@@ -1,21 +1,24 @@
-export type UserRole = 'Superadmin' | 'Admin' | 'Supervisor' | 'Intern';
+export type GlobalRole = 'Superadmin' | 'Admin' | 'Standard_User';
+export type DepartmentRole = 'Head' | 'Supervisor' | 'Intern';
 
 export interface User {
-  user_id: string; // uuid
+  user_id: string; // UUID
   first_name: string;
   last_name: string;
-  email: string;
-  role: UserRole;
+  email: string; 
+  global_role: GlobalRole; 
+  department_role: DepartmentRole;
   department_id?: number;
   is_active: boolean;
+  created_at?: Date;
+  updated_at?: Date;
 }
-
 export interface InternProfile {
   profile_id: number;
-  user_id: string; // uuid
+  user_id: string; // UUID - FK to User.user_id
   school_university: string;
-  required_hours: number;
-  rendered_hours_total: number;
+  required_hours: number; // total
+  rendered_hours_total: number; // accumulated
   expected_end_date: Date;
   actual_end_date?: Date;
 }
@@ -23,5 +26,40 @@ export interface InternProfile {
 export interface Department {
   department_id: number;
   department_name: string;
-  supervisor_id?: string; // uuid
+  supervisor_id?: string;
+  head_id?: string; 
+  created_at?: Date;
+}
+
+export interface WhitelistedEmail {
+  whitelist_id: number;
+  email: string; 
+  is_setup_complete: boolean; 
+  whitelisted_by: string;
+  whitelisted_at: Date;
+}
+
+export interface UserProfile extends User {
+  intern_profile?: InternProfile;
+  department?: Department;
+}
+
+export function isIntern(user: User): boolean {
+  return user.department_role === 'Intern';
+}
+
+export function isSupervisor(user: User): boolean {
+  return user.department_role === 'Supervisor';
+}
+
+export function isDepartmentHead(user: User): boolean {
+  return user.department_role === 'Head';
+}
+
+export function isSuperadmin(user: User): boolean {
+  return user.global_role === 'Superadmin';
+}
+
+export function isAdmin(user: User): boolean {
+  return user.global_role === 'Admin';
 }
