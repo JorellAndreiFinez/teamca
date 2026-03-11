@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { config } from '../config/env';
 
 const api = axios.create({
@@ -10,7 +10,7 @@ const api = axios.create({
 
 // request interceptor to add token
 api.interceptors.request.use(
-  (requestConfig: any) => {
+  (requestConfig: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
       const persisted = window.localStorage.getItem('auth-storage');
 
@@ -30,15 +30,15 @@ api.interceptors.request.use(
 
     return requestConfig;
   },
-  (error: any) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
 // response interceptor to handle errors
 api.interceptors.response.use(
-  (response: any) => response,
-  (error: any) => {
+  (response: AxiosResponse) => response,
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );

@@ -12,12 +12,12 @@ export interface InternProfilePayload {
 
 export const internProfileService = {
   getInternProfileByUserId: async (userId: string): Promise<InternProfile> => {
-    const { data } = await api.get(`/intern-profiles/user/${userId}`);
+    const { data } = await api.get<InternProfile>(`/intern-profiles/user/${userId}`);
     return data;
   },
 
   createInternProfile: async (payload: InternProfilePayload): Promise<InternProfile> => {
-    const { data } = await api.post('/intern-profiles', payload);
+    const { data } = await api.post<InternProfile>('/intern-profiles', payload);
     return data;
   },
 
@@ -25,7 +25,7 @@ export const internProfileService = {
     userId: string,
     payload: Partial<InternProfilePayload>
   ): Promise<InternProfile> => {
-    const { data } = await api.put(`/intern-profiles/user/${userId}`, payload);
+    const { data } = await api.put<InternProfile>(`/intern-profiles/user/${userId}`, payload);
     return data;
   },
 };

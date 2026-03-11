@@ -28,22 +28,22 @@ export interface UserProfileResponse extends User {
 
 export const userService = {
   getProfile: async (userId: string): Promise<UserProfileResponse> => {
-    const { data } = await api.get(`/users/${userId}`);
+    const { data } = await api.get<UserProfileResponse>(`/users/${userId}`);
     return data;
   },
   
   getAllUsers: async (): Promise<User[]> => {
-    const { data } = await api.get('/users');
+    const { data } = await api.get<User[]>('/users');
     return data;
   },
 
   createUser: async (payload: UpsertUserPayload): Promise<UserProfileResponse> => {
-    const { data } = await api.post('/users', payload);
+    const { data } = await api.post<UserProfileResponse>('/users', payload);
     return data;
   },
 
   updateProfile: async (userId: string, payload: UpsertUserPayload): Promise<UserProfileResponse> => {
-    const { data } = await api.put(`/users/${userId}`, payload);
+    const { data } = await api.put<UserProfileResponse>(`/users/${userId}`, payload);
     return data;
   },
 
@@ -51,13 +51,13 @@ export const userService = {
     userId: string,
     payload: UpsertInternProfilePayload
   ): Promise<UserProfileResponse> => {
-    const { data } = await api.put(`/users/${userId}/intern-profile`, payload);
+    const { data } = await api.put<UserProfileResponse>(`/users/${userId}/intern-profile`, payload);
     return data;
   },
   
   // add new user w/ email (superadmin only)
   whitelistEmail: async (email: string): Promise<{ message: string; user: User }> => {
-    const { data } = await api.post('/users/whitelist', { email });
+    const { data } = await api.post<{ message: string; user: User }>('/users/whitelist', { email });
     return data;
   },
 
@@ -65,7 +65,7 @@ export const userService = {
     userId: string,
     payload: UpsertUserPayload
   ): Promise<UserProfileResponse> => {
-    const { data } = await api.put(`/users/${userId}/activate`, payload);
+    const { data } = await api.put<UserProfileResponse>(`/users/${userId}/activate`, payload);
     return data;
   },
 };
