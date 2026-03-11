@@ -49,6 +49,10 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
       return res.status(403).json({ message: 'Account is not active or does not exist.' });
     }
 
+    if (!user.global_role) {
+      return res.status(403).json({ message: 'Account role is not configured.' });
+    }
+
     req.user = {
       user_id: user._id,
       email: user.email,

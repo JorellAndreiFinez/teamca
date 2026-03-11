@@ -24,16 +24,16 @@ const userSchema = new Schema(
       type: String,
       trim: true,
       default: null,
-      required(this: { is_active?: boolean }) {
-        return this.is_active;
+      required(this: { is_active: boolean }) {
+        return this.is_active === true;
       },
     },
     last_name: {
       type: String,
       trim: true,
       default: null,
-      required(this: { is_active?: boolean }) {
-        return this.is_active;
+      required(this: { is_active: boolean }) {
+        return this.is_active === true;
       },
     },
     email: {
@@ -48,8 +48,8 @@ const userSchema = new Schema(
     password_hash: {
       type: String,
       default: null,
-      required(this: { is_active?: boolean }) {
-        return this.is_active;
+      required(this: { is_active: boolean }) {
+        return this.is_active === true;
       },
       minlength: 8,
     },
@@ -57,8 +57,8 @@ const userSchema = new Schema(
       type: String,
       enum: ['Superadmin', 'Admin', 'Standard_User'],
       default: null,
-      required(this: { is_active?: boolean }) {
-        return this.is_active;
+      required(this: { is_active: boolean }) {
+        return this.is_active === true;
       },
     },
     is_active: {

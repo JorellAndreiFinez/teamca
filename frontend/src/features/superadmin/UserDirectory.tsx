@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { userService } from '../../services/userService';
 import { useAuthStore } from '../../store/authStore';
 import type { User } from '../../types/user';
+import { Button } from '../../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
 
 const getDepartmentRoleLabel = (user: User): string => {
   const userRecord = user as User & {
@@ -78,42 +81,41 @@ export default function UserDirectory() {
 
   if (!allowedToView) {
     return (
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold text-slate-900">User Directory</h2>
-        <p className="mt-2 text-sm text-slate-600">You do not have permission to access this page.</p>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">User Directory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-slate-600">You do not have permission to access this page.</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+    <Card className="space-y-4">
+      <CardHeader className="pb-0">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">User Directory</h2>
-        <button
-          type="button"
-          onClick={() => void loadUsers()}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <CardTitle className="text-xl">User Directory</CardTitle>
+        <Button type="button" variant="outline" onClick={() => void loadUsers()}>
           Refresh
-        </button>
+        </Button>
       </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
 
       {canWhitelistEmails() && (
         <form onSubmit={handleWhitelist} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
+          <Input
             type="email"
             value={newEmail}
             onChange={(event) => setNewEmail(event.target.value)}
             placeholder="intern@example.com"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+            className="w-full"
           />
-          <button
-            type="submit"
-            disabled={isWhitelisting}
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="submit" disabled={isWhitelisting}>
             {isWhitelisting ? 'Whitelisting...' : 'Whitelist Email'}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -151,6 +153,7 @@ export default function UserDirectory() {
       {!canManageUsers() && (
         <p className="text-xs text-slate-500">You can view users, but account management actions are restricted.</p>
       )}
-    </section>
+      </CardContent>
+    </Card>
   );
 }
