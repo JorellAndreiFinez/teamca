@@ -1,7 +1,11 @@
 ---
 import DashboardLayout from "../layouts/DashboardLayout.astro";
+import UserDirectory from "../features/superadmin/UserDirectory";
 ---
 
 <DashboardLayout>
-  <h1>Super Admin Dashboard</h1>
+  <div class="space-y-4 p-4">
+    <h1 class="text-2xl font-bold text-slate-900">Superadmin Dashboard</h1>
+    <UserDirectory client:load />
+  </div>
 </DashboardLayout>
