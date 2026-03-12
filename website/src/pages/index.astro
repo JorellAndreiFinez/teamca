@@ -1,0 +1,33 @@
+---
+import "../styles/global.css";
+import MainLayout from '../layouts/MainLayout.tsx';
+import HomeHero from '../components/hero/HomeHero.tsx';
+import WhatWeDo from '../components/sections/home/WhatWeDo.tsx';
+import WhoWeAre from '../components/sections/home/WhoWeAre.tsx';
+import WhyFinancialMatters from '../components/sections/home/WhyFinancialMatters.tsx';
+import Testimonials from '../components/sections/home/Testimonials.tsx';
+import CTA from '../components/sections/CTA.tsx';
+
+---
+<html lang="en">
+  <head>
+    <title>Home | Team CA</title>
+  </head>
+  <body>
+    <MainLayout client:load>
+      <HomeHero client:load />
+      <WhatWeDo client:load />
+      <WhoWeAre client:load />
+      <WhyFinancialMatters client:load />
+      <Testimonials client:load />
+      <CTA 
+        client:load
+        title="Join Us Today"
+        subtitle="Get started with Team CA in just a few steps."
+        buttonText="Sign Up"
+        buttonLink="#"
+        bgImage="https://placehold.co/1600x500"
+      />
+    </MainLayout>
+  </body>
+</html>
