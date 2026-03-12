@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&family=Source+Sans+3:wght@200..900&display=swap");
+
+:root {
+  --primary-color: rgb(106, 52, 5);
+  --light-primary-color: rgb(210, 155, 41);
+  --secondary-color: #f5f5f5;
+  --accent-color: #e9ce60;
+
+  --font-heading: "Montserrat", sans-serif;
+  --font-body: "Source Sans 3", sans-serif;
+
+  --font-heading-weight: 700;
+  --font-body-weight: 400;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  background-color: var(--secondary-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  color: var(--light-primary-color);
+}
+
+body,
+a,
+p,
+button {
+  font-family: var(--font-body);
+  color: oklch(55.1% 0.027 264.364);
+  font-weight: var(--font-body-weight);
+}
+
+.bold-heading {
+  font-weight: 900;
+}
+
+.light-body {
+  font-weight: 200;
+}
+
+nav {
+  z-index: 99999;
+}
+
+nav a {
+  color: var(--primary-color);
+}
+
+footer h3 {
+  color: var(--primary-color);
+}
