@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
 import RouteGuard from '../components/common/RouteGuard';
+=======
+import '../styles/globals.css';
+>>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
 import Sidebar from '../components/common/Sidebar';
 ---
 
@@ -7,8 +11,25 @@ import Sidebar from '../components/common/Sidebar';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard</title>
+    <title>TeamCA</title>
+    <script>
+      // Client-side auth guard
+      const stored = localStorage.getItem('auth-storage');
+      if (!stored) {
+        window.location.replace('/login');
+      } else {
+        try {
+          const parsed = JSON.parse(stored);
+          if (!parsed?.state?.isAuthenticated || !parsed?.state?.token) {
+            window.location.replace('/login');
+          }
+        } catch {
+          window.location.replace('/login');
+        }
+      }
+    </script>
   </head>
+<<<<<<< HEAD
   <body class="bg-slate-50 text-slate-900">
     <RouteGuard mode="protected" client:load />
     <div class="mx-auto min-h-screen max-w-7xl p-4 md:p-6">
@@ -23,10 +44,24 @@ import Sidebar from '../components/common/Sidebar';
         <header class="border-b border-slate-200 px-4 py-3 text-sm text-slate-500">
           TeamCA Dashboard
         </header>
+=======
+  <body class="bg-gray-50 min-h-screen">
+    <!-- Sidebar -->
+    <Sidebar client:load />
+>>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
 
+    <!-- Main content area with offset for sidebar -->
+    <div id="main-content" class="transition-all duration-300 ml-64">
+      <main class="min-h-screen p-6">
         <slot />
       </main>
       </div>
     </div>
+
+    <script>
+      // Dynamically adjust main content margin when sidebar collapses
+      // The sidebar toggles between w-64 and w-16
+      const sidebarKey = 'teamca-ui-store';
+    </script>
   </body>
 </html>

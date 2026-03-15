@@ -1,4 +1,5 @@
 ---
+<<<<<<< HEAD
 import DashboardLayout from '../layouts/DashboardLayout.astro';
 import RoleDashboard from '../features/dashboard/RoleDashboard';
 ---
@@ -8,3 +9,12 @@ import RoleDashboard from '../features/dashboard/RoleDashboard';
     <RoleDashboard client:load />
   </div>
 </DashboardLayout>
+=======
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import Dashboard from "../features/dashboard/Dashboard";
+---
+
+<DashboardLayout>
+  <Dashboard client:load />
+</DashboardLayout>
+>>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)

@@ -1,6 +1,10 @@
 ---
+<<<<<<< HEAD
 // redirects to login, main dashboard
 import RouteGuard from '../components/common/RouteGuard';
+=======
+import AuthLayout from "../layouts/AuthLayout.astro";
+>>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
 ---
 
 <html lang="en">
@@ -8,8 +12,32 @@ import RouteGuard from '../components/common/RouteGuard';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TeamCA</title>
+    <script>
+      // Redirect based on auth state stored in localStorage
+      const stored = localStorage.getItem('auth-storage');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.state?.isAuthenticated && parsed?.state?.token) {
+            window.location.replace('/dashboard');
+          } else {
+            window.location.replace('/login');
+          }
+        } catch {
+          window.location.replace('/login');
+        }
+      } else {
+        window.location.replace('/login');
+      }
+    </script>
   </head>
   <body>
+<<<<<<< HEAD
     <RouteGuard mode="root" client:load />
+=======
+    <div class="min-h-screen flex items-center justify-center">
+      <p class="text-gray-500 text-sm">Redirecting...</p>
+    </div>
+>>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
   </body>
 </html>
