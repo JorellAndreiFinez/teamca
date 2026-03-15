@@ -3,12 +3,23 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'teamca-dev-secret-change-in-production';
+const MS_PER_HOUR = 3_600_000;
+const HOURS_DECIMAL_PLACES = 100; // multiply then divide to keep 2 decimal places
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET environment variable must be set in production.');
+    process.exit(1);
+  }
+  console.warn('WARNING: JWT_SECRET not set. Using insecure default — DO NOT use in production.');
+}
+const JWT_SECRET_RESOLVED = JWT_SECRET || 'teamca-dev-secret-change-in-production';
 
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:4321')
   .split(',')
@@ -28,7 +39,25 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// ── In-memory mock data for development ───────────────────────────────────────
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+
+/** Stricter limiter for authentication endpoints (login, setup, etc.) */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
+});
+
+/** General limiter for authenticated API routes */
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
+});
 
 interface MockUser {
   user_id: string;
@@ -103,13 +132,20 @@ function authMiddleware(
   }
   const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { user_id: string };
+    const payload = jwt.verify(token, JWT_SECRET_RESOLVED) as { user_id: string };
     (req as any).userId = payload.user_id;
     next();
-  } catch {
+  } catch (err) {
+    console.warn('[auth] Token verification failed:', (err as Error).message);
     res.status(401).json({ message: 'Invalid or expired token' });
   }
 }
+
+// ── Route-level rate limiting ─────────────────────────────────────────────────
+app.use('/auth', authLimiter);
+app.use('/users', apiLimiter);
+app.use('/dtr', apiLimiter);
+app.use('/tasks', apiLimiter);
 
 // ── Auth Routes ───────────────────────────────────────────────────────────────
 
@@ -147,7 +183,7 @@ app.post('/auth/login', (req, res) => {
     return;
   }
 
-  const token = jwt.sign({ user_id: user.user_id }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ user_id: user.user_id }, JWT_SECRET_RESOLVED, { expiresIn: '7d' });
   res.json({ token, user: toPublicUser(user) });
 });
 
@@ -175,7 +211,7 @@ app.post('/auth/complete-setup', (req, res) => {
   };
   mockUsers.push(newUser);
 
-  const token = jwt.sign({ user_id: newUser.user_id }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ user_id: newUser.user_id }, JWT_SECRET_RESOLVED, { expiresIn: '7d' });
   res.status(201).json({ token, user: toPublicUser(newUser) });
 });
 
@@ -185,17 +221,17 @@ app.post('/auth/logout', (_req, res) => {
 
 // ── User Routes ───────────────────────────────────────────────────────────────
 
-app.get('/users', authMiddleware, (_req, res) => {
+app.get('/users', apiLimiter, authMiddleware, (_req, res) => {
   res.json(mockUsers.map(toPublicUser));
 });
 
-app.get('/users/:userId', authMiddleware, (req, res) => {
+app.get('/users/:userId', apiLimiter, authMiddleware, (req, res) => {
   const user = mockUsers.find((u) => u.user_id === req.params.userId);
   if (!user) { res.status(404).json({ message: 'User not found' }); return; }
   res.json(toPublicUser(user));
 });
 
-app.put('/users/:userId', authMiddleware, (req, res) => {
+app.put('/users/:userId', apiLimiter, authMiddleware, (req, res) => {
   const idx = mockUsers.findIndex((u) => u.user_id === req.params.userId);
   if (idx === -1) { res.status(404).json({ message: 'User not found' }); return; }
   const { first_name, last_name } = req.body;
@@ -204,7 +240,7 @@ app.put('/users/:userId', authMiddleware, (req, res) => {
   res.json(toPublicUser(mockUsers[idx]));
 });
 
-app.post('/users/whitelist', authMiddleware, (req, res) => {
+app.post('/users/whitelist', apiLimiter, authMiddleware, (req, res) => {
   const { email } = req.body as { email: string };
   if (!email) { res.status(400).json({ message: 'Email is required' }); return; }
   if (!whitelistedEmails.includes(email.toLowerCase())) {
@@ -213,7 +249,7 @@ app.post('/users/whitelist', authMiddleware, (req, res) => {
   res.status(201).json({ message: `${email} has been whitelisted` });
 });
 
-app.delete('/users/whitelist/:email', authMiddleware, (req, res) => {
+app.delete('/users/whitelist/:email', apiLimiter, authMiddleware, (req, res) => {
   const emailToRemove = decodeURIComponent(String(req.params.email)).toLowerCase();
   const idx = whitelistedEmails.indexOf(emailToRemove);
   if (idx !== -1) whitelistedEmails.splice(idx, 1);
@@ -235,7 +271,7 @@ interface DTRRecord {
 const dtrRecords: DTRRecord[] = [];
 let dtrIdCounter = 1;
 
-app.post('/dtr/clock-in', authMiddleware, (req, res) => {
+app.post('/dtr/clock-in', apiLimiter, authMiddleware, (req, res) => {
   const userId = (req as any).userId;
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -257,7 +293,7 @@ app.post('/dtr/clock-in', authMiddleware, (req, res) => {
   res.status(201).json(record);
 });
 
-app.post('/dtr/clock-out', authMiddleware, (req, res) => {
+app.post('/dtr/clock-out', apiLimiter, authMiddleware, (req, res) => {
   const userId = (req as any).userId;
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -269,11 +305,11 @@ app.post('/dtr/clock-out', authMiddleware, (req, res) => {
 
   record.clock_out_time = now.toISOString();
   const ms = now.getTime() - new Date(record.clock_in_time).getTime();
-  record.hours_rendered = Math.round((ms / 3600000) * 100) / 100;
+  record.hours_rendered = Math.round((ms / MS_PER_HOUR) * HOURS_DECIMAL_PLACES) / HOURS_DECIMAL_PLACES;
   res.json(record);
 });
 
-app.get('/dtr/:userId', authMiddleware, (req, res) => {
+app.get('/dtr/:userId', apiLimiter, authMiddleware, (req, res) => {
   res.json(dtrRecords.filter((r) => r.user_id === req.params.userId));
 });
 
@@ -314,11 +350,11 @@ const taskRecords: TaskRecord[] = [
 ];
 let taskIdCounter = 3;
 
-app.get('/tasks', authMiddleware, (_req, res) => {
+app.get('/tasks', apiLimiter, authMiddleware, (_req, res) => {
   res.json(taskRecords);
 });
 
-app.post('/tasks', authMiddleware, (req, res) => {
+app.post('/tasks', apiLimiter, authMiddleware, (req, res) => {
   const { title, description, priority, deadline } = req.body;
   if (!title || !deadline) {
     res.status(400).json({ message: 'Title and deadline are required' });
@@ -338,7 +374,7 @@ app.post('/tasks', authMiddleware, (req, res) => {
   res.status(201).json(newTask);
 });
 
-app.put('/tasks/:taskId', authMiddleware, (req, res) => {
+app.put('/tasks/:taskId', apiLimiter, authMiddleware, (req, res) => {
   const idx = taskRecords.findIndex((t) => t.task_id === parseInt(String(req.params.taskId), 10));
   if (idx === -1) { res.status(404).json({ message: 'Task not found' }); return; }
   const { status, title, description, priority, deadline } = req.body;
@@ -350,7 +386,7 @@ app.put('/tasks/:taskId', authMiddleware, (req, res) => {
   res.json(taskRecords[idx]);
 });
 
-app.delete('/tasks/:taskId', authMiddleware, (req, res) => {
+app.delete('/tasks/:taskId', apiLimiter, authMiddleware, (req, res) => {
   const idx = taskRecords.findIndex((t) => t.task_id === parseInt(String(req.params.taskId), 10));
   if (idx !== -1) taskRecords.splice(idx, 1);
   res.json({ message: 'Task deleted' });

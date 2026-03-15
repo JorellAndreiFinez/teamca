@@ -101,8 +101,7 @@ export default function CalendarWidget({ records }: CalendarWidgetProps) {
     else if (status === 'leave') leaveCount++;
   }
 
-  const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
-  const isFutureMonth = new Date(year, month) > new Date(today.getFullYear(), today.getMonth());
+
 
   return (
     <div>

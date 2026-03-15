@@ -65,8 +65,9 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
       });
       login(result.token, result.user);
       window.location.href = '/dashboard';
-    } catch (err: any) {
-      setServerError(err?.response?.data?.message || 'Setup failed. Please try again.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setServerError(message || 'Setup failed. Please try again.');
     } finally {
       setLoading(false);
     }
