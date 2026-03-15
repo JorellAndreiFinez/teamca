@@ -4,6 +4,16 @@ export const getAllDepartments = async () => {
   return Department.find().sort({ department_name: 1 }).lean();
 };
 
+export const getDepartmentsByIds = async (departmentIds: string[]) => {
+  if (departmentIds.length === 0) {
+    return [];
+  }
+
+  return Department.find({ _id: { $in: departmentIds } })
+    .sort({ department_name: 1 })
+    .lean();
+};
+
 export const getDepartmentById = async (departmentId: string) => {
   return Department.findById(departmentId).lean();
 };

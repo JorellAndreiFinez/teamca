@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import InternProfile from '../models/InternProfile';
 
+const SAFE_USER_SELECT = '-password_hash';
+
 type LoginInput = {
   email: string;
   password: string;
@@ -60,9 +62,15 @@ export const login = async (payload: LoginInput) => {
   }
 
   const token = issueToken(String(user._id));
+  const safeUser = await User.findById(user._id).select(SAFE_USER_SELECT).lean();
+
+  if (!safeUser) {
+    throw new Error('User not found after login.');
+  }
+
   return {
     token,
-    user,
+    user: safeUser,
   };
 };
 
@@ -112,10 +120,15 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   }
 
   const token = issueToken(String(user._id));
+  const safeUser = await User.findById(user._id).select(SAFE_USER_SELECT).lean();
+
+  if (!safeUser) {
+    throw new Error('User not found after setup.');
+  }
 
   return {
     token,
-    user,
+    user: safeUser,
   };
 };
 

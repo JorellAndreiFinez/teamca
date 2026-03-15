@@ -3,6 +3,33 @@ import type { NextFunction, Request, Response } from 'express';
 type GlobalRole = 'Superadmin' | 'Admin' | 'Standard_User';
 type DepartmentRole = 'Head' | 'Supervisor' | 'Intern';
 
+type AuthUser = Express.AuthUser;
+
+export const isSameUser = (requestUser: AuthUser, targetUserId: string): boolean =>
+  String(requestUser.user_id) === targetUserId;
+
+export const hasDepartmentRoleIn = (
+  requestUser: AuthUser,
+  allowedRoles: DepartmentRole[]
+): boolean => {
+  return requestUser.departments.some((department) =>
+    allowedRoles.includes(department.department_role)
+  );
+};
+
+export const hasSharedDepartment = (
+  requestUser: AuthUser,
+  targetDepartments: Array<{ department_id: unknown }>
+): boolean => {
+  const requesterDepartmentIds = new Set(
+    requestUser.departments.map((department) => String(department.department_id))
+  );
+
+  return targetDepartments.some((department) =>
+    requesterDepartmentIds.has(String(department.department_id))
+  );
+};
+
 export const requireGlobalRole = (...allowedRoles: GlobalRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -61,4 +88,7 @@ export default {
   requireGlobalRole,
   requireDepartmentRole,
   requireAnyRole,
+  isSameUser,
+  hasDepartmentRoleIn,
+  hasSharedDepartment,
 };

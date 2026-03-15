@@ -11,7 +11,7 @@ export const checkEmailHandler = async (req: Request, res: Response) => {
     const result = await checkEmail(email);
     return res.status(200).json(result);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to check email.', error });
+    return res.status(500).json({ message: 'Failed to check email.' });
   }
 };
 
@@ -29,7 +29,7 @@ export const loginHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: error.message });
     }
 
-    return res.status(500).json({ message: 'Failed to login.', error });
+    return res.status(500).json({ message: 'Failed to login.' });
   }
 };
 
@@ -70,7 +70,7 @@ export const completeSetupHandler = async (req: Request, res: Response) => {
       return res.status(409).json({ message: error.message });
     }
 
-    return res.status(500).json({ message: 'Failed to complete setup.', error });
+    return res.status(500).json({ message: 'Failed to complete setup.' });
   }
 };
 
@@ -79,7 +79,7 @@ export const logoutHandler = async (_req: Request, res: Response) => {
     const result = await logout();
     return res.status(200).json(result);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to logout.', error });
+    return res.status(500).json({ message: 'Failed to logout.' });
   }
 };
 

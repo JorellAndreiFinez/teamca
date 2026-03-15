@@ -4,6 +4,8 @@ import {
   getInternProfileByUserId,
   updateInternProfileByUserId,
 } from '../services/internProfileService';
+import { getUserById } from '../services/userService';
+import { hasDepartmentRoleIn, hasSharedDepartment, isSameUser } from '../middleware/rbac';
 
 const getUserIdParam = (req: Request): string => {
   const raw = req.params.userId;
@@ -12,19 +14,43 @@ const getUserIdParam = (req: Request): string => {
 
 export const getInternProfileByUser = async (req: Request, res: Response) => {
   try {
-    const profile = await getInternProfileByUserId(getUserIdParam(req));
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const targetUserId = getUserIdParam(req);
+    const targetUser = await getUserById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const isSuperadmin = req.user.global_role === 'Superadmin';
+    const isAdmin = req.user.global_role === 'Admin';
+    const isSelf = isSameUser(req.user, targetUserId);
+    const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
+    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
+
+    if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
+      return res.status(403).json({ message: 'Insufficient permissions to view this intern profile.' });
+    }
+
+    const profile = await getInternProfileByUserId(targetUserId);
     if (!profile) {
       return res.status(404).json({ message: 'Intern profile not found.' });
     }
 
     return res.status(200).json(profile);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch intern profile.', error });
+    return res.status(500).json({ message: 'Failed to fetch intern profile.' });
   }
 };
 
 export const createInternProfileHandler = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
     const payload = req.body as {
       user_id?: string;
       school?: string;
@@ -48,6 +74,21 @@ export const createInternProfileHandler = async (req: Request, res: Response) =>
       });
     }
 
+    const targetUser = await getUserById(payload.user_id);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const isSuperadmin = req.user.global_role === 'Superadmin';
+    const isAdmin = req.user.global_role === 'Admin';
+    const isSelf = isSameUser(req.user, payload.user_id);
+    const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
+    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
+
+    if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
+      return res.status(403).json({ message: 'Insufficient permissions to create this intern profile.' });
+    }
+
     const created = await createInternProfile({
       user_id: payload.user_id,
       school: payload.school ?? payload.school_university ?? '',
@@ -66,12 +107,32 @@ export const createInternProfileHandler = async (req: Request, res: Response) =>
       return res.status(409).json({ message: error.message });
     }
 
-    return res.status(500).json({ message: 'Failed to create intern profile.', error });
+    return res.status(500).json({ message: 'Failed to create intern profile.' });
   }
 };
 
 export const updateInternProfileByUser = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const targetUserId = getUserIdParam(req);
+    const targetUser = await getUserById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const isSuperadmin = req.user.global_role === 'Superadmin';
+    const isAdmin = req.user.global_role === 'Admin';
+    const isSelf = isSameUser(req.user, targetUserId);
+    const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
+    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
+
+    if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
+      return res.status(403).json({ message: 'Insufficient permissions to update this intern profile.' });
+    }
+
     const payload = req.body as {
       school?: string;
       school_university?: string;
@@ -88,7 +149,7 @@ export const updateInternProfileByUser = async (req: Request, res: Response) => 
       actualEndDate = new Date(payload.actual_end_date);
     }
 
-    const updated = await updateInternProfileByUserId(getUserIdParam(req), {
+    const updated = await updateInternProfileByUserId(targetUserId, {
       school: payload.school ?? payload.school_university,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
@@ -102,7 +163,7 @@ export const updateInternProfileByUser = async (req: Request, res: Response) => 
       return res.status(404).json({ message: error.message });
     }
 
-    return res.status(500).json({ message: 'Failed to update intern profile.', error });
+    return res.status(500).json({ message: 'Failed to update intern profile.' });
   }
 };
 

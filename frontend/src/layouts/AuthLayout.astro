@@ -1,3 +1,7 @@
+---
+import RouteGuard from '../components/common/RouteGuard';
+---
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -5,6 +9,7 @@
     <title>Authentication</title>
   </head>
   <body>
+    <RouteGuard mode="auth" client:load />
     <div class="auth-layout">
       <slot />
     </div>

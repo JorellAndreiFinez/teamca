@@ -2,6 +2,8 @@ import type { Types } from 'mongoose';
 import User from '../models/User';
 import InternProfile from '../models/InternProfile';
 
+const SAFE_USER_SELECT = '-password_hash';
+
 type GlobalRole = 'Superadmin' | 'Admin' | 'Standard_User';
 type DepartmentRole = 'Head' | 'Supervisor' | 'Intern';
 
@@ -66,11 +68,11 @@ const toDepartmentAssignments = (departments?: DepartmentAssignmentInput[]): Dep
 };
 
 export const getAllUsers = async () => {
-  return User.find().sort({ createdAt: -1 }).lean();
+  return User.find().select(SAFE_USER_SELECT).sort({ createdAt: -1 }).lean();
 };
 
 export const getUserById = async (userId: string) => {
-  const user = await User.findById(userId).lean();
+  const user = await User.findById(userId).select(SAFE_USER_SELECT).lean();
   if (!user) {
     return null;
   }
@@ -87,7 +89,7 @@ export const createWhitelistedUser = async (payload: CreateWhitelistedUserInput)
     throw new Error('Email already exists.');
   }
 
-  return User.create({
+  const created = await User.create({
     email,
     is_active: false,
     first_name: null,
@@ -96,6 +98,8 @@ export const createWhitelistedUser = async (payload: CreateWhitelistedUserInput)
     global_role: null,
     departments: [],
   });
+
+  return getUserById(String(created._id));
 };
 
 export const activateWhitelistedUser = async (userId: string, payload: ActivateWhitelistedUserInput) => {
@@ -111,7 +115,8 @@ export const activateWhitelistedUser = async (userId: string, payload: ActivateW
   user.set('departments', payload.departments ?? []);
   user.is_active = true;
 
-  return user.save();
+  await user.save();
+  return getUserById(String(user._id));
 };
 
 export const createUser = async (payload: CreateUserInput) => {
@@ -158,7 +163,8 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
     user.is_active = payload.is_active;
   }
 
-  return user.save();
+  await user.save();
+  return getUserById(String(user._id));
 };
 
 export const upsertUserInternProfile = async (userId: string, payload: UpsertInternProfileInput) => {

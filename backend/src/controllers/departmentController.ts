@@ -3,6 +3,7 @@ import {
   createDepartment,
   getAllDepartments,
   getDepartmentById,
+  getDepartmentsByIds,
   updateDepartment,
 } from '../services/departmentService';
 
@@ -13,23 +14,51 @@ const getDepartmentIdParam = (req: Request): string => {
 
 export const listDepartments = async (_req: Request, res: Response) => {
   try {
-    const departments = await getAllDepartments();
+    const reqUser = _req.user;
+    if (!reqUser) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    if (reqUser.global_role === 'Superadmin' || reqUser.global_role === 'Admin') {
+      const departments = await getAllDepartments();
+      return res.status(200).json(departments);
+    }
+
+    const departmentIds = reqUser.departments.map((department) => String(department.department_id));
+    const departments = await getDepartmentsByIds(departmentIds);
     return res.status(200).json(departments);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to list departments.', error });
+    return res.status(500).json({ message: 'Failed to list departments.' });
   }
 };
 
 export const getDepartment = async (req: Request, res: Response) => {
   try {
-    const department = await getDepartmentById(getDepartmentIdParam(req));
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const requestedDepartmentId = getDepartmentIdParam(req);
+    const department = await getDepartmentById(requestedDepartmentId);
     if (!department) {
       return res.status(404).json({ message: 'Department not found.' });
     }
 
+    if (req.user.global_role === 'Superadmin' || req.user.global_role === 'Admin') {
+      return res.status(200).json(department);
+    }
+
+    const hasDepartmentAccess = req.user.departments.some(
+      (entry) => String(entry.department_id) === requestedDepartmentId
+    );
+
+    if (!hasDepartmentAccess) {
+      return res.status(403).json({ message: 'Insufficient permissions to view this department.' });
+    }
+
     return res.status(200).json(department);
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch department.', error });
+    return res.status(500).json({ message: 'Failed to fetch department.' });
   }
 };
 
@@ -47,7 +76,7 @@ export const createDepartmentHandler = async (req: Request, res: Response) => {
       return res.status(409).json({ message: error.message });
     }
 
-    return res.status(500).json({ message: 'Failed to create department.', error });
+    return res.status(500).json({ message: 'Failed to create department.' });
   }
 };
 
@@ -65,7 +94,7 @@ export const updateDepartmentHandler = async (req: Request, res: Response) => {
       return res.status(404).json({ message: error.message });
     }
 
-    return res.status(500).json({ message: 'Failed to update department.', error });
+    return res.status(500).json({ message: 'Failed to update department.' });
   }
 };
 
