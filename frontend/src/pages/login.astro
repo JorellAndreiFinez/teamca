@@ -1,7 +1,8 @@
 ---
 import AuthLayout from "../layouts/AuthLayout.astro";
+import LoginForm from "../features/auth/LoginForm";
 ---
 
 <AuthLayout>
-  <h1>Login</h1>
+  <LoginForm client:load />
 </AuthLayout>
