@@ -1,5 +1,4 @@
 ---
-// redirects to login, main dashboard
 ---
 
 <html lang="en">
@@ -7,8 +6,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TeamCA</title>
+    <script>
+      // Redirect based on auth state stored in localStorage
+      const stored = localStorage.getItem('auth-storage');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.state?.isAuthenticated && parsed?.state?.token) {
+            window.location.replace('/dashboard');
+          } else {
+            window.location.replace('/login');
+          }
+        } catch {
+          window.location.replace('/login');
+        }
+      } else {
+        window.location.replace('/login');
+      }
+    </script>
   </head>
   <body>
-    <h1>Welcome to TeamCA</h1>
+    <div class="min-h-screen flex items-center justify-center">
+      <p class="text-gray-500 text-sm">Redirecting...</p>
+    </div>
   </body>
 </html>
