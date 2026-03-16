@@ -10,19 +10,7 @@ export function getDashboardRouteForUser(user: User | null): string {
     return '/login';
   }
 
-  if (user.global_role === 'Superadmin') {
-    return '/superadmin';
-  }
-
-  if (user.global_role === 'Admin') {
-    return '/tasks';
-  }
-
-  if (user.department_role === 'Head' || user.department_role === 'Supervisor') {
-    return '/tasks';
-  }
-
-  return '/dtr';
+  return '/dashboard';
 }
 
 export function hasRoleAccess(user: User | null, options?: RoleAccessOptions): boolean {
@@ -30,13 +18,15 @@ export function hasRoleAccess(user: User | null, options?: RoleAccessOptions): b
     return false;
   }
 
-  const hasAllowedGlobalRole = options?.allowedGlobalRoles?.length
-    ? options.allowedGlobalRoles.includes(user.global_role)
-    : true;
+  const globalRoles = options?.allowedGlobalRoles ?? [];
+  const departmentRoles = options?.allowedDepartmentRoles ?? [];
 
-  const hasAllowedDepartmentRole = options?.allowedDepartmentRoles?.length
-    ? options.allowedDepartmentRoles.includes(user.department_role)
-    : true;
+  if (globalRoles.length === 0 && departmentRoles.length === 0) {
+    return true;
+  }
 
-  return hasAllowedGlobalRole && hasAllowedDepartmentRole;
+  const hasAllowedGlobalRole = globalRoles.includes(user.global_role);
+  const hasAllowedDepartmentRole = departmentRoles.includes(user.department_role);
+
+  return hasAllowedGlobalRole || hasAllowedDepartmentRole;
 }

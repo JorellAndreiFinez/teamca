@@ -1,7 +1,8 @@
 ---
 import DashboardLayout from "../layouts/DashboardLayout.astro";
+import TasksPageContent from "../features/dashboard/TasksPageContent";
 ---
 
 <DashboardLayout>
-  <h1>Tasks</h1>
+  <TasksPageContent client:load />
 </DashboardLayout>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { userService } from '../../services/userService';
 import UserDirectory from './UserDirectory';
 import type { User } from '../../types/user';
@@ -29,13 +29,15 @@ export default function SuperadminDashboard() {
     const totalUsers = users.length;
     const activeUsers = users.filter((user) => user.is_active).length;
     const whitelistedUsers = users.filter((user) => !user.is_active).length;
-    const admins = users.filter((user) => user.global_role === 'Superadmin' || user.global_role === 'Admin').length;
+    const managementUsers = users.filter(
+      (user) => user.global_role === 'Superadmin' || user.global_role === 'Admin'
+    ).length;
 
     return {
       totalUsers,
       activeUsers,
       whitelistedUsers,
-      admins,
+      managementUsers,
     };
   }, [users]);
 
@@ -68,10 +70,10 @@ export default function SuperadminDashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">Admins</CardDescription>
+            <CardDescription className="text-xs uppercase tracking-wide">Management</CardDescription>
           </CardHeader>
           <CardContent>
-            <CardTitle>{isLoading ? '-' : summary.admins}</CardTitle>
+            <CardTitle>{isLoading ? '-' : summary.managementUsers}</CardTitle>
           </CardContent>
         </Card>
       </section>

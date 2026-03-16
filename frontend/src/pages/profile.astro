@@ -1,7 +1,8 @@
 ---
 import DashboardLayout from "../layouts/DashboardLayout.astro";
+import ProfilePageContent from "../features/dashboard/ProfilePageContent";
 ---
 
 <DashboardLayout>
-  <h1>Profile</h1>
+  <ProfilePageContent client:load />
 </DashboardLayout>

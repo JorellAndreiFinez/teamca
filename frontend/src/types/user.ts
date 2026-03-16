@@ -8,7 +8,7 @@ export interface User {
   email: string; 
   global_role: GlobalRole; 
   department_role: DepartmentRole;
-  department_id?: number;
+  department_id?: number | string;
   is_active: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -24,7 +24,8 @@ export interface InternProfile {
 }
 
 export interface Department {
-  department_id: number;
+  _id?: string;
+  department_id?: number | string;
   department_name: string;
   supervisor_id?: string;
   head_id?: string; 

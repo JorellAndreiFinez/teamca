@@ -23,12 +23,16 @@ export const listUsers = async (req: Request, res: Response) => {
     }
 
     const users = await getAllUsers();
-    if (req.user.global_role === 'Superadmin' || req.user.global_role === 'Admin') {
+    if (
+      req.user.global_role === 'Superadmin' ||
+      req.user.global_role === 'Admin' ||
+      hasDepartmentRoleIn(req.user, ['Supervisor'])
+    ) {
       return res.status(200).json(users);
     }
 
     const requesterId = String(req.user.user_id);
-    const requesterCanViewTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
+    const requesterCanViewTeam = hasDepartmentRoleIn(req.user, ['Head']);
 
     if (!requesterCanViewTeam) {
       const ownUser = users.filter((user) => String(user._id) === requesterId);
@@ -53,7 +57,11 @@ export const getUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    if (req.user.global_role === 'Superadmin' || req.user.global_role === 'Admin') {
+    if (
+      req.user.global_role === 'Superadmin' ||
+      req.user.global_role === 'Admin' ||
+      hasDepartmentRoleIn(req.user, ['Supervisor'])
+    ) {
       return res.status(200).json(user);
     }
 
@@ -62,7 +70,7 @@ export const getUser = async (req: Request, res: Response) => {
       return res.status(200).json(user);
     }
 
-    const requesterCanViewTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
+    const requesterCanViewTeam = hasDepartmentRoleIn(req.user, ['Head']);
     if (requesterCanViewTeam && hasSharedDepartment(req.user, user.departments ?? [])) {
       return res.status(200).json(user);
     }
@@ -150,7 +158,7 @@ export const activateUser = async (req: Request, res: Response) => {
   }
 };
 
-// make sure control is only accessible by superadmin or the user themselves
+// only superadmin can manage other user accounts; users can still update themselves
 export const updateUserById = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
@@ -165,12 +173,8 @@ export const updateUserById = async (req: Request, res: Response) => {
 
     const isSelfUpdate = isSameUser(req.user, targetUserId);
     const isSuperadmin = req.user.global_role === 'Superadmin';
-    const isAdmin = req.user.global_role === 'Admin';
-    const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
-    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
 
-    const canAccessTarget =
-      isSuperadmin || isAdmin || isSelfUpdate || (canManageTeam && sharesDepartment);
+    const canAccessTarget = isSuperadmin || isSelfUpdate;
 
     if (!canAccessTarget) {
       return res.status(403).json({ message: 'Insufficient permissions to update this user.' });

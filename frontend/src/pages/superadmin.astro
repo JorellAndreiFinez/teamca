@@ -5,9 +5,14 @@ import RouteGuard from '../components/common/RouteGuard';
 ---
 
 <DashboardLayout>
-  <RouteGuard mode="protected" allowedGlobalRoles={['Superadmin']} client:load />
+  <RouteGuard
+    mode="protected"
+    allowedGlobalRoles={['Superadmin', 'Admin']}
+    allowedDepartmentRoles={['Head', 'Supervisor']}
+    client:load
+  />
   <div class="space-y-4 p-4">
-    <h1 class="text-2xl font-bold text-slate-900">Superadmin Dashboard</h1>
+    <h1 class="text-2xl font-bold text-slate-900">User Management</h1>
     <SuperadminDashboard client:load />
   </div>
 </DashboardLayout>

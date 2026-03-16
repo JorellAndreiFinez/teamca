@@ -13,7 +13,14 @@ const frontendUrl = process.env.FRONTEND_URL ?? '*';
 
 app.use(
 	cors({
-		origin: frontendUrl,
+		origin: (origin, callback) => {
+			// allow requests with no origin 
+			if (!origin || origin.startsWith('http://localhost') || origin === frontendUrl) {
+				callback(null, true);
+			} else {
+				callback(new Error('Not allowed by CORS'));
+			}
+		},
 		credentials: true,
 	})
 );

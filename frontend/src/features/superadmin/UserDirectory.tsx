@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { userService } from '../../services/userService';
 import { useAuthStore } from '../../store/authStore';
 import type { User } from '../../types/user';
@@ -11,18 +11,40 @@ const getDepartmentRoleLabel = (user: User): string => {
     departments?: Array<{ department_role?: string }>;
   };
 
+  const toPosition = (role?: string) => {
+    if (!role) return undefined;
+    if (role === 'Intern') return 'Member';
+    return role;
+  };
+
   if (user.department_role) {
-    return user.department_role;
+    return toPosition(user.department_role) ?? 'Not assigned';
   }
 
   if (userRecord.departments && userRecord.departments.length > 0) {
     return userRecord.departments
-      .map((department) => department.department_role)
+      .map((department) => toPosition(department.department_role))
       .filter(Boolean)
-      .join(', ');
+      .join(', ') || 'Not assigned';
   }
 
   return 'Not assigned';
+};
+
+const getAccessLevelLabel = (user: User): string => {
+  if (user.global_role === 'Superadmin') {
+    return 'Full Access';
+  }
+
+  if (user.global_role === 'Admin') {
+    return 'Management Access';
+  }
+
+  if (user.global_role === 'Standard_User') {
+    return 'Standard Access';
+  }
+
+  return 'Pending setup';
 };
 
 export default function UserDirectory() {
@@ -60,7 +82,7 @@ export default function UserDirectory() {
     void loadUsers();
   }, [allowedToView]);
 
-  const handleWhitelist = async (event: React.FormEvent) => {
+  const handleWhitelist = async (event: FormEvent) => {
     event.preventDefault();
     if (!newEmail.trim() || !canWhitelistEmails()) {
       return;
@@ -130,8 +152,8 @@ export default function UserDirectory() {
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-2 py-3">Name</th>
                 <th className="px-2 py-3">Email</th>
-                <th className="px-2 py-3">Global Role</th>
-                <th className="px-2 py-3">Department Role</th>
+                <th className="px-2 py-3">Access</th>
+                <th className="px-2 py-3">Position</th>
                 <th className="px-2 py-3">Status</th>
               </tr>
             </thead>
@@ -140,7 +162,7 @@ export default function UserDirectory() {
                 <tr key={user.user_id} className="border-b border-slate-100 text-sm text-slate-700">
                   <td className="px-2 py-3">{`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || 'Pending setup'}</td>
                   <td className="px-2 py-3">{user.email}</td>
-                  <td className="px-2 py-3">{user.global_role ?? 'Pending setup'}</td>
+                  <td className="px-2 py-3">{getAccessLevelLabel(user)}</td>
                   <td className="px-2 py-3">{getDepartmentRoleLabel(user)}</td>
                   <td className="px-2 py-3">{user.is_active ? 'Active' : 'Whitelisted'}</td>
                 </tr>

@@ -15,8 +15,11 @@ const getDepartmentIdParam = (req: Request): string => {
 export const listDepartments = async (_req: Request, res: Response) => {
   try {
     const reqUser = _req.user;
+
+    // Unauthenticated (e.g. first-time setup form) — return all departments
     if (!reqUser) {
-      return res.status(401).json({ message: 'Authentication required.' });
+      const departments = await getAllDepartments();
+      return res.status(200).json(departments);
     }
 
     if (reqUser.global_role === 'Superadmin' || reqUser.global_role === 'Admin') {
