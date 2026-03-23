@@ -1,25 +1,15 @@
-import { Router } from 'express';
+import express from "express";
 import {
-  activateUser,
-  createUserHandler,
-  getUser,
-  listUsers,
-  updateUserById,
-  upsertInternProfileByUserId,
-  whitelistUserEmail,
-} from '../controllers/userController';
-import authenticateJWT from '../middleware/auth';
-import { requireGlobalRole } from '../middleware/rbac';
+  getUsers,
+  getUserById,
+  updateUser,
+} from "../controllers/userController";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
-const router = Router();
+const router = express.Router();
 
-router.get('/', authenticateJWT, listUsers);
-router.get('/:userId', authenticateJWT, getUser);
-
-router.post('/', authenticateJWT, requireGlobalRole('Superadmin'), createUserHandler);
-router.put('/:userId', authenticateJWT, updateUserById);
-router.post('/whitelist', authenticateJWT, requireGlobalRole('Superadmin'), whitelistUserEmail);
-router.put('/:userId/activate', authenticateJWT, requireGlobalRole('Superadmin'), activateUser);
-router.put('/:userId/intern-profile', authenticateJWT, upsertInternProfileByUserId);
+router.get("/", authMiddleware, getUsers);
+router.get("/:userId", authMiddleware, getUserById);
+router.put("/:userId", authMiddleware, updateUser);
 
 export default router;

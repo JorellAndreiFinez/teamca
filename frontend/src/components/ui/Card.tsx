@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { cn } from '../../lib/utils';
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -8,32 +8,45 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = 'Card';
+=======
+type DivProps = React.HTMLAttributes<HTMLDivElement>;
+type CardProps = DivProps & {
+  title?: string;
+  subtitle?: string;
+};
+>>>>>>> 75180937812242ebfb8c998aa2d5b47944bfdfa3
 
-const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />
-);
-CardHeader.displayName = 'CardHeader';
+export function Card({ className = '', title, subtitle, children, ...props }: CardProps) {
+  return (
+    <div className={`rounded-xl border border-gray-200 bg-white shadow-sm ${className}`} {...props}>
+      {(title || subtitle) && (
+        <div className="border-b border-gray-100 px-6 py-4">
+          {title && <h3 className="text-base font-semibold text-gray-900">{title}</h3>}
+          {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
+        </div>
+      )}
+      {title || subtitle ? <div className="px-6 py-4">{children}</div> : children}
+    </div>
+  );
+}
 
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => <h3 ref={ref} className={cn('text-2xl font-semibold leading-none tracking-tight', className)} {...props} />
-);
-CardTitle.displayName = 'CardTitle';
+export function CardHeader({ className = '', ...props }: DivProps) {
+  return <div className={`border-b border-gray-100 px-6 py-4 ${className}`} {...props} />;
+}
 
-const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => <p ref={ref} className={cn('text-sm text-slate-500', className)} {...props} />
-);
-CardDescription.displayName = 'CardDescription';
+export function CardTitle({ className = '', ...props }: DivProps) {
+  return <h3 className={`text-base font-semibold text-gray-900 ${className}`} {...props} />;
+}
 
-const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
-);
-CardContent.displayName = 'CardContent';
+export function CardDescription({ className = '', ...props }: DivProps) {
+  return <p className={`mt-0.5 text-sm text-gray-500 ${className}`} {...props} />;
+}
 
-const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('flex items-center p-6 pt-0', className)} {...props} />
-);
-CardFooter.displayName = 'CardFooter';
+export function CardContent({ className = '', ...props }: DivProps) {
+  return <div className={`px-6 py-4 ${className}`} {...props} />;
+}
 
+<<<<<<< HEAD
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
 =======
 interface CardProps {
@@ -57,3 +70,6 @@ export default function Card({ children, className = '', title, subtitle }: Card
   );
 }
 >>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
+=======
+export default Card;
+>>>>>>> 75180937812242ebfb8c998aa2d5b47944bfdfa3

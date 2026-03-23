@@ -93,12 +93,8 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   user.is_active = true;
 
   if (payload.department_id) {
-    user.set('departments', [
-      {
-        department_id: payload.department_id,
-        department_role: 'Intern',
-      },
-    ]);
+    user.department_id = payload.department_id;
+    user.department_role = 'Intern';
   }
 
   await user.save();

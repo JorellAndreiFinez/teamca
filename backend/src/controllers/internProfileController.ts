@@ -28,7 +28,7 @@ export const getInternProfileByUser = async (req: Request, res: Response) => {
     const isAdmin = req.user.global_role === 'Admin';
     const isSelf = isSameUser(req.user, targetUserId);
     const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
-    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
+    const sharesDepartment = hasSharedDepartment(req.user, targetUser.department_id);
 
     if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
       return res.status(403).json({ message: 'Insufficient permissions to view this intern profile.' });
@@ -83,7 +83,7 @@ export const createInternProfileHandler = async (req: Request, res: Response) =>
     const isAdmin = req.user.global_role === 'Admin';
     const isSelf = isSameUser(req.user, payload.user_id);
     const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
-    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
+    const sharesDepartment = hasSharedDepartment(req.user, targetUser.department_id);
 
     if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
       return res.status(403).json({ message: 'Insufficient permissions to create this intern profile.' });
@@ -127,7 +127,7 @@ export const updateInternProfileByUser = async (req: Request, res: Response) => 
     const isAdmin = req.user.global_role === 'Admin';
     const isSelf = isSameUser(req.user, targetUserId);
     const canManageTeam = hasDepartmentRoleIn(req.user, ['Head', 'Supervisor']);
-    const sharesDepartment = hasSharedDepartment(req.user, targetUser.departments ?? []);
+    const sharesDepartment = hasSharedDepartment(req.user, targetUser.department_id);
 
     if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
       return res.status(403).json({ message: 'Insufficient permissions to update this intern profile.' });
