@@ -1,16 +1,15 @@
 ---
-import RouteGuard from '../components/common/RouteGuard';
+import '../styles/globals.css';
 ---
 
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Authentication</title>
+    <title>TeamCA — Sign In</title>
   </head>
-  <body>
-    <RouteGuard mode="auth" client:load />
-    <div class="auth-layout">
+  <body class="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
+    <div class="auth-layout w-full flex items-center justify-center">
       <slot />
     </div>
   </body>

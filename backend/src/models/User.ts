@@ -1,84 +1,34 @@
-import { Schema, model, type InferSchemaType } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
-const userDepartmentSchema = new Schema(
-  {
-    department_id: {
-      type: Schema.Types.ObjectId,
-      ref: 'Department',
-      required: true,
-    },
-    department_role: {
-      type: String,
-      enum: ['Head', 'Supervisor', 'Intern'],
-      required: true,
-    },
-  },
-  {
-    _id: false,
-  }
-);
+export interface IUser extends Document {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password_hash: string;
+  global_role: "Superadmin" | "Admin" | "Standard_User";
+  department_role?: "Head" | "Supervisor" | "Intern";
+  department_id?: number;
+  is_active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-const userSchema = new Schema(
+const userSchema = new Schema<IUser>(
   {
-    first_name: {
-      type: String,
-      trim: true,
-      default: null,
-      required(this: { is_active: boolean }) {
-        return this.is_active === true;
-      },
-    },
-    last_name: {
-      type: String,
-      trim: true,
-      default: null,
-      required(this: { is_active: boolean }) {
-        return this.is_active === true;
-      },
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-      index: true,
-      match: [/^\S+@\S+\.\S+$/, 'Invalid email format'],
-    },
-    password_hash: {
-      type: String,
-      default: null,
-      required(this: { is_active: boolean }) {
-        return this.is_active === true;
-      },
-      minlength: 8,
-    },
+    first_name: { type: String, default: "" },
+    last_name: { type: String, default: "" },
+    email: { type: String, required: true, unique: true },
+    password_hash: { type: String, required: true },
     global_role: {
       type: String,
-      enum: ['Superadmin', 'Admin', 'Standard_User'],
-      default: null,
-      required(this: { is_active: boolean }) {
-        return this.is_active === true;
-      },
+      enum: ["Superadmin", "Admin", "Standard_User"],
+      default: "Standard_User",
     },
-    is_active: {
-      type: Boolean,
-      default: false,
-      required: true,
-    },
-    departments: {
-      type: [userDepartmentSchema],
-      default: [],
-    },
+    department_role: { type: String, enum: ["Head", "Supervisor", "Intern"] },
+    department_id: Number,
+    is_active: { type: Boolean, default: true },
   },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
+  { timestamps: true },
 );
 
-export type UserDocument = InferSchemaType<typeof userSchema>;
-
-export const User = model<UserDocument>('User', userSchema);
-
-export default User;
+export default mongoose.model<IUser>("User", userSchema);

@@ -10,25 +10,20 @@ const api = axios.create({
 
 // request interceptor to add token
 api.interceptors.request.use(
-  (requestConfig: InternalAxiosRequestConfig) => {
-    if (typeof window !== 'undefined') {
-      const persisted = window.localStorage.getItem('auth-storage');
-
-      if (persisted) {
-        try {
-          const parsed = JSON.parse(persisted) as { state?: { token?: string | null } };
-          const token = parsed?.state?.token;
-
-          if (token) {
-            requestConfig.headers.Authorization = `Bearer ${token}`;
-          }
-        } catch {
-          // ignore persistent payloads that can't be parsed
+  (reqConfig) => {
+    try {
+      const stored = localStorage.getItem('auth-storage');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const token = parsed?.state?.token;
+        if (token) {
+          reqConfig.headers.Authorization = `Bearer ${token}`;
         }
       }
+    } catch {
+      // ignore parse errors
     }
-
-    return requestConfig;
+    return reqConfig;
   },
   (error: AxiosError) => {
     return Promise.reject(error);
@@ -37,8 +32,12 @@ api.interceptors.request.use(
 
 // response interceptor to handle errors
 api.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error: AxiosError) => {
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth-storage');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

@@ -1,47 +1,39 @@
-import cors from 'cors';
-import dotenv from 'dotenv';
-import express from 'express';
-import mongoose from 'mongoose';
-import routes from './routes';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
+import { connectDB } from "./config/db";
 
 dotenv.config();
-
 const app = express();
-const port = Number(process.env.PORT ?? 3000);
-const mongoUri = process.env.MONGODB_URI;
-const frontendUrl = process.env.FRONTEND_URL ?? '*';
+const PORT = process.env.PORT || 3000;
 
-app.use(
-	cors({
-		origin: (origin, callback) => {
-			// allow requests with no origin 
-			if (!origin || origin.startsWith('http://localhost') || origin === frontendUrl) {
-				callback(null, true);
-			} else {
-				callback(new Error('Not allowed by CORS'));
-			}
-		},
-		credentials: true,
-	})
-);
+app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
-	return res.status(200).json({ status: 'ok' });
-});
+// ── Rate limiters
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 
-app.use(routes);
+// ── MongoDB connection
+connectDB().then(() => console.log("MongoDB ready"));
 
-const start = async () => {
-	if (!mongoUri) {
-		throw new Error('MONGODB_URI is not configured.');
-	}
+// ── Routes
+import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/userRoutes";
+// import dtrRoutes from "./routes/dtrRoutes";
+// import taskRoutes from "./routes/taskRoutes";
 
-	await mongoose.connect(mongoUri);
-	app.listen(port, () => {
-		// eslint-disable-next-line no-console
-		console.log(`Backend server listening on port ${port}`);
-	});
-};
+app.use("/auth", authLimiter, authRoutes);
+app.use("/users", apiLimiter, userRoutes);
+// app.use("/dtr", apiLimiter, dtrRoutes);
+// app.use("/tasks", apiLimiter, taskRoutes);
 
-void start();
+// ── Health check
+app.get("/health", (_req, res) =>
+  res.json({ status: "ok", timestamp: new Date().toISOString() }),
+);
+
+app.listen(PORT, () =>
+  console.log(`Server running at http://localhost:${PORT}`),
+);

@@ -1,18 +1,8 @@
 ---
 import DashboardLayout from "../layouts/DashboardLayout.astro";
-import SuperadminDashboard from "../features/superadmin/SuperadminDashboard";
-import RouteGuard from '../components/common/RouteGuard';
+import SuperadminDashboard from "../features/dashboard/SuperadminDashboard";
 ---
 
 <DashboardLayout>
-  <RouteGuard
-    mode="protected"
-    allowedGlobalRoles={['Superadmin', 'Admin']}
-    allowedDepartmentRoles={['Head', 'Supervisor']}
-    client:load
-  />
-  <div class="space-y-4 p-4">
-    <h1 class="text-2xl font-bold text-slate-900">User Management</h1>
-    <SuperadminDashboard client:load />
-  </div>
+  <SuperadminDashboard client:load />
 </DashboardLayout>

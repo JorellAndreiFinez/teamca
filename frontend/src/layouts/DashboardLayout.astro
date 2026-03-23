@@ -1,5 +1,5 @@
 ---
-import RouteGuard from '../components/common/RouteGuard';
+import '../styles/globals.css';
 import Sidebar from '../components/common/Sidebar';
 ---
 
@@ -7,26 +7,39 @@ import Sidebar from '../components/common/Sidebar';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard</title>
+    <title>TeamCA</title>
+    <script>
+      // Client-side auth guard
+      const stored = localStorage.getItem('auth-storage');
+      if (!stored) {
+        window.location.replace('/login');
+      } else {
+        try {
+          const parsed = JSON.parse(stored);
+          if (!parsed?.state?.isAuthenticated || !parsed?.state?.token) {
+            window.location.replace('/login');
+          }
+        } catch {
+          window.location.replace('/login');
+        }
+      }
+    </script>
   </head>
-  <body class="bg-slate-50 text-slate-900">
-    <RouteGuard mode="protected" client:load />
-    <div class="mx-auto min-h-screen max-w-7xl p-4 md:p-6">
-      <div class="grid min-h-[85vh] grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[240px,1fr]">
-      <!-- Sidebar -->
-      <aside class="border-b border-slate-200 lg:border-b-0 lg:border-r">
-        <Sidebar client:load />
-      </aside>
+  <body class="bg-gray-50 min-h-screen">
+    <!-- Sidebar -->
+    <Sidebar client:load />
 
-      <!-- Main -->
-      <main class="min-w-0">
-        <header class="border-b border-slate-200 px-4 py-3 text-sm text-slate-500">
-          TeamCA Dashboard
-        </header>
-
+    <!-- Main content area with offset for sidebar -->
+    <div id="main-content" class="transition-all duration-300 ml-64">
+      <main class="min-h-screen p-6">
         <slot />
       </main>
       </div>
     </div>
+
+    <script>
+      // Dynamically adjust main content margin when sidebar collapses
+      // TODO: listen for sidebar collapse events and update #main-content margin
+    </script>
   </body>
 </html>

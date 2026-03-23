@@ -1,10 +1,8 @@
 ---
-import DashboardLayout from '../layouts/DashboardLayout.astro';
-import RoleDashboard from '../features/dashboard/RoleDashboard';
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import Dashboard from "../features/dashboard/Dashboard";
 ---
 
 <DashboardLayout>
-  <div class="p-4">
-    <RoleDashboard client:load />
-  </div>
+  <Dashboard client:load />
 </DashboardLayout>
