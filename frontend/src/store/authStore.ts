@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { User } from '../types/user';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { User } from "../types/user";
 
 interface AuthState {
   token: string | null;
@@ -30,7 +30,7 @@ interface AuthState {
   canAssignRoles: () => boolean;
   canViewAllDepartments: () => boolean;
   canManageOwnDepartment: () => boolean;
-  
+
   // util
   getUserFullName: () => string;
   getUserDepartmentId: () => number | null;
@@ -52,52 +52,52 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: (token: string, user: User) => {
-        set({ 
-          token, 
-          user, 
-          isAuthenticated: true 
+        set({
+          token,
+          user,
+          isAuthenticated: true,
         });
       },
 
       logout: () => {
-        set({ 
-          token: null, 
-          user: null, 
-          isAuthenticated: false 
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
         });
-        localStorage.removeItem('auth-storage');
+        localStorage.removeItem("auth-storage");
       },
 
       // check global role
       isSuperadmin: () => {
         const { user } = get();
-        return user?.global_role === 'Superadmin';
+        return user?.global_role === "Superadmin";
       },
 
       isAdmin: () => {
         const { user } = get();
-        return user?.global_role === 'Admin';
+        return user?.global_role === "Admin";
       },
 
       isStandardUser: () => {
         const { user } = get();
-        return user?.global_role === 'Standard_User';
+        return user?.global_role === "Standard_User";
       },
 
       // check dept role
       isDepartmentHead: () => {
         const { user } = get();
-        return user?.department_role === 'Head';
+        return user?.department_role === "Head";
       },
 
       isSupervisor: () => {
         const { user } = get();
-        return user?.department_role === 'Supervisor';
+        return user?.department_role === "Supervisor";
       },
 
       isIntern: () => {
         const { user } = get();
-        return user?.department_role === 'Intern';
+        return user?.department_role === "Intern";
       },
 
       // advanced permission checks
@@ -105,74 +105,90 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return false;
 
-        if (user.global_role === 'Superadmin' || user.global_role === 'Admin') {
+        if (user.global_role === "Superadmin" || user.global_role === "Admin") {
           return true;
         }
 
-        return user.department_role === 'Head' || user.department_role === 'Supervisor';
+        return (
+          user.department_role === "Head" ||
+          user.department_role === "Supervisor"
+        );
       },
 
       canManageUsers: () => {
         const { user } = get();
         if (!user) return false;
 
-        return user.global_role === 'Superadmin';
+        return user.global_role === "Superadmin";
       },
 
       canWhitelistEmails: () => {
         const { user } = get();
         if (!user) return false;
-        
+
         // allow only Superadmins to whitelist emails
-        return user.global_role === 'Superadmin';
+        return user.global_role === "Superadmin";
       },
 
       canManageDepartments: () => {
         const { user } = get();
         if (!user) return false;
-        
+
         // allow Superadmins and Admins to manage departments
-        return user.global_role === 'Superadmin' || user.global_role === 'Admin';
+        return (
+          user.global_role === "Superadmin" || user.global_role === "Admin"
+        );
       },
 
       canAssignRoles: () => {
         const { user } = get();
         if (!user) return false;
 
-        return user.global_role === 'Superadmin';
+        return user.global_role === "Superadmin";
       },
 
       canViewAllDepartments: () => {
         const { user } = get();
         if (!user) return false;
-        
+
         // allow Superadmins and Admins to view all departments
-        return user.global_role === 'Superadmin' || user.global_role === 'Admin';
+        return (
+          user.global_role === "Superadmin" || user.global_role === "Admin"
+        );
       },
 
       canManageOwnDepartment: () => {
         const { user } = get();
         if (!user) return false;
-        
+
         // allow Department Heads and Supervisors to manage their own department
-        return user.department_role === 'Head' || user.department_role === 'Supervisor';
+        return (
+          user.department_role === "Head" ||
+          user.department_role === "Supervisor"
+        );
       },
 
       // util functions
       getUserFullName: () => {
         const { user } = get();
-        if (!user) return 'Guest';
+        if (!user) return "Guest";
         return `${user.first_name} ${user.last_name}`;
       },
 
       getUserDepartmentId: () => {
         const { user } = get();
-        if (!user || typeof user.department_id === 'undefined' || user.department_id === null) {
+        if (
+          !user ||
+          typeof user.department_id === "undefined" ||
+          user.department_id === null
+        ) {
           return null;
         }
 
-        if (typeof user.department_id === 'number') {
-          return Number.isFinite(user.department_id) ? user.department_id : null;
+        if (typeof user.department_id === "number") {
+          return Number.isFinite(user.department_id)
+            ? user.department_id
+            : null;
         }
 
         const parsed = Number(user.department_id);
@@ -180,7 +196,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       // only persist token and user, not computed values
       partialize: (state) => ({
         token: state.token,
@@ -190,6 +206,6 @@ export const useAuthStore = create<AuthState>()(
         if (!state) return;
         state.isAuthenticated = Boolean(state.token && state.user);
       },
-    }
-  )
+    },
+  ),
 );
