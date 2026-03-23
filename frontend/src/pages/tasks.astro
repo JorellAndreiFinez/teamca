@@ -4,5 +4,25 @@ import TasksPage from "../features/tasks/TasksPage";
 ---
 
 <DashboardLayout>
-  <TasksPage client:load />
+  <TasksPage client:only="react">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-semibold text-slate-900">Tasks</h1>
+          <p class="mt-1 text-sm text-slate-500">Loading tasks tracker...</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {
+          Array.from({ length: 6 }).map(() => (
+            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div class="mb-2 h-4 w-2/3 animate-pulse rounded bg-slate-200" />
+              <div class="mb-3 h-3 w-full animate-pulse rounded bg-slate-100" />
+              <div class="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </TasksPage>
 </DashboardLayout>

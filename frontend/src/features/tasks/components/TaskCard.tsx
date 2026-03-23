@@ -1,7 +1,6 @@
 import Button from '../../../components/ui/Button';
 import type { Task, TaskFeedback, TaskStatus } from '../../../types/task';
-
-type StatusActions = { canEdit: boolean; advance?: TaskStatus; revert?: TaskStatus };
+import type { StatusActions } from '../domain/taskPolicy';
 
 type AssignableUser = {
   id: string;

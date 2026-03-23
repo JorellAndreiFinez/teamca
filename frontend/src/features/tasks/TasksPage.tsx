@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { useAuthStore } from '../../store/authStore';
 import { taskService } from '../../services/taskService';
-import { userService } from '../../services/userService';
 import type { CreateTaskPayload, Task, TaskFeedback, TaskPriority, TaskStatus, TaskStatusHistory, TaskWorkLink } from '../../types/task';
 import type { User } from '../../types/user';
 import Button from '../../components/ui/Button';
@@ -11,12 +10,13 @@ import Modal from '../../components/ui/Modal';
 import TaskCard from './components/TaskCard';
 import TimelineModal from './components/TimelineModal';
 import WorkLinksModal from './components/WorkLinksModal';
+import { canEditWorkLinks, getTaskStatusActions } from './domain/taskPolicy';
+import { useTasksData } from './hooks/useTasksData';
 
 const ALL_STATUSES: TaskStatus[] = ['Not Started', 'In Progress', 'Under Review', 'Completed'];
 const ALL_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High'];
 const TASKS_PER_PAGE = 10;
 
-type StatusActions = { canEdit: boolean; advance?: TaskStatus; revert?: TaskStatus };
 type PendingWorkLinkDeletion = {
   taskId: string;
   workLinkId: string;
@@ -42,30 +42,6 @@ const toggleSelection = (selected: string[], userId: string): string[] => {
   return [...selected, userId];
 };
 
-const hasSetupName = (user: RawUser): boolean => {
-  return Boolean(user.first_name?.trim() && user.last_name?.trim());
-};
-
-const MANAGER_ADVANCE: Partial<Record<TaskStatus, TaskStatus>> = {
-  'Not Started': 'In Progress',
-  'In Progress': 'Under Review',
-  'Under Review': 'Completed',
-};
-
-const MANAGER_REVERT: Partial<Record<TaskStatus, TaskStatus>> = {
-  'In Progress': 'Not Started',
-  'Under Review': 'In Progress',
-};
-
-const INTERN_ADVANCE: Partial<Record<TaskStatus, TaskStatus>> = {
-  'Not Started': 'In Progress',
-  'In Progress': 'Under Review',
-};
-
-const INTERN_REVERT: Partial<Record<TaskStatus, TaskStatus>> = {
-  'In Progress': 'Not Started',
-};
-
 export default function TasksPage() {
   const user = useAuthStore((state) => state.user as RawUser | null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -73,9 +49,6 @@ export default function TasksPage() {
   const canManageOwnDepartment = useAuthStore((state) => state.canManageOwnDepartment);
 
   const [mounted, setMounted] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [users, setUsers] = useState<RawUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [statusUpdatingTaskId, setStatusUpdatingTaskId] = useState<string | null>(null);
@@ -108,6 +81,18 @@ export default function TasksPage() {
   const canAssign = isGlobalManager || isDepartmentManager || isInternAssigner;
   const currentDepartmentId = user?.department_id ? String(user.department_id) : '';
 
+  const { tasks, users, isLoading, isRefreshing, lastSyncedAt, loadTasksData } = useTasksData({
+    mounted,
+    isAuthenticated,
+    canAssign,
+    isGlobalManager,
+    isDepartmentManager,
+    isInternAssigner,
+    currentDepartmentId,
+    currentUserId,
+    onError: setServerError,
+  });
+
   const [createForm, setCreateForm] = useState<CreateTaskPayload>({
     title: '',
     description: '',
@@ -123,51 +108,6 @@ export default function TasksPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!mounted || !isAuthenticated) return;
-
-    const loadData = async () => {
-      setIsLoading(true);
-      setServerError('');
-
-      try {
-        const [taskItems, allUsers] = await Promise.all([
-          taskService.getTasks(),
-          canAssign ? userService.getAllUsers() : Promise.resolve([]),
-        ]);
-
-        const scopedUsers = (allUsers as RawUser[]).filter((item) => {
-          if (!item.is_active || !hasSetupName(item)) {
-            return false;
-          }
-
-          if (isGlobalManager) {
-            return true;
-          }
-
-          if (isDepartmentManager || isInternAssigner) {
-            return (
-              !!currentDepartmentId &&
-              !!item.department_id &&
-              String(item.department_id) === currentDepartmentId
-            );
-          }
-
-          return getUserId(item) === currentUserId;
-        });
-
-        setTasks(taskItems);
-        setUsers(scopedUsers);
-      } catch (error: any) {
-        setServerError(error?.response?.data?.message || 'Failed to load tasks.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void loadData();
-  }, [mounted, isAuthenticated, canAssign, isGlobalManager, isDepartmentManager, isInternAssigner, currentDepartmentId, currentUserId]);
 
   useEffect(() => {
     const fallbackId = users[0]?._id || users[0]?.user_id || currentUserId;
@@ -293,8 +233,7 @@ export default function TasksPage() {
 
       await taskService.createTask(payload);
 
-      const updated = await taskService.getTasks();
-      setTasks(updated);
+      await loadTasksData({ silent: true });
 
       setCreateForm({
         title: '',
@@ -314,37 +253,12 @@ export default function TasksPage() {
     }
   };
 
-  const getTaskStatusActions = (task: Task): StatusActions => {
-    const isManager = isGlobalManager || isDepartmentManager;
-    const taskAssignees = task.assignees ?? [];
-    const isOwnTask = String(task.created_by) === currentUserId || taskAssignees.includes(currentUserId);
-
-    if (!isManager && !isOwnTask) {
-      return { canEdit: false };
-    }
-
-    if (task.status === 'Completed') {
-      return { canEdit: false };
-    }
-
-    if (isManager) {
-      return {
-        canEdit: true,
-        advance: MANAGER_ADVANCE[task.status],
-        revert: MANAGER_REVERT[task.status],
-      };
-    }
-
-    return {
-      canEdit: true,
-      advance: INTERN_ADVANCE[task.status],
-      revert: INTERN_REVERT[task.status],
-    };
-  };
-
-  const canEditWorkLinks = (task: Task, statusActions: StatusActions) => {
-    return statusActions.canEdit && task.status !== 'Under Review' && task.status !== 'Completed';
-  };
+  const getActionsForTask = (task: Task) =>
+    getTaskStatusActions(task, {
+      currentUserId,
+      isGlobalManager,
+      isDepartmentManager,
+    });
 
   const loadTaskFeedback = async (taskId: string) => {
     setFeedbackLoadingTaskId(taskId);
@@ -536,8 +450,7 @@ export default function TasksPage() {
       }
 
       await taskService.assignTask(taskId, payload);
-      const updated = await taskService.getTasks();
-      setTasks(updated);
+      await loadTasksData({ silent: true });
       setAssignDraftByTaskId((prev) => ({ ...prev, [taskId]: [] }));
     } catch (error: any) {
       setServerError(error?.response?.data?.message || 'Failed to assign users to task.');
@@ -560,8 +473,7 @@ export default function TasksPage() {
         status: nextStatus,
       });
 
-      const updated = await taskService.getTasks();
-      setTasks(updated);
+      await loadTasksData({ silent: true });
 
       if (timelineModalTaskId === taskId) {
         await loadTaskStatusHistory(taskId);
@@ -583,10 +495,24 @@ export default function TasksPage() {
               ? 'Create and assign tasks across all departments.'
               : 'Create and assign tasks for your current department.'}
           </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {lastSyncedAt ? `Last update: ${lastSyncedAt.toLocaleTimeString()}` : 'Waiting for first sync...'}
+            {isRefreshing ? ' (refreshing...)' : ''}
+          </p>
         </div>
-        <Button variant="primary" size="md" onClick={() => setIsCreateModalOpen(true)}>
-          + New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            loading={isRefreshing}
+            onClick={() => void loadTasksData({ silent: true })}
+          >
+            Refresh
+          </Button>
+          <Button variant="primary" size="md" onClick={() => setIsCreateModalOpen(true)}>
+            + New Task
+          </Button>
+        </div>
       </div>
 
       {serverError && (
@@ -632,7 +558,7 @@ export default function TasksPage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {pagedTasks.map((task) => {
-              const statusActions = getTaskStatusActions(task);
+              const statusActions = getActionsForTask(task);
               const taskId = String(task.task_id);
               const selectedAssignees = assignDraftByTaskId[taskId] || [];
               const feedbackItems = feedbackByTaskId[taskId] || [];
@@ -758,7 +684,7 @@ export default function TasksPage() {
         task={workLinksTask}
         links={workLinksModalTaskId ? (workLinksByTaskId[workLinksModalTaskId] || []) : []}
         loading={!!workLinksModalTaskId && workLinksLoadingTaskId === workLinksModalTaskId}
-        canEdit={!!workLinksTask && canEditWorkLinks(workLinksTask, getTaskStatusActions(workLinksTask))}
+        canEdit={!!workLinksTask && canEditWorkLinks(workLinksTask, getActionsForTask(workLinksTask))}
         draft={workLinksTask ? (workLinkDraftByTaskId[String(workLinksTask.task_id)] || { url: '', label: '' }) : { url: '', label: '' }}
         submitting={!!workLinksTask && workLinksSubmittingTaskId === String(workLinksTask.task_id)}
         deletingId={workLinksDeletingId}
