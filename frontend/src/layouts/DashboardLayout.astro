@@ -1,26 +1,32 @@
+---
+import RouteGuard from '../components/common/RouteGuard';
+import Sidebar from '../components/common/Sidebar';
+---
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard</title>
   </head>
-  <body>
-    <div class="dashboard-layout">
+  <body class="bg-slate-50 text-slate-900">
+    <RouteGuard mode="protected" client:load />
+    <div class="mx-auto min-h-screen max-w-7xl p-4 md:p-6">
+      <div class="grid min-h-[85vh] grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[240px,1fr]">
       <!-- Sidebar -->
-      <aside class="sidebar">
-        <nav>
-          <!-- Nav items -->
-        </nav>
+      <aside class="border-b border-slate-200 lg:border-b-0 lg:border-r">
+        <Sidebar client:load />
       </aside>
 
       <!-- Main -->
-      <main>
-        <header>
-          <!-- Header -->
+      <main class="min-w-0">
+        <header class="border-b border-slate-200 px-4 py-3 text-sm text-slate-500">
+          TeamCA Dashboard
         </header>
 
         <slot />
       </main>
+      </div>
     </div>
   </body>
 </html>

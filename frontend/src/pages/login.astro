@@ -1,7 +1,10 @@
 ---
 import AuthLayout from "../layouts/AuthLayout.astro";
+import LoginForm from "../features/auth/LoginForm";
 ---
 
 <AuthLayout>
-  <h1>Login</h1>
+  <div class="min-h-screen bg-slate-50 px-4 py-10">
+    <LoginForm client:load />
+  </div>
 </AuthLayout>

@@ -1,0 +1,10 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import RoleDashboard from '../features/dashboard/RoleDashboard';
+---
+
+<DashboardLayout>
+  <div class="p-4">
+    <RoleDashboard client:load />
+  </div>
+</DashboardLayout>

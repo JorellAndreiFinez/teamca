@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, GlobalRole, DepartmentRole } from '../types/user';
+import type { User } from '../types/user';
 
 interface AuthState {
   token: string | null;
@@ -104,19 +104,19 @@ export const useAuthStore = create<AuthState>()(
       canAccessUserDirectory: () => {
         const { user } = get();
         if (!user) return false;
-        
-        // if intern, cannot access user directory
-        if (user.department_role === 'Intern') return false;
-        
-        return true;
+
+        if (user.global_role === 'Superadmin' || user.global_role === 'Admin') {
+          return true;
+        }
+
+        return user.department_role === 'Head' || user.department_role === 'Supervisor';
       },
 
       canManageUsers: () => {
         const { user } = get();
         if (!user) return false;
-        
-        // allow Superadmins and Admins to manage users
-        return user.global_role === 'Superadmin' || user.global_role === 'Admin';
+
+        return user.global_role === 'Superadmin';
       },
 
       canWhitelistEmails: () => {
@@ -138,9 +138,8 @@ export const useAuthStore = create<AuthState>()(
       canAssignRoles: () => {
         const { user } = get();
         if (!user) return false;
-        
-        // Superadmin = assign all roles, Head = within dept only
-        return user.global_role === 'Superadmin' || user.department_role === 'Head';
+
+        return user.global_role === 'Superadmin';
       },
 
       canViewAllDepartments: () => {
@@ -168,7 +167,16 @@ export const useAuthStore = create<AuthState>()(
 
       getUserDepartmentId: () => {
         const { user } = get();
-        return user?.department_id ?? null;
+        if (!user || typeof user.department_id === 'undefined' || user.department_id === null) {
+          return null;
+        }
+
+        if (typeof user.department_id === 'number') {
+          return Number.isFinite(user.department_id) ? user.department_id : null;
+        }
+
+        const parsed = Number(user.department_id);
+        return Number.isFinite(parsed) ? parsed : null;
       },
     }),
     {
@@ -177,8 +185,11 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         token: state.token,
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.isAuthenticated = Boolean(state.token && state.user);
+      },
     }
   )
 );

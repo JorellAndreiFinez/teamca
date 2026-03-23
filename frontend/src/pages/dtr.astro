@@ -1,7 +1,8 @@
 ---
 import DashboardLayout from "../layouts/DashboardLayout.astro";
+import DtrPageContent from "../features/dashboard/DtrPageContent";
 ---
 
 <DashboardLayout>
-  <h1>DTR</h1>
+  <DtrPageContent client:load />
 </DashboardLayout>

@@ -1,5 +1,6 @@
 ---
 // redirects to login, main dashboard
+import RouteGuard from '../components/common/RouteGuard';
 ---
 
 <html lang="en">
@@ -9,6 +10,6 @@
     <title>TeamCA</title>
   </head>
   <body>
-    <h1>Welcome to TeamCA</h1>
+    <RouteGuard mode="root" client:load />
   </body>
 </html>
