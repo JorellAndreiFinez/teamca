@@ -6,9 +6,9 @@ const WhyFinancialMatters = () => {
     <section className="py-16">
       <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 ">
         <SectionHeader
-          subtitle="Lorem Ipsum"
-          title="Lorem ipsum dolor sit, amet consectetur adipisicing elit."
-          description="Lorem ipsum dolor sit amet consectetur adipisicing elit."
+          subtitle="Financial Matters"
+          title="At Pru Life UK, we believe that every life is insurable"
+          description="We proudly offer life insurance coverage for individuals with special needs.Because love means preparing for their future, no matter what. "
           align="hybrid"
           size="md"
         />

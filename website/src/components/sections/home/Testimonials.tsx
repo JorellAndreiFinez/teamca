@@ -38,17 +38,7 @@ type TestimonialsProps = {
 const Testimonials = () => {
   return (
     <section className="relative py-32">
-      <div className="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/6/65/Map_of_the_Philippines.svg')] bg-cover bg-[center_0%]"></div>
-
-      <div
-        className="absolute inset-0 z-10 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(circle at bottom left, rgb(210, 155, 41, 0.5), transparent 40%),
-            radial-gradient(circle at bottom right, rgb(210, 155, 41, 0.5), transparent 60%)
-          `,
-        }}
-      ></div>
+      <div className="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/6/65/Map_of_the_Philippines.svg')] bg-cover bg-[center_0%] opacity-20 backdrop-blur-xl"></div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-20">
         <SectionHeader
@@ -63,7 +53,7 @@ const Testimonials = () => {
           {testimonialData.map((testimonial, idx) => (
             <div
               key={idx}
-              className="bg-white p-6 rounded-xl shadow-lg w-80 hover:shadow-xl transition-shadow duration-300"
+              className="bg-[--secondary-color] p-6 rounded-xl shadow-lg w-80 hover:shadow-xl transition-shadow duration-300"
             >
               <p className="text-gray-600 mb-4">"{testimonial.quote}"</p>
 

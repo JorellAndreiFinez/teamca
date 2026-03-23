@@ -8,9 +8,9 @@ const HomeHero: React.FC = () => {
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      <div className="absolute inset-0 bg-black/60"></div>
+      <div className="absolute inset-0 bg-black/80"></div>
 
-      <div
+      {/* <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
           background: `
@@ -18,7 +18,7 @@ const HomeHero: React.FC = () => {
             radial-gradient(circle at bottom right, rgba(210,155,41,0.15), transparent 45%)
           `,
         }}
-      ></div>
+      ></div> */}
 
       <div
         className="
