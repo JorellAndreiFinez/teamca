@@ -65,12 +65,14 @@ connectDB().then(() => console.log("MongoDB ready"));
 
 // ── Routes
 import authRoutes from "./routes/authRoutes";
+import departmentRoutes from "./routes/departmentRoutes";
 import userRoutes from "./routes/userRoutes";
 // import dtrRoutes from "./routes/dtrRoutes";
 // import taskRoutes from "./routes/taskRoutes";
 
 app.use(apiLimiter);
 app.use("/auth", authLimiter, authRoutes);
+app.use("/departments", departmentRoutes);
 app.use("/users", userRoutes);
 // app.use("/dtr", apiLimiter, dtrRoutes);
 // app.use("/tasks", apiLimiter, taskRoutes);
