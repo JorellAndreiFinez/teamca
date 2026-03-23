@@ -1,10 +1,12 @@
 ---
-import AuthLayout from '../layouts/AuthLayout.astro';
-import FirstTimeSetupForm from '../features/auth/FirstTimeSetupForm';
+import AuthLayout from "../layouts/AuthLayout.astro";
+import FirstTimeSetupForm from "../features/auth/FirstTimeSetupForm";
+
+const email = Astro.url.searchParams.get("email") ?? "";
 ---
 
 <AuthLayout>
   <div class="min-h-screen bg-slate-50 px-4 py-10">
-    <FirstTimeSetupForm client:load />
+    <FirstTimeSetupForm email={email} client:load />
   </div>
 </AuthLayout>

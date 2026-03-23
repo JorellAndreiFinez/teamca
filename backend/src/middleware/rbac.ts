@@ -12,22 +12,18 @@ export const hasDepartmentRoleIn = (
   requestUser: AuthUser,
   allowedRoles: DepartmentRole[]
 ): boolean => {
-  return requestUser.departments.some((department) =>
-    allowedRoles.includes(department.department_role)
-  );
+  return !!requestUser.department_role && allowedRoles.includes(requestUser.department_role);
 };
 
 export const hasSharedDepartment = (
   requestUser: AuthUser,
-  targetDepartments: Array<{ department_id: unknown }>
+  targetDepartmentId: unknown
 ): boolean => {
-  const requesterDepartmentIds = new Set(
-    requestUser.departments.map((department) => String(department.department_id))
-  );
+  if (!requestUser.department_id || !targetDepartmentId) {
+    return false;
+  }
 
-  return targetDepartments.some((department) =>
-    requesterDepartmentIds.has(String(department.department_id))
-  );
+  return String(requestUser.department_id) === String(targetDepartmentId);
 };
 
 export const requireGlobalRole = (...allowedRoles: GlobalRole[]) => {
@@ -50,9 +46,9 @@ export const requireDepartmentRole = (...allowedRoles: DepartmentRole[]) => {
       return res.status(401).json({ message: 'Authentication required.' });
     }
 
-    const hasRole = req.user.departments.some((department) =>
-      allowedRoles.includes(department.department_role)
-    );
+    const hasRole =
+      !!req.user.department_role &&
+      allowedRoles.includes(req.user.department_role);
 
     if (!hasRole) {
       return res.status(403).json({ message: 'Insufficient department role permissions.' });
@@ -74,7 +70,8 @@ export const requireAnyRole = (
     const hasGlobalRole = globalRoles.length > 0 && globalRoles.includes(req.user.global_role);
     const hasDepartmentRole =
       departmentRoles.length > 0 &&
-      req.user.departments.some((department) => departmentRoles.includes(department.department_role));
+      !!req.user.department_role &&
+      departmentRoles.includes(req.user.department_role);
 
     if (!hasGlobalRole && !hasDepartmentRole) {
       return res.status(403).json({ message: 'Insufficient role permissions.' });

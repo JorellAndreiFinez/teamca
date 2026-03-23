@@ -1,9 +1,7 @@
 import * as React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '../../lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   children: React.ReactNode;
@@ -14,6 +12,7 @@ const variantClasses: Record<string, string> = {
   secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-200',
   danger: 'bg-red-600 hover:bg-red-700 text-white border-transparent',
   ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 border-transparent',
+  outline: 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300',
 };
 
 const sizeClasses: Record<string, string> = {
@@ -22,7 +21,7 @@ const sizeClasses: Record<string, string> = {
   lg: 'px-6 py-3 text-base',
 };
 
-export default function Button({
+export function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -50,3 +49,5 @@ export default function Button({
     </button>
   );
 }
+
+export default Button;

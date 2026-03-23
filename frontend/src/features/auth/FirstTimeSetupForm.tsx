@@ -1,28 +1,39 @@
 // account setup for init login
-import React, { useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { authService } from '../../services/authService';
+import { departmentService } from '../../services/departmentService';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import type { Department } from '../../types/user';
 
 interface FirstTimeSetupFormProps {
   email: string;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupFormProps) {
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    window.location.href = '/login';
+  };
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     password: '',
     confirmPassword: '',
-    department_id: 1,
+    department_id: '',
     school_university: '',
     required_hours: 480,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   const login = useAuthStore((state) => state.login);
 
@@ -37,20 +48,24 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     if (!formData.last_name.trim()) errs.last_name = 'Last name is required';
     if (formData.password.length < 8) errs.password = 'Password must be at least 8 characters';
     if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    if (!formData.department_id) errs.department_id = 'Department is required';
     if (!formData.school_university.trim()) errs.school_university = 'School/University is required';
     if (formData.required_hours < 1) errs.required_hours = 'Required hours must be at least 1';
     return errs;
   };
 
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const data = await departmentService.getAllDepartments();
+        setDepartments(data);
+      } catch {
+        setServerError('Failed to load departments. Please refresh and try again.');
+      }
+    };
+
     void loadDepartments();
   }, []);
-
-  const setField = (field: keyof typeof formData, value: string) => {
-    setFormData((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -69,7 +84,7 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
         first_name: formData.first_name,
         last_name: formData.last_name,
         password: formData.password,
-        department_id: Number(formData.department_id),
+        department_id: String(formData.department_id),
         school_university: formData.school_university,
         required_hours: Number(formData.required_hours),
       });
@@ -143,6 +158,34 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
             placeholder="e.g. University of the Philippines"
           />
 
+          <div className="flex flex-col gap-1">
+            <label htmlFor="department" className="text-sm font-medium text-gray-700">
+              Department
+            </label>
+            <select
+              id="department"
+              value={formData.department_id}
+              onChange={(e) => handleChange('department_id', e.target.value)}
+              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.department_id ? 'border-red-400 focus:ring-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select a department</option>
+              {departments.map((department) => {
+                const departmentValue = department.department_id ?? department._id;
+                if (!departmentValue) {
+                  return null;
+                }
+                return (
+                  <option key={String(departmentValue)} value={String(departmentValue)}>
+                    {department.department_name}
+                  </option>
+                );
+              })}
+            </select>
+            {errors.department_id && <p className="text-xs text-red-600">{errors.department_id}</p>}
+          </div>
+
           <Input
             label="Required Internship Hours"
             type="number"
@@ -158,7 +201,7 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
           </Button>
           <button
             type="button"
-            onClick={onBack}
+            onClick={handleBack}
             className="w-full text-sm text-gray-500 hover:text-gray-700 text-center"
           >
             ← Back

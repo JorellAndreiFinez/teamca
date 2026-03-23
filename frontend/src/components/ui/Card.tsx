@@ -1,23 +1,39 @@
 import * as React from 'react';
-import { cn } from '../../lib/utils';
 
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
+type DivProps = React.HTMLAttributes<HTMLDivElement>;
+type CardProps = DivProps & {
   title?: string;
   subtitle?: string;
-}
+};
 
-export default function Card({ children, className = '', title, subtitle }: CardProps) {
+export function Card({ className = '', title, subtitle, children, ...props }: CardProps) {
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}>
+    <div className={`rounded-xl border border-gray-200 bg-white shadow-sm ${className}`} {...props}>
       {(title || subtitle) && (
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="border-b border-gray-100 px-6 py-4">
           {title && <h3 className="text-base font-semibold text-gray-900">{title}</h3>}
-          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
         </div>
       )}
-      <div className="p-6">{children}</div>
+      {title || subtitle ? <div className="px-6 py-4">{children}</div> : children}
     </div>
   );
 }
+
+export function CardHeader({ className = '', ...props }: DivProps) {
+  return <div className={`border-b border-gray-100 px-6 py-4 ${className}`} {...props} />;
+}
+
+export function CardTitle({ className = '', ...props }: DivProps) {
+  return <h3 className={`text-base font-semibold text-gray-900 ${className}`} {...props} />;
+}
+
+export function CardDescription({ className = '', ...props }: DivProps) {
+  return <p className={`mt-0.5 text-sm text-gray-500 ${className}`} {...props} />;
+}
+
+export function CardContent({ className = '', ...props }: DivProps) {
+  return <div className={`px-6 py-4 ${className}`} {...props} />;
+}
+
+export default Card;
