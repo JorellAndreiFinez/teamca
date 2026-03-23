@@ -21,21 +21,30 @@ export interface TaskAssignment {
 }
 
 export interface TaskStatusHistory {
-  history_id: number;
-  task_id: number;
+  history_id: string;
+  task_id: string | number;
   updated_by: string; // uuid
-  previous_status: string;
-  new_status: string;
+  previous_status: TaskStatus;
+  new_status: TaskStatus;
   update_notes?: string;
-  timestamp: Date;
+  timestamp: string | Date;
 }
 
 export interface TaskFeedback {
-  feedback_id: number;
+  feedback_id: string;
   task_id: string;
   supervisor_id: string; // uuid
   comments: string;
-  created_at: Date;
+  created_at: string | Date;
+}
+
+export interface TaskWorkLink {
+  work_link_id: string;
+  task_id: string;
+  submitted_by: string;
+  url: string;
+  label?: string;
+  created_at: string | Date;
 }
 
 export interface CreateTaskPayload {
@@ -43,5 +52,29 @@ export interface CreateTaskPayload {
   description?: string;
   priority: TaskPriority;
   deadline: string;
-  assigned_to?: string;
+  assigned_to?: string[];
+}
+
+export interface UpdateTaskStatusPayload {
+  status: TaskStatus;
+  update_notes?: string;
+}
+
+export interface UpdateTaskStatusResponse {
+  task: Task;
+  history: TaskStatusHistory;
+}
+
+export interface AddTaskFeedbackPayload {
+  comments: string;
+}
+
+export interface AddTaskWorkLinkPayload {
+  url: string;
+  label?: string;
+}
+
+export interface CreateTaskResponse {
+  task: Task;
+  assignments: TaskAssignment[];
 }
