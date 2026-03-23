@@ -42,7 +42,17 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     return errs;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    void loadDepartments();
+  }, []);
+
+  const setField = (field: keyof typeof formData, value: string) => {
+    setFormData((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {

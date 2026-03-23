@@ -1,15 +1,10 @@
 // Superadmin component to manage whitelisted emails
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export default function WhitelistManager() {
   const [newEmail, setNewEmail] = useState('');
-  const [whitelistedUsers, setWhitelistedUsers] = useState([]);
 
   const handleWhitelistEmail = async () => {
-
-  };
-
-  const handleRemoveEmail = async (userId: string) => {
 
   };
 
