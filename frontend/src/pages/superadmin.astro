@@ -1,34 +1,8 @@
 ---
 import DashboardLayout from "../layouts/DashboardLayout.astro";
-<<<<<<< HEAD
-<<<<<<< HEAD
-import SuperadminDashboard from "../features/superadmin/SuperadminDashboard";
-import RouteGuard from '../components/common/RouteGuard';
----
-
-<DashboardLayout>
-  <RouteGuard
-    mode="protected"
-    allowedGlobalRoles={['Superadmin', 'Admin']}
-    allowedDepartmentRoles={['Head', 'Supervisor']}
-    client:load
-  />
-  <div class="space-y-4 p-4">
-    <h1 class="text-2xl font-bold text-slate-900">User Management</h1>
-    <SuperadminDashboard client:load />
-  </div>
-=======
 import SuperadminDashboard from "../features/dashboard/SuperadminDashboard";
 ---
 
 <DashboardLayout>
   <SuperadminDashboard client:load />
->>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
-=======
-import SuperadminDashboard from "../features/dashboard/SuperadminDashboard";
----
-
-<DashboardLayout>
-  <SuperadminDashboard client:load />
->>>>>>> 75180937812242ebfb8c998aa2d5b47944bfdfa3
 </DashboardLayout>

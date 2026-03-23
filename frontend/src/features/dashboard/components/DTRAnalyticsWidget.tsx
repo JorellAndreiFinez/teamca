@@ -1,4 +1,3 @@
-import React from 'react';
 import type { DailyTimeRecord } from '../../../types/dtr';
 
 interface DTRAnalyticsWidgetProps {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import type { Task, TaskStatus, TaskPriority } from '../../types/task';
+import type { Task, TaskStatus } from '../../types/task';
 
 const MOCK_TASKS: Task[] = [
   {

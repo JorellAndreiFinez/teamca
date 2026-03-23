@@ -1,13 +1,5 @@
 ---
-<<<<<<< HEAD
-<<<<<<< HEAD
-// redirects to login, main dashboard
-import RouteGuard from '../components/common/RouteGuard';
-=======
-import AuthLayout from "../layouts/AuthLayout.astro";
->>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
-=======
->>>>>>> 75180937812242ebfb8c998aa2d5b47944bfdfa3
+
 ---
 
 <html lang="en">
@@ -17,36 +9,28 @@ import AuthLayout from "../layouts/AuthLayout.astro";
     <title>TeamCA</title>
     <script>
       // Redirect based on auth state stored in localStorage
-      const stored = localStorage.getItem('auth-storage');
+      const stored = localStorage.getItem("auth-storage");
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (parsed?.state?.isAuthenticated && parsed?.state?.token) {
-            window.location.replace('/dashboard');
+          const hasToken = Boolean(parsed?.state?.token);
+          const hasUser = Boolean(parsed?.state?.user);
+          if (hasToken && hasUser) {
+            window.location.replace("/dashboard");
           } else {
-            window.location.replace('/login');
+            window.location.replace("/login");
           }
         } catch {
-          window.location.replace('/login');
+          window.location.replace("/login");
         }
       } else {
-        window.location.replace('/login');
+        window.location.replace("/login");
       }
     </script>
   </head>
   <body>
-<<<<<<< HEAD
-<<<<<<< HEAD
-    <RouteGuard mode="root" client:load />
-=======
     <div class="min-h-screen flex items-center justify-center">
       <p class="text-gray-500 text-sm">Redirecting...</p>
     </div>
->>>>>>> f0d231d (feat: implement dashboard with role-based views, sidebar, DTR/tasks/profile pages, and backend mock API)
-=======
-    <div class="min-h-screen flex items-center justify-center">
-      <p class="text-gray-500 text-sm">Redirecting...</p>
-    </div>
->>>>>>> 75180937812242ebfb8c998aa2d5b47944bfdfa3
   </body>
 </html>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuthStore } from '../../store/authStore';
 import Card from '../../components/ui/Card';
 import CalendarWidget from './components/CalendarWidget';
@@ -8,7 +7,6 @@ import Button from '../../components/ui/Button';
 
 export default function InternDashboard() {
   const user = useAuthStore((state) => state.user);
-  const fullName = useAuthStore((state) => state.getUserFullName)();
 
   const greeting = () => {
     const hour = new Date().getHours();

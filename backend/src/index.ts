@@ -13,25 +13,37 @@ const PORT = process.env.PORT || 3000;
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
-const allowedOrigins = (process.env.CORS_ORIGINS || "")
+const defaultOrigins = ["http://localhost:4321", "http://127.0.0.1:4321"];
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...configuredOrigins]));
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow non-browser clients (no origin header).
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("CORS policy blocked this origin."));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
+const isLocalDevOrigin = (origin: string): boolean => {
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+};
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // allow non-browser clients (no origin header).
+    if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(
   helmet({
