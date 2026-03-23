@@ -1,24 +1,24 @@
 import api from './api';
-import type { Task } from '../types/task';
+import type { CreateTaskPayload, Task, TaskAssignment } from '../types/task';
+
+export interface CreateTaskResponse {
+  task: Task;
+  assignment: TaskAssignment;
+}
 
 export const taskService = {
   getTasks: async (): Promise<Task[]> => {
     const response = await api.get<Task[]>('/tasks');
     return response.data;
   },
-  
-  createTask: async (taskData: Partial<Task>): Promise<Task> => {
-    const response = await api.post<Task>('/tasks', taskData);
+
+  createTask: async (taskData: CreateTaskPayload): Promise<CreateTaskResponse> => {
+    const response = await api.post<CreateTaskResponse>('/tasks', taskData);
     return response.data;
   },
-  
-  updateTask: async (taskId: string, taskData: Partial<Task>): Promise<Task> => {
-    const response = await api.put<Task>(`/tasks/${taskId}`, taskData);
+
+  assignTask: async (taskId: string, assigned_to: string): Promise<TaskAssignment> => {
+    const response = await api.post<TaskAssignment>(`/tasks/${taskId}/assign`, { assigned_to });
     return response.data;
-  },
-  
-  deleteTask: async (taskId: string): Promise<{ message?: string }> => {
-    const response = await api.delete<{ message?: string }>(`/tasks/${taskId}`);
-    return (response as { data: { message?: string } }).data;
   },
 };

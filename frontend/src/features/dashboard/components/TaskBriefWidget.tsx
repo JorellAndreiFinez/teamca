@@ -61,7 +61,7 @@ const PRIORITY_STYLES: Record<string, string> = {
   High: 'bg-red-100 text-red-700',
 };
 
-function formatDeadline(date: Date): string {
+function formatDeadline(date: Date | string): string {
   const d = new Date(date);
   const now = new Date();
   const diffMs = d.getTime() - now.getTime();
