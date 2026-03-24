@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import http from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db";
+import { initTaskSocket } from "./socket/io";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
@@ -94,6 +96,9 @@ app.get("/health", (_req, res) =>
   res.json({ status: "ok", timestamp: new Date().toISOString() }),
 );
 
-app.listen(PORT, () =>
+const server = http.createServer(app);
+initTaskSocket(server, allowedOrigins);
+
+server.listen(PORT, () =>
   console.log(`Server running at http://localhost:${PORT}`),
 );

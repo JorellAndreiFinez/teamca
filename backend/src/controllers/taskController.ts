@@ -1,17 +1,22 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import {
-  addTaskWorkLink,
+  addTaskComment,
   addTaskFeedback,
+  addTaskWorkLink,
   assignTask,
   createTaskWithAssignment,
   deleteTaskWorkLink,
+  getTaskDetail,
   listAccessibleTasks,
-  listTaskWorkLinks,
-  listTaskStatusHistory,
+  listAccessibleTasksPaginated,
+  listTaskComments,
   listTaskFeedback,
+  listTaskStatusHistory,
+  listTaskWorkLinks,
   updateTaskStatus,
 } from "../services/taskService";
+import { emitTaskCommentCreated, emitTaskStatusUpdated } from "../socket/io";
 
 const createTaskSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters.").max(120, "Title must be 120 characters or fewer."),
@@ -40,10 +45,35 @@ const addTaskFeedbackSchema = z.object({
   comments: z.string().trim().min(3, "comments must be at least 3 characters.").max(2000, "comments must be 2000 characters or fewer."),
 });
 
+const addTaskCommentSchema = z.object({
+  message: z.string().trim().min(1, "message is required.").max(2000, "message must be 2000 characters or fewer."),
+});
+
 const addTaskWorkLinkSchema = z.object({
   url: z.string().trim().url("url must be a valid URL."),
   label: z.string().trim().max(120, "label must be 120 characters or fewer.").optional(),
 });
+
+const listTasksQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  status: z.enum(["Not Started", "In Progress", "Under Review", "Completed"]).optional(),
+  priority: z.enum(["Low", "Medium", "High"]).optional(),
+  search: z.string().trim().max(200).optional(),
+  created_date: z.enum(["all", "today", "7d", "30d"]).default("all"),
+  sort_by: z.enum(["created_desc", "created_asc", "priority_desc", "priority_asc", "deadline_asc", "deadline_desc", "title_asc"]).default("created_desc"),
+});
+
+const parseTaskId = (req: Request, res: Response): string | null => {
+  const rawTaskId = req.params.taskId;
+  const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+  if (!taskId) {
+    res.status(400).json({ message: "taskId is required." });
+    return null;
+  }
+
+  return taskId;
+};
 
 export const createTaskHandler = async (req: Request, res: Response) => {
   try {
@@ -103,10 +133,9 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const payload = assignTaskSchema.parse(req.body);
@@ -161,10 +190,58 @@ export const listTasksHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const tasks = await listAccessibleTasks(req.user);
-    return res.status(200).json(tasks);
-  } catch {
+    const query = listTasksQuerySchema.parse(req.query);
+
+    if (req.query.paginate === "false") {
+      const tasks = await listAccessibleTasks(req.user);
+      return res.status(200).json(tasks);
+    }
+
+    const payload = await listAccessibleTasksPaginated(req.user, {
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      priority: query.priority,
+      search: query.search,
+      createdDate: query.created_date,
+      sortBy: query.sort_by,
+    });
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid query params.", issues: error.issues });
+    }
+
     return res.status(500).json({ message: "Failed to list tasks." });
+  }
+};
+
+export const getTaskDetailHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
+    const taskId = parseTaskId(req, res);
+    if (!taskId) {
+      return;
+    }
+
+    const task = await getTaskDetail(req.user, taskId);
+    return res.status(200).json(task);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "Task not found.") {
+        return res.status(404).json({ message: error.message });
+      }
+
+      if (error.message.includes("do not have permission")) {
+        return res.status(403).json({ message: error.message });
+      }
+    }
+
+    return res.status(500).json({ message: "Failed to fetch task details." });
   }
 };
 
@@ -174,10 +251,9 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const payload = updateTaskStatusSchema.parse(req.body);
@@ -185,6 +261,12 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
       taskId,
       newStatus: payload.status,
       updateNotes: payload.update_notes,
+    });
+
+    emitTaskStatusUpdated(taskId, {
+      task_id: taskId,
+      task: updated.task,
+      history: updated.history,
     });
 
     return res.status(200).json(updated);
@@ -222,10 +304,9 @@ export const addTaskFeedbackHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const payload = addTaskFeedbackSchema.parse(req.body);
@@ -263,10 +344,9 @@ export const listTaskFeedbackHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const feedback = await listTaskFeedback(req.user, taskId);
@@ -292,10 +372,9 @@ export const listTaskStatusHistoryHandler = async (req: Request, res: Response) 
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const history = await listTaskStatusHistory(req.user, taskId);
@@ -321,10 +400,9 @@ export const addTaskWorkLinkHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const payload = addTaskWorkLinkSchema.parse(req.body);
@@ -364,10 +442,9 @@ export const listTaskWorkLinksHandler = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const workLinks = await listTaskWorkLinks(req.user, taskId);
@@ -393,10 +470,9 @@ export const deleteTaskWorkLinkHandler = async (req: Request, res: Response) => 
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const rawTaskId = req.params.taskId;
-    const taskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+    const taskId = parseTaskId(req, res);
     if (!taskId) {
-      return res.status(400).json({ message: "taskId is required." });
+      return;
     }
 
     const rawWorkLinkId = req.params.workLinkId;
@@ -429,10 +505,81 @@ export const deleteTaskWorkLinkHandler = async (req: Request, res: Response) => 
   }
 };
 
+export const listTaskCommentsHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
+    const taskId = parseTaskId(req, res);
+    if (!taskId) {
+      return;
+    }
+
+    const comments = await listTaskComments(req.user, taskId);
+    return res.status(200).json(comments);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "Task not found.") {
+        return res.status(404).json({ message: error.message });
+      }
+
+      if (error.message.includes("do not have permission")) {
+        return res.status(403).json({ message: error.message });
+      }
+    }
+
+    return res.status(500).json({ message: "Failed to load task comments." });
+  }
+};
+
+export const addTaskCommentHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
+    const taskId = parseTaskId(req, res);
+    if (!taskId) {
+      return;
+    }
+
+    const payload = addTaskCommentSchema.parse(req.body);
+    const comment = await addTaskComment(req.user, {
+      taskId,
+      message: payload.message,
+    });
+
+    emitTaskCommentCreated(taskId, {
+      task_id: taskId,
+      comment,
+    });
+
+    return res.status(201).json(comment);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+    }
+
+    if (error instanceof Error) {
+      if (error.message === "Task not found.") {
+        return res.status(404).json({ message: error.message });
+      }
+
+      if (error.message.includes("do not have permission")) {
+        return res.status(403).json({ message: error.message });
+      }
+    }
+
+    return res.status(500).json({ message: "Failed to add task comment." });
+  }
+};
+
 export default {
   createTaskHandler,
   assignTaskHandler,
   listTasksHandler,
+  getTaskDetailHandler,
   updateTaskStatusHandler,
   addTaskFeedbackHandler,
   listTaskFeedbackHandler,
@@ -440,4 +587,6 @@ export default {
   addTaskWorkLinkHandler,
   listTaskWorkLinksHandler,
   deleteTaskWorkLinkHandler,
+  listTaskCommentsHandler,
+  addTaskCommentHandler,
 };

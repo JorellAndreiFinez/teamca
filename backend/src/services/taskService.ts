@@ -1,6 +1,8 @@
 import { Types } from "mongoose";
+import Department from "../models/Department";
 import Task, { type ITask, type TaskPriority, type TaskStatus } from "../models/Task";
 import TaskAssignment from "../models/TaskAssignment";
+import TaskComment from "../models/TaskComment";
 import TaskFeedback from "../models/TaskFeedback";
 import TaskStatusHistory from "../models/TaskStatusHistory";
 import TaskWorkLink from "../models/TaskWorkLink";
@@ -44,14 +46,87 @@ export type DeleteTaskWorkLinkInput = {
   workLinkId: string;
 };
 
+export type AddTaskCommentInput = {
+  taskId: string;
+  message: string;
+};
+
+export type ListTasksInput = {
+  page: number;
+  limit: number;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  search?: string;
+  createdDate?: "all" | "today" | "7d" | "30d";
+  sortBy?: "created_desc" | "created_asc" | "priority_desc" | "priority_asc" | "deadline_asc" | "deadline_desc" | "title_asc";
+};
+
+export type TaskLinkPermissions = {
+  can_add_links: boolean;
+  can_delete_any_link: boolean;
+  can_delete_own_links: boolean;
+};
+
+export type TaskUserSummary = {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+};
+
+export type TaskDepartmentSummary = {
+  department_id: string;
+  department_name: string;
+};
+
+export type TaskListItem = ReturnType<typeof normalizeTask> & {
+  assigned_users: TaskUserSummary[];
+  links_count: number;
+};
+
+export type PaginatedTasksResponse = {
+  items: TaskListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+};
+
 export type ListTaskStatusHistoryItem = {
   history_id: string;
   task_id: string;
   updated_by: string;
+  updated_by_user: TaskUserSummary | null;
   previous_status: TaskStatus;
   new_status: TaskStatus;
   update_notes?: string;
   timestamp: Date;
+};
+
+export type TaskCommentItem = {
+  comment_id: string;
+  task_id: string;
+  user_id: string;
+  user: TaskUserSummary | null;
+  message: string;
+  created_at: Date;
+};
+
+export type TaskDetailResponse = ReturnType<typeof normalizeTask> & {
+  assigned_users: TaskUserSummary[];
+  involved_departments: TaskDepartmentSummary[];
+  links: Array<{
+    work_link_id: string;
+    task_id: string;
+    submitted_by: string;
+    url: string;
+    label?: string;
+    created_at: Date;
+  }>;
+  links_count: number;
+  history: ListTaskStatusHistoryItem[];
+  comments: TaskCommentItem[];
+  link_permissions: TaskLinkPermissions;
 };
 
 const canManageGlobally = (globalRole: ActorRole): boolean => {
@@ -75,7 +150,16 @@ const MANAGER_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
   "Under Review": ["In Progress", "Completed"],
 };
 
-const normalizeTask = (task: ITask) => ({
+const normalizeTask = (task: ITask | {
+  _id: Types.ObjectId | string;
+  title: string;
+  description?: string;
+  created_by: Types.ObjectId | string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  deadline: Date;
+  created_at: Date;
+}) => ({
   task_id: String(task._id),
   title: task.title,
   description: task.description ?? "",
@@ -85,106 +169,6 @@ const normalizeTask = (task: ITask) => ({
   deadline: task.deadline,
   created_at: task.created_at,
 });
-
-const canChangeTaskStatus = async (
-  actor: Express.AuthUser,
-  task: { _id: Types.ObjectId; created_by: Types.ObjectId; status: TaskStatus },
-) => {
-  const actorId = String(actor.user_id);
-
-  if (canManageGlobally(actor.global_role)) {
-    return true;
-  }
-
-  if (canManageDepartment(actor.department_role)) {
-    const [taskCreator, taskAssignees] = await Promise.all([
-      User.findById(task.created_by).select("department_id").lean(),
-      TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
-    ]);
-
-    const creatorInDepartment =
-      !!taskCreator?.department_id &&
-      !!actor.department_id &&
-      String(taskCreator.department_id) === String(actor.department_id);
-
-    const hasAssigneeInDepartment =
-      !!actor.department_id &&
-      (await User.exists({
-        _id: { $in: taskAssignees.map((item) => item.assigned_to) },
-        department_id: String(actor.department_id),
-      })) !== null;
-
-    return creatorInDepartment || hasAssigneeInDepartment;
-  }
-
-  if (isStandardIntern(actor.global_role)) {
-    if (String(task.created_by) === actorId) {
-      return true;
-    }
-
-    const selfAssignment = await TaskAssignment.findOne({ task_id: task._id, assigned_to: actorId })
-      .select("_id")
-      .lean();
-
-    return !!selfAssignment;
-  }
-
-  return false;
-};
-
-const getAllowedTransitions = (actor: Express.AuthUser, currentStatus: TaskStatus): TaskStatus[] => {
-  if (canManageGlobally(actor.global_role) || canManageDepartment(actor.department_role)) {
-    return MANAGER_TRANSITIONS[currentStatus] ?? [];
-  }
-
-  if (isStandardIntern(actor.global_role)) {
-    return INTERN_TRANSITIONS[currentStatus] ?? [];
-  }
-
-  return [];
-};
-
-const canAccessTaskScope = async (
-  actor: Express.AuthUser,
-  task: { _id: Types.ObjectId; created_by: Types.ObjectId },
-) => {
-  const actorId = String(actor.user_id);
-
-  if (canManageGlobally(actor.global_role)) {
-    return true;
-  }
-
-  if (canManageDepartment(actor.department_role)) {
-    const [taskCreator, taskAssignees] = await Promise.all([
-      User.findById(task.created_by).select("department_id").lean(),
-      TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
-    ]);
-
-    const creatorInDepartment =
-      !!taskCreator?.department_id &&
-      !!actor.department_id &&
-      String(taskCreator.department_id) === String(actor.department_id);
-
-    const hasAssigneeInDepartment =
-      !!actor.department_id &&
-      (await User.exists({
-        _id: { $in: taskAssignees.map((item) => item.assigned_to) },
-        department_id: String(actor.department_id),
-      })) !== null;
-
-    return creatorInDepartment || hasAssigneeInDepartment;
-  }
-
-  if (String(task.created_by) === actorId) {
-    return true;
-  }
-
-  const selfAssignment = await TaskAssignment.findOne({ task_id: task._id, assigned_to: actorId })
-    .select("_id")
-    .lean();
-
-  return !!selfAssignment;
-};
 
 const normalizeFeedback = (feedback: {
   _id: Types.ObjectId;
@@ -200,7 +184,12 @@ const normalizeFeedback = (feedback: {
   created_at: feedback.created_at,
 });
 
-const normalizeAssignment = (assignment: { _id: Types.ObjectId | string; task_id: Types.ObjectId | string; assigned_to: Types.ObjectId | string; assigned_at: Date; }) => ({
+const normalizeAssignment = (assignment: {
+  _id: Types.ObjectId | string;
+  task_id: Types.ObjectId | string;
+  assigned_to: Types.ObjectId | string;
+  assigned_at: Date;
+}) => ({
   assignment_id: String(assignment._id),
   task_id: String(assignment.task_id),
   assigned_to: String(assignment.assigned_to),
@@ -221,6 +210,18 @@ const normalizeWorkLink = (workLink: {
   url: workLink.url,
   label: workLink.label,
   created_at: workLink.created_at,
+});
+
+const normalizeUser = (user: {
+  _id: Types.ObjectId | string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}): TaskUserSummary => ({
+  user_id: String(user._id),
+  first_name: user.first_name?.trim() || "",
+  last_name: user.last_name?.trim() || "",
+  email: user.email?.trim() || "",
 });
 
 const uniqueAssignees = (assignees: string[]): string[] => {
@@ -290,6 +291,213 @@ const assertCanAssign = async (
   if (actorId !== assigneeUserId) {
     throw new Error("Standard users can only assign tasks to themselves.");
   }
+};
+
+const getAllowedTransitions = (actor: Express.AuthUser, currentStatus: TaskStatus): TaskStatus[] => {
+  if (canManageGlobally(actor.global_role) || canManageDepartment(actor.department_role)) {
+    return MANAGER_TRANSITIONS[currentStatus] ?? [];
+  }
+
+  if (isStandardIntern(actor.global_role)) {
+    return INTERN_TRANSITIONS[currentStatus] ?? [];
+  }
+
+  return [];
+};
+
+const canAccessTaskScope = async (
+  actor: Express.AuthUser,
+  task: { _id: Types.ObjectId; created_by: Types.ObjectId },
+) => {
+  const actorId = String(actor.user_id);
+
+  if (canManageGlobally(actor.global_role)) {
+    return true;
+  }
+
+  if (canManageDepartment(actor.department_role)) {
+    const [taskCreator, taskAssignees] = await Promise.all([
+      User.findById(task.created_by).select("department_id").lean(),
+      TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
+    ]);
+
+    const creatorInDepartment =
+      !!taskCreator?.department_id &&
+      !!actor.department_id &&
+      String(taskCreator.department_id) === String(actor.department_id);
+
+    const hasAssigneeInDepartment =
+      !!actor.department_id &&
+      (await User.exists({
+        _id: { $in: taskAssignees.map((item) => item.assigned_to) },
+        department_id: String(actor.department_id),
+      })) !== null;
+
+    return creatorInDepartment || hasAssigneeInDepartment;
+  }
+
+  if (String(task.created_by) === actorId) {
+    return true;
+  }
+
+  const selfAssignment = await TaskAssignment.findOne({ task_id: task._id, assigned_to: actorId })
+    .select("_id")
+    .lean();
+
+  return !!selfAssignment;
+};
+
+const canChangeTaskStatus = async (
+  actor: Express.AuthUser,
+  task: { _id: Types.ObjectId; created_by: Types.ObjectId; status: TaskStatus },
+) => {
+  const actorId = String(actor.user_id);
+
+  if (canManageGlobally(actor.global_role)) {
+    return true;
+  }
+
+  if (canManageDepartment(actor.department_role)) {
+    const [taskCreator, taskAssignees] = await Promise.all([
+      User.findById(task.created_by).select("department_id").lean(),
+      TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
+    ]);
+
+    const creatorInDepartment =
+      !!taskCreator?.department_id &&
+      !!actor.department_id &&
+      String(taskCreator.department_id) === String(actor.department_id);
+
+    const hasAssigneeInDepartment =
+      !!actor.department_id &&
+      (await User.exists({
+        _id: { $in: taskAssignees.map((item) => item.assigned_to) },
+        department_id: String(actor.department_id),
+      })) !== null;
+
+    return creatorInDepartment || hasAssigneeInDepartment;
+  }
+
+  if (isStandardIntern(actor.global_role)) {
+    if (String(task.created_by) === actorId) {
+      return true;
+    }
+
+    const selfAssignment = await TaskAssignment.findOne({ task_id: task._id, assigned_to: actorId })
+      .select("_id")
+      .lean();
+
+    return !!selfAssignment;
+  }
+
+  return false;
+};
+
+const resolveTaskOrThrow = async (taskId: string) => {
+  const task = await Task.findById(taskId).lean();
+  if (!task) {
+    throw new Error("Task not found.");
+  }
+
+  return task;
+};
+
+const getTaskAssigneeIdsMap = async (taskIds: string[]) => {
+  const assignments = await TaskAssignment.find({ task_id: { $in: taskIds } }).lean();
+  const map = new Map<string, string[]>();
+
+  for (const item of assignments) {
+    const id = String(item.task_id);
+    const list = map.get(id) ?? [];
+    list.push(String(item.assigned_to));
+    map.set(id, list);
+  }
+
+  return map;
+};
+
+const getTaskLinksCountMap = async (taskIds: string[]) => {
+  if (taskIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await TaskWorkLink.aggregate<{ _id: Types.ObjectId; count: number }>([
+    { $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } } },
+    { $group: { _id: "$task_id", count: { $sum: 1 } } },
+  ]);
+
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    map.set(String(row._id), row.count);
+  }
+
+  return map;
+};
+
+const getUsersByIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, TaskUserSummary>();
+  }
+
+  const users = await User.find({ _id: { $in: userIds } })
+    .select("first_name last_name email department_id")
+    .lean();
+
+  const map = new Map<string, TaskUserSummary>();
+  for (const user of users) {
+    map.set(String(user._id), normalizeUser(user));
+  }
+
+  return map;
+};
+
+const getInvolvedDepartments = async (
+  users: Array<{ department_id?: string | null }>,
+): Promise<TaskDepartmentSummary[]> => {
+  const departmentIds = [...new Set(
+    users
+      .map((item) => item.department_id)
+      .filter((item): item is string => !!item && item.trim().length > 0),
+  )];
+
+  if (departmentIds.length === 0) {
+    return [];
+  }
+
+  const departments = await Department.find({ _id: { $in: departmentIds } })
+    .select("department_name")
+    .lean();
+
+  const map = new Map<string, string>();
+  for (const department of departments) {
+    map.set(String(department._id), department.department_name);
+  }
+
+  return departmentIds.map((departmentId) => ({
+    department_id: departmentId,
+    department_name: map.get(departmentId) || "Unknown Department",
+  }));
+};
+
+const normalizeComment = (
+  comment: {
+    _id: Types.ObjectId | string;
+    task_id: Types.ObjectId | string;
+    user_id: Types.ObjectId | string;
+    message: string;
+    created_at: Date;
+  },
+  userMap: Map<string, TaskUserSummary>,
+): TaskCommentItem => {
+  const userId = String(comment.user_id);
+  return {
+    comment_id: String(comment._id),
+    task_id: String(comment.task_id),
+    user_id: userId,
+    user: userMap.get(userId) ?? null,
+    message: comment.message,
+    created_at: comment.created_at,
+  };
 };
 
 export const createTaskWithAssignment = async (
@@ -421,7 +629,7 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
     }
 
     return tasks.map((task) => ({
-      ...normalizeTask(task as unknown as ITask),
+      ...normalizeTask(task),
       assignees: assignmentMap.get(String(task._id)) ?? [],
     }));
   }
@@ -458,7 +666,7 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
     }
 
     return tasks.map((task) => ({
-      ...normalizeTask(task as unknown as ITask),
+      ...normalizeTask(task),
       assignees: assignmentMap.get(String(task._id)) ?? [],
     }));
   }
@@ -482,9 +690,131 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
   }
 
   return tasks.map((task) => ({
-    ...normalizeTask(task as unknown as ITask),
+    ...normalizeTask(task),
     assignees: assignmentMap.get(String(task._id)) ?? [],
   }));
+};
+
+export const listAccessibleTasksPaginated = async (
+  actor: Express.AuthUser,
+  input: ListTasksInput,
+): Promise<PaginatedTasksResponse> => {
+  const allTasks = await listAccessibleTasks(actor);
+
+  const taskIds = allTasks.map((task) => String(task.task_id));
+  const assigneeMap = await getTaskAssigneeIdsMap(taskIds);
+  const linksCountMap = await getTaskLinksCountMap(taskIds);
+
+  const userIds = [...new Set(allTasks.flatMap((task) => [
+    String(task.created_by),
+    ...(assigneeMap.get(String(task.task_id)) ?? []),
+  ]))];
+
+  const userMap = await getUsersByIds(userIds);
+  const normalizedSearch = (input.search || "").trim().toLowerCase();
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOf7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const startOf30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const filtered = allTasks.filter((task) => {
+    if (input.status && task.status !== input.status) {
+      return false;
+    }
+
+    if (input.priority && task.priority !== input.priority) {
+      return false;
+    }
+
+    const createdAt = new Date(task.created_at);
+    if (input.createdDate === "today" && createdAt < startOfToday) {
+      return false;
+    }
+
+    if (input.createdDate === "7d" && createdAt < startOf7d) {
+      return false;
+    }
+
+    if (input.createdDate === "30d" && createdAt < startOf30d) {
+      return false;
+    }
+
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    const assignedUsers = (assigneeMap.get(String(task.task_id)) ?? [])
+      .map((id) => userMap.get(id))
+      .filter((item): item is TaskUserSummary => !!item);
+
+    const taskTitle = task.title.toLowerCase();
+    const assigneeNames = assignedUsers.map((user) => `${user.first_name} ${user.last_name}`.trim().toLowerCase());
+
+    return taskTitle.includes(normalizedSearch) || assigneeNames.some((name) => name.includes(normalizedSearch));
+  });
+
+  const priorityRank: Record<TaskPriority, number> = {
+    Low: 1,
+    Medium: 2,
+    High: 3,
+  };
+
+  const sorted = [...filtered].sort((left, right) => {
+    const sortBy = input.sortBy ?? "created_desc";
+
+    if (sortBy === "created_asc") {
+      return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+    }
+
+    if (sortBy === "created_desc") {
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+    }
+
+    if (sortBy === "priority_desc") {
+      return priorityRank[right.priority] - priorityRank[left.priority];
+    }
+
+    if (sortBy === "priority_asc") {
+      return priorityRank[left.priority] - priorityRank[right.priority];
+    }
+
+    if (sortBy === "deadline_asc") {
+      return new Date(left.deadline).getTime() - new Date(right.deadline).getTime();
+    }
+
+    if (sortBy === "deadline_desc") {
+      return new Date(right.deadline).getTime() - new Date(left.deadline).getTime();
+    }
+
+    return left.title.localeCompare(right.title);
+  });
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / input.limit));
+  const page = Math.min(input.page, totalPages);
+  const start = (page - 1) * input.limit;
+  const end = start + input.limit;
+
+  const items: TaskListItem[] = sorted.slice(start, end).map((task) => {
+    const assignedUsers = (assigneeMap.get(String(task.task_id)) ?? [])
+      .map((id) => userMap.get(id))
+      .filter((item): item is TaskUserSummary => !!item);
+
+    return {
+      ...task,
+      assigned_users: assignedUsers,
+      links_count: linksCountMap.get(String(task.task_id)) ?? 0,
+    };
+  });
+
+  return {
+    items,
+    total,
+    page,
+    limit: input.limit,
+    total_pages: totalPages,
+  };
 };
 
 export const listTaskStatusHistory = async (actor: Express.AuthUser, taskId: string): Promise<ListTaskStatusHistoryItem[]> => {
@@ -506,10 +836,13 @@ export const listTaskStatusHistory = async (actor: Express.AuthUser, taskId: str
     .sort({ timestamp: -1 })
     .lean();
 
+  const userMap = await getUsersByIds([...new Set(historyItems.map((item) => String(item.updated_by)))]);
+
   return historyItems.map((item) => ({
     history_id: String(item._id),
     task_id: String(item.task_id),
     updated_by: String(item.updated_by),
+    updated_by_user: userMap.get(String(item.updated_by)) ?? null,
     previous_status: item.previous_status,
     new_status: item.new_status,
     update_notes: item.update_notes,
@@ -565,12 +898,15 @@ export const updateTaskStatus = async (actor: Express.AuthUser, input: UpdateTas
     update_notes: input.updateNotes?.trim() || undefined,
   });
 
+  const userMap = await getUsersByIds([String(history.updated_by)]);
+
   return {
     task: normalizeTask(task),
     history: {
       history_id: String(history._id),
       task_id: String(history.task_id),
       updated_by: String(history.updated_by),
+      updated_by_user: userMap.get(String(history.updated_by)) ?? null,
       previous_status: history.previous_status,
       new_status: history.new_status,
       update_notes: history.update_notes,
@@ -755,4 +1091,150 @@ export const listTaskFeedback = async (actor: Express.AuthUser, taskId: string) 
       created_at: item.created_at,
     }),
   );
+};
+
+export const listTaskComments = async (actor: Express.AuthUser, taskId: string): Promise<TaskCommentItem[]> => {
+  const task = await resolveTaskOrThrow(taskId);
+
+  const hasAccess = await canAccessTaskScope(actor, {
+    _id: task._id as Types.ObjectId,
+    created_by: task.created_by as Types.ObjectId,
+  });
+
+  if (!hasAccess) {
+    throw new Error("You do not have permission to view comments for this task.");
+  }
+
+  const comments = await TaskComment.find({ task_id: task._id })
+    .sort({ created_at: 1 })
+    .lean();
+
+  const userIds = [...new Set(comments.map((comment) => String(comment.user_id)))];
+  const userMap = await getUsersByIds(userIds);
+
+  return comments.map((comment) =>
+    normalizeComment({
+      _id: comment._id,
+      task_id: comment.task_id,
+      user_id: comment.user_id,
+      message: comment.message,
+      created_at: comment.created_at,
+    }, userMap),
+  );
+};
+
+export const addTaskComment = async (actor: Express.AuthUser, input: AddTaskCommentInput): Promise<TaskCommentItem> => {
+  const task = await resolveTaskOrThrow(input.taskId);
+
+  const hasAccess = await canAccessTaskScope(actor, {
+    _id: task._id as Types.ObjectId,
+    created_by: task.created_by as Types.ObjectId,
+  });
+
+  if (!hasAccess) {
+    throw new Error("You do not have permission to comment on this task.");
+  }
+
+  const created = await TaskComment.create({
+    task_id: task._id,
+    user_id: actor.user_id,
+    message: input.message.trim(),
+  });
+
+  const userMap = await getUsersByIds([String(actor.user_id)]);
+
+  return normalizeComment({
+    _id: created._id,
+    task_id: created.task_id,
+    user_id: created.user_id,
+    message: created.message,
+    created_at: created.created_at,
+  }, userMap);
+};
+
+export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Promise<TaskDetailResponse> => {
+  const task = await resolveTaskOrThrow(taskId);
+
+  const hasAccess = await canAccessTaskScope(actor, {
+    _id: task._id as Types.ObjectId,
+    created_by: task.created_by as Types.ObjectId,
+  });
+
+  if (!hasAccess) {
+    throw new Error("You do not have permission to view this task.");
+  }
+
+  const [assigneeRows, links, historyRows, commentsRows] = await Promise.all([
+    TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
+    TaskWorkLink.find({ task_id: task._id }).sort({ created_at: -1 }).lean(),
+    TaskStatusHistory.find({ task_id: task._id }).sort({ timestamp: -1 }).lean(),
+    TaskComment.find({ task_id: task._id }).sort({ created_at: 1 }).lean(),
+  ]);
+
+  const assigneeIds = assigneeRows.map((row) => String(row.assigned_to));
+  const historyUserIds = historyRows.map((row) => String(row.updated_by));
+  const commentUserIds = commentsRows.map((row) => String(row.user_id));
+  const allUserIds = [...new Set([String(task.created_by), ...assigneeIds, ...historyUserIds, ...commentUserIds])];
+
+  const userMap = await getUsersByIds(allUserIds);
+
+  const involvedUsers = await User.find({ _id: { $in: allUserIds } })
+    .select("department_id")
+    .lean();
+
+  const involved_departments = await getInvolvedDepartments(involvedUsers);
+
+  const history: ListTaskStatusHistoryItem[] = historyRows.map((item) => ({
+    history_id: String(item._id),
+    task_id: String(item.task_id),
+    updated_by: String(item.updated_by),
+    updated_by_user: userMap.get(String(item.updated_by)) ?? null,
+    previous_status: item.previous_status,
+    new_status: item.new_status,
+    update_notes: item.update_notes,
+    timestamp: item.timestamp,
+  }));
+
+  const comments: TaskCommentItem[] = commentsRows.map((item) =>
+    normalizeComment({
+      _id: item._id,
+      task_id: item.task_id,
+      user_id: item.user_id,
+      message: item.message,
+      created_at: item.created_at,
+    }, userMap),
+  );
+
+  const assigned_users = assigneeIds
+    .map((id) => userMap.get(id))
+    .filter((item): item is TaskUserSummary => !!item);
+
+  const normalizedTask = normalizeTask(task);
+  const canEditLinksByStatus = task.status !== "Under Review" && task.status !== "Completed";
+  const managerCanDeleteAny = canManageGlobally(actor.global_role) || canManageDepartment(actor.department_role);
+  const link_permissions: TaskLinkPermissions = {
+    can_add_links: canEditLinksByStatus,
+    can_delete_any_link: canEditLinksByStatus && managerCanDeleteAny,
+    can_delete_own_links: canEditLinksByStatus,
+  };
+
+  return {
+    ...normalizedTask,
+    assigned_users,
+    involved_departments,
+    links: links.map((item) =>
+      normalizeWorkLink({
+        _id: item._id,
+        task_id: item.task_id,
+        submitted_by: item.submitted_by,
+        url: item.url,
+        label: item.label,
+        created_at: item.created_at,
+      }),
+    ),
+    links_count: links.length,
+    history,
+    comments,
+    link_permissions,
+  };
 };

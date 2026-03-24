@@ -1,21 +1,50 @@
 import api from './api';
 import type {
+  AddTaskCommentPayload,
   AddTaskFeedbackPayload,
   AddTaskWorkLinkPayload,
   CreateTaskResponse,
   CreateTaskPayload,
+  PaginatedTaskListResponse,
   Task,
   TaskAssignment,
+  TaskComment,
+  TaskDetail,
   TaskFeedback,
-  TaskWorkLink,
+  TaskListQuery,
   TaskStatusHistory,
+  TaskWorkLink,
   UpdateTaskStatusPayload,
   UpdateTaskStatusResponse,
 } from '../types/task';
 
+const buildListQueryParams = (query?: TaskListQuery) => ({
+  page: query?.page ?? 1,
+  limit: query?.limit ?? 10,
+  status: query?.status,
+  priority: query?.priority,
+  search: query?.search,
+  created_date: query?.created_date ?? 'all',
+  sort_by: query?.sort_by ?? 'created_desc',
+});
+
 export const taskService = {
   getTasks: async (): Promise<Task[]> => {
-    const response = await api.get<Task[]>('/tasks');
+    const response = await api.get<Task[]>('/tasks', { params: { paginate: false }, headers: {} });
+    return response.data;
+  },
+
+  getTaskList: async (query?: TaskListQuery): Promise<PaginatedTaskListResponse> => {
+    const response = await api.get<PaginatedTaskListResponse>('/tasks', {
+      params: buildListQueryParams(query),
+      headers: {},
+    });
+
+    return response.data;
+  },
+
+  getTaskDetail: async (taskId: string): Promise<TaskDetail> => {
+    const response = await api.get<TaskDetail>(`/tasks/${taskId}`);
     return response.data;
   },
 
@@ -61,5 +90,15 @@ export const taskService = {
 
   deleteTaskWorkLink: async (taskId: string, workLinkId: string): Promise<void> => {
     await api.delete(`/tasks/${taskId}/work-links/${workLinkId}`);
+  },
+
+  getTaskComments: async (taskId: string): Promise<TaskComment[]> => {
+    const response = await api.get<TaskComment[]>(`/tasks/${taskId}/comments`);
+    return response.data;
+  },
+
+  addTaskComment: async (taskId: string, payload: AddTaskCommentPayload): Promise<TaskComment> => {
+    const response = await api.post<TaskComment>(`/tasks/${taskId}/comments`, payload);
+    return response.data;
   },
 };

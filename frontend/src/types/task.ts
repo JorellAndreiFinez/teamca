@@ -5,7 +5,7 @@ export interface Task {
   task_id: string | number;
   title: string;
   description: string;
-  created_by: string; // uuid
+  created_by: string;
   status: TaskStatus;
   priority: TaskPriority;
   deadline: string | Date;
@@ -13,17 +13,43 @@ export interface Task {
   assignees?: string[];
 }
 
+export interface TaskUserSummary {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
+export interface TaskDepartmentSummary {
+  department_id: string;
+  department_name: string;
+}
+
+export interface TaskListItem extends Task {
+  assigned_users: TaskUserSummary[];
+  links_count: number;
+}
+
+export interface PaginatedTaskListResponse {
+  items: TaskListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface TaskAssignment {
   assignment_id: string;
   task_id: string | number;
-  assigned_to: string; // uuid
+  assigned_to: string;
   assigned_at: string | Date;
 }
 
 export interface TaskStatusHistory {
   history_id: string;
   task_id: string | number;
-  updated_by: string; // uuid
+  updated_by: string;
+  updated_by_user: TaskUserSummary | null;
   previous_status: TaskStatus;
   new_status: TaskStatus;
   update_notes?: string;
@@ -33,7 +59,7 @@ export interface TaskStatusHistory {
 export interface TaskFeedback {
   feedback_id: string;
   task_id: string;
-  supervisor_id: string; // uuid
+  supervisor_id: string;
   comments: string;
   created_at: string | Date;
 }
@@ -45,6 +71,31 @@ export interface TaskWorkLink {
   url: string;
   label?: string;
   created_at: string | Date;
+}
+
+export interface TaskComment {
+  comment_id: string;
+  task_id: string;
+  user_id: string;
+  user: TaskUserSummary | null;
+  message: string;
+  created_at: string | Date;
+}
+
+export interface TaskLinkPermissions {
+  can_add_links: boolean;
+  can_delete_any_link: boolean;
+  can_delete_own_links: boolean;
+}
+
+export interface TaskDetail extends Task {
+  assigned_users: TaskUserSummary[];
+  involved_departments: TaskDepartmentSummary[];
+  links: TaskWorkLink[];
+  links_count: number;
+  history: TaskStatusHistory[];
+  comments: TaskComment[];
+  link_permissions: TaskLinkPermissions;
 }
 
 export interface CreateTaskPayload {
@@ -74,7 +125,21 @@ export interface AddTaskWorkLinkPayload {
   label?: string;
 }
 
+export interface AddTaskCommentPayload {
+  message: string;
+}
+
 export interface CreateTaskResponse {
   task: Task;
   assignments: TaskAssignment[];
+}
+
+export interface TaskListQuery {
+  page?: number;
+  limit?: number;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  search?: string;
+  created_date?: 'all' | 'today' | '7d' | '30d';
+  sort_by?: 'created_desc' | 'created_asc' | 'priority_desc' | 'priority_asc' | 'deadline_asc' | 'deadline_desc' | 'title_asc';
 }

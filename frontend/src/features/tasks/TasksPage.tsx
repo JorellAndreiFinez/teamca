@@ -1,844 +1,773 @@
-import React, { useEffect, useMemo, useState } from 'react';
-
-import { useAuthStore } from '../../store/authStore';
-import { taskService } from '../../services/taskService';
-import type { CreateTaskPayload, Task, TaskFeedback, TaskPriority, TaskStatus, TaskStatusHistory, TaskWorkLink } from '../../types/task';
-import type { User } from '../../types/user';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
-import TaskCard from './components/TaskCard';
-import TimelineModal from './components/TimelineModal';
-import WorkLinksModal from './components/WorkLinksModal';
-import { canEditWorkLinks, getTaskStatusActions } from './domain/taskPolicy';
-import { useTasksData } from './hooks/useTasksData';
+import { taskService } from '../../services/taskService';
+import { userService } from '../../services/userService';
+import { useAuthStore } from '../../store/authStore';
+import type {
+  CreateTaskPayload,
+  PaginatedTaskListResponse,
+  TaskComment,
+  TaskDetail,
+  TaskPriority,
+  TaskStatus,
+  TaskWorkLink,
+} from '../../types/task';
+import type { User } from '../../types/user';
+import TaskFilters from './components/TaskFilters';
+import TaskModal from './components/TaskModal';
+import TaskPagination from './components/TaskPagination';
+import TaskTable from './components/TaskTable';
+import { useTaskSocket } from './hooks/useTaskSocket';
 
-const ALL_STATUSES: TaskStatus[] = ['Not Started', 'In Progress', 'Under Review', 'Completed'];
-const ALL_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High'];
-const TASKS_PER_PAGE = 10;
+type CreatedDateFilter = 'all' | 'today' | '7d' | '30d';
+type SortBy = 'created_desc' | 'created_asc' | 'priority_desc' | 'priority_asc' | 'deadline_asc' | 'deadline_desc' | 'title_asc';
 
-type PendingWorkLinkDeletion = {
-  taskId: string;
-  workLinkId: string;
-  label: string;
-};
-
-type RawUser = User & { _id?: string };
-
-const getUserId = (user: RawUser | null | undefined): string => {
-  if (!user) return '';
-  return user.user_id || user._id || '';
-};
-
-const getUserDisplay = (user: RawUser): string => {
-  return `${user.first_name} ${user.last_name}`.trim() || user.email;
-};
-
-const toggleSelection = (selected: string[], userId: string): string[] => {
-  if (selected.includes(userId)) {
-    return selected.filter((id) => id !== userId);
-  }
-
-  return [...selected, userId];
+const DEFAULT_LIST: PaginatedTaskListResponse = {
+  items: [],
+  total: 0,
+  page: 1,
+  limit: 10,
+  total_pages: 1,
 };
 
 export default function TasksPage() {
-  const user = useAuthStore((state) => state.user as RawUser | null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const canManageUsers = useAuthStore((state) => state.canManageUsers);
-  const canManageOwnDepartment = useAuthStore((state) => state.canManageOwnDepartment);
+  const currentUser = useAuthStore((state) => state.user);
+  const currentUserId = useAuthStore((state) => state.user?.user_id || '');
 
   const [mounted, setMounted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [statusUpdatingTaskId, setStatusUpdatingTaskId] = useState<string | null>(null);
-  const [feedbackByTaskId, setFeedbackByTaskId] = useState<Record<string, TaskFeedback[]>>({});
-  const [feedbackOpenByTaskId, setFeedbackOpenByTaskId] = useState<Record<string, boolean>>({});
-  const [feedbackDraftByTaskId, setFeedbackDraftByTaskId] = useState<Record<string, string>>({});
-  const [feedbackLoadingTaskId, setFeedbackLoadingTaskId] = useState<string | null>(null);
-  const [feedbackSubmittingTaskId, setFeedbackSubmittingTaskId] = useState<string | null>(null);
-  const [workLinksByTaskId, setWorkLinksByTaskId] = useState<Record<string, TaskWorkLink[]>>({});
-  const [workLinksLoadingTaskId, setWorkLinksLoadingTaskId] = useState<string | null>(null);
-  const [workLinksSubmittingTaskId, setWorkLinksSubmittingTaskId] = useState<string | null>(null);
-  const [workLinksDeletingId, setWorkLinksDeletingId] = useState<string | null>(null);
-  const [pendingWorkLinkDeletion, setPendingWorkLinkDeletion] = useState<PendingWorkLinkDeletion | null>(null);
-  const [workLinkDraftByTaskId, setWorkLinkDraftByTaskId] = useState<Record<string, { url: string; label: string }>>({});
-  const [workLinksModalTaskId, setWorkLinksModalTaskId] = useState<string | null>(null);
-  const [copiedWorkLinkId, setCopiedWorkLinkId] = useState<string | null>(null);
-  const [historyByTaskId, setHistoryByTaskId] = useState<Record<string, TaskStatusHistory[]>>({});
-  const [historyLoadingTaskId, setHistoryLoadingTaskId] = useState<string | null>(null);
-  const [timelineModalTaskId, setTimelineModalTaskId] = useState<string | null>(null);
-  const [assignDraftByTaskId, setAssignDraftByTaskId] = useState<Record<string, string[]>>({});
-  const [assignSubmittingTaskId, setAssignSubmittingTaskId] = useState<string | null>(null);
   const [serverError, setServerError] = useState('');
-  const [filter, setFilter] = useState<TaskStatus | 'All'>('All');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const currentUserId = getUserId(user);
-  const isGlobalManager = canManageUsers();
-  const isDepartmentManager = canManageOwnDepartment() && !isGlobalManager;
-  const isInternAssigner = user?.global_role === 'Standard_User' && user?.department_role === 'Intern';
-  const canAssign = isGlobalManager || isDepartmentManager || isInternAssigner;
-  const currentDepartmentId = user?.department_id ? String(user.department_id) : '';
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
+  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'All'>('All');
+  const [createdDateFilter, setCreatedDateFilter] = useState<CreatedDateFilter>('all');
+  const [sortBy, setSortBy] = useState<SortBy>('created_desc');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
-  const { tasks, users, isLoading, isRefreshing, lastSyncedAt, loadTasksData } = useTasksData({
-    mounted,
-    isAuthenticated,
-    canAssign,
-    isGlobalManager,
-    isDepartmentManager,
-    isInternAssigner,
-    currentDepartmentId,
-    currentUserId,
-    onError: setServerError,
-  });
-
-  const [createForm, setCreateForm] = useState<CreateTaskPayload>({
+  const [taskList, setTaskList] = useState<PaginatedTaskListResponse>(DEFAULT_LIST);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [createForm, setCreateForm] = useState<{
+    title: string;
+    description: string;
+    priority: TaskPriority;
+    dueDate: string;
+    dueTime: string;
+  }>({
     title: '',
     description: '',
     priority: 'Medium',
-    deadline: '',
-    assigned_to: currentUserId ? [currentUserId] : [],
+    dueDate: '',
+    dueTime: '',
   });
-  const [scheduleDate, setScheduleDate] = useState('');
-  const [scheduleTime, setScheduleTime] = useState('');
 
-  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [taskDetail, setTaskDetail] = useState<TaskDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+
+  const [linkDraft, setLinkDraft] = useState({ url: '', label: '' });
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [linkDeletingId, setLinkDeletingId] = useState<string | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const [modalToasts, setModalToasts] = useState<Array<{ id: string; message: string; exiting: boolean }>>([]);
+
+  const pushModalToast = useCallback((message: string) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setModalToasts((prev) => [...prev, { id, message, exiting: false }]);
+
+    window.setTimeout(() => {
+      setModalToasts((prev) => prev.map((item) => (item.id === id ? { ...item, exiting: true } : item)));
+    }, 1800);
+
+    window.setTimeout(() => {
+      setModalToasts((prev) => prev.filter((item) => item.id !== id));
+    }, 2100);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    const fallbackId = users[0]?._id || users[0]?.user_id || currentUserId;
-    setCreateForm((prev) => ({
-      ...prev,
-      assigned_to:
-        canAssign
-          ? (prev.assigned_to && prev.assigned_to.length > 0
-            ? prev.assigned_to
-            : (fallbackId ? [fallbackId] : []))
-          : (currentUserId ? [currentUserId] : []),
-    }));
-  }, [canAssign, currentUserId, users]);
+  const isSuperadmin = currentUser?.global_role === 'Superadmin';
+  const isAdmin = currentUser?.global_role === 'Admin';
+  const isHeadOrSupervisor = currentUser?.department_role === 'Head' || currentUser?.department_role === 'Supervisor';
+  const isIntern = currentUser?.department_role === 'Intern';
+  const isSelfOnlyAssignee = !isSuperadmin && !isAdmin && !isHeadOrSupervisor && !isIntern;
 
-  const statusCounts = useMemo(
-    () =>
-      ALL_STATUSES.reduce((acc, status) => {
-        acc[status] = tasks.filter((task) => task.status === status).length;
-        return acc;
-      }, {} as Record<TaskStatus, number>),
-    [tasks],
-  );
-
-  const filteredTasks = filter === 'All' ? tasks : tasks.filter((task) => task.status === filter);
-  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / TASKS_PER_PAGE));
-  const pagedTasks = filteredTasks.slice((currentPage - 1) * TASKS_PER_PAGE, currentPage * TASKS_PER_PAGE);
-  const visiblePageNumbers = useMemo(() => {
-    const windowSize = 5;
-    if (totalPages <= windowSize) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const assignableUsers = useMemo(() => {
+    if (!currentUser) {
+      return [] as User[];
     }
 
-    const halfWindow = Math.floor(windowSize / 2);
-    let start = Math.max(1, currentPage - halfWindow);
-    let end = Math.min(totalPages, start + windowSize - 1);
+    const activeUsers = allUsers.filter((user) => user.is_active);
+    let scopedUsers: User[];
 
-    if (end - start + 1 < windowSize) {
-      start = Math.max(1, end - windowSize + 1);
+    if (isSuperadmin || isAdmin) {
+      scopedUsers = activeUsers;
+    } else if (isHeadOrSupervisor || isIntern) {
+      const departmentId = currentUser.department_id;
+      scopedUsers = activeUsers.filter(
+        (user) =>
+          typeof user.department_id !== 'undefined' &&
+          user.department_id !== null &&
+          typeof departmentId !== 'undefined' &&
+          departmentId !== null &&
+          String(user.department_id) === String(departmentId)
+      );
+    } else {
+      scopedUsers = activeUsers.filter((user) => user.user_id === currentUserId);
     }
 
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-  }, [currentPage, totalPages]);
-  const timelineTask = timelineModalTaskId
-    ? tasks.find((task) => String(task.task_id) === timelineModalTaskId) || null
-    : null;
-  const workLinksTask = workLinksModalTaskId
-    ? tasks.find((task) => String(task.task_id) === workLinksModalTaskId) || null
-    : null;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filter]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    if (!scopedUsers.some((user) => user.user_id === currentUserId) && currentUser.is_active) {
+      scopedUsers = [...scopedUsers, currentUser];
     }
-  }, [currentPage, totalPages]);
 
-  if (!mounted) return null;
+    return [...scopedUsers].sort((a, b) => {
+      const aName = `${a.first_name} ${a.last_name}`.trim() || a.email;
+      const bName = `${b.first_name} ${b.last_name}`.trim() || b.email;
+      return aName.localeCompare(bName);
+    });
+  }, [allUsers, currentUser, currentUserId, isAdmin, isHeadOrSupervisor, isIntern, isSuperadmin]);
+
+  const assignmentHint = isSuperadmin || isAdmin
+    ? 'You can assign any active user.'
+    : isHeadOrSupervisor
+      ? 'You can assign users in your department.'
+      : isIntern
+        ? 'You can assign users in your department and your account will always be included.'
+        : 'You can only assign tasks to your own account.';
+
+  const loadTasks = useCallback(async (options?: { refresh?: boolean }) => {
+    if (!options?.refresh) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
+
+    setServerError('');
+
+    try {
+      const payload = await taskService.getTaskList({
+        page,
+        limit,
+        search: search.trim() || undefined,
+        status: statusFilter === 'All' ? undefined : statusFilter,
+        priority: priorityFilter === 'All' ? undefined : priorityFilter,
+        created_date: createdDateFilter,
+        sort_by: sortBy,
+      });
+
+      setTaskList(payload);
+      if (payload.page !== page) {
+        setPage(payload.page);
+      }
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to load tasks.');
+      setTaskList(DEFAULT_LIST);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [createdDateFilter, limit, page, priorityFilter, search, sortBy, statusFilter]);
+
+  const loadTaskDetail = useCallback(async (taskId: string) => {
+    setDetailLoading(true);
+    setServerError('');
+
+    try {
+      const detail = await taskService.getTaskDetail(taskId);
+      setTaskDetail(detail);
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to load task details.');
+      setTaskDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !isAuthenticated) {
+      return;
+    }
+
+    void loadTasks();
+  }, [isAuthenticated, loadTasks, mounted]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, priorityFilter, createdDateFilter, sortBy, limit]);
+
+  useEffect(() => {
+    if (!selectedTaskId) {
+      setTaskDetail(null);
+      return;
+    }
+
+    void loadTaskDetail(selectedTaskId);
+  }, [loadTaskDetail, selectedTaskId]);
+
+  useEffect(() => {
+    if (!isCreateModalOpen || !isAuthenticated) {
+      return;
+    }
+
+    setUsersLoading(true);
+    void userService
+      .getAllUsers()
+      .then((users) => setAllUsers(users))
+      .catch(() => setCreateError('Failed to load assignable users.'))
+      .finally(() => setUsersLoading(false));
+  }, [isAuthenticated, isCreateModalOpen]);
+
+  useEffect(() => {
+    if (!isCreateModalOpen || !currentUserId) {
+      return;
+    }
+
+    setAssigneeIds((prev) => {
+      if (prev.length > 0) {
+        return prev;
+      }
+
+      return [currentUserId];
+    });
+  }, [currentUserId, isCreateModalOpen]);
+
+  useEffect(() => {
+    setAssigneeIds((prev) => {
+      const scoped = prev.filter((id) => assignableUsers.some((user) => user.user_id === id));
+      if (isIntern && currentUserId && !scoped.includes(currentUserId)) {
+        return [...scoped, currentUserId];
+      }
+
+      return scoped;
+    });
+  }, [assignableUsers, currentUserId, isIntern]);
+
+  const handleSocketComment = useCallback((payload: any) => {
+    const taskId = payload?.task_id;
+    const comment = payload?.comment as TaskComment | undefined;
+
+    if (!taskId || !comment || String(taskId) !== selectedTaskId) {
+      return;
+    }
+
+    setTaskDetail((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      if (prev.comments.some((item) => item.comment_id === comment.comment_id)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        comments: [...prev.comments, comment],
+      };
+    });
+
+    pushModalToast('New comment received');
+  }, [pushModalToast, selectedTaskId]);
+
+  const handleSocketStatus = useCallback((payload: any) => {
+    const taskId = payload?.task_id;
+    const nextTask = payload?.task;
+    const history = payload?.history;
+
+    if (!taskId || String(taskId) !== selectedTaskId || !nextTask || !history) {
+      return;
+    }
+
+    setTaskDetail((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        status: nextTask.status,
+        history: [history, ...prev.history],
+      };
+    });
+
+    pushModalToast(`Status updated to ${nextTask.status}`);
+
+    void loadTasks({ refresh: true });
+  }, [loadTasks, pushModalToast, selectedTaskId]);
+
+  useTaskSocket({
+    taskId: selectedTaskId,
+    onCommentCreated: handleSocketComment,
+    onStatusUpdated: handleSocketStatus,
+  });
+
+  if (!mounted) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     window.location.replace('/login');
     return null;
   }
 
-  const validateCreateForm = () => {
-    const errors: Record<string, string> = {};
+  const canAddLinks = !!taskDetail?.link_permissions.can_add_links;
+  const canDeleteAnyLink = !!taskDetail?.link_permissions.can_delete_any_link;
+  const canDeleteOwnLink = !!taskDetail?.link_permissions.can_delete_own_links;
 
-    if (!createForm.title.trim()) {
-      errors.title = 'Title is required.';
+  const handleUpdateStatus = async (nextStatus: TaskStatus) => {
+    if (!taskDetail) {
+      return;
     }
 
-    if (!scheduleDate) {
-      errors.deadline_date = 'Schedule date is required.';
+    setStatusUpdating(true);
+    setServerError('');
+
+    try {
+      const response = await taskService.updateTaskStatus(String(taskDetail.task_id), {
+        status: nextStatus,
+      });
+
+      setTaskDetail((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          status: response.task.status,
+          history: [response.history, ...prev.history],
+        };
+      });
+
+      await loadTasks({ refresh: true });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to update task status.');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!taskDetail) {
+      return;
     }
 
-    if (!scheduleTime) {
-      errors.deadline_time = 'Schedule time is required.';
+    const message = commentDraft.trim();
+    if (!message) {
+      setServerError('Comment message is required.');
+      return;
     }
 
-    if (!createForm.assigned_to || createForm.assigned_to.length === 0) {
-      errors.assigned_to = 'Assignee is required.';
+    setCommentSubmitting(true);
+    setServerError('');
+
+    try {
+      const created = await taskService.addTaskComment(String(taskDetail.task_id), { message });
+      setCommentDraft('');
+      pushModalToast('Comment posted');
+
+      setTaskDetail((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        if (prev.comments.some((item) => item.comment_id === created.comment_id)) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          comments: [...prev.comments, created],
+        };
+      });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to add comment.');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const handleAddLink = async () => {
+    if (!taskDetail) {
+      return;
     }
 
-    return errors;
+    const url = linkDraft.url.trim();
+    if (!url) {
+      setServerError('Link URL is required.');
+      return;
+    }
+
+    if (!canAddLinks) {
+      setServerError('You do not have permission to add links on this task.');
+      return;
+    }
+
+    setLinkSubmitting(true);
+    setServerError('');
+
+    try {
+      await taskService.addTaskWorkLink(String(taskDetail.task_id), {
+        url,
+        label: linkDraft.label.trim() || undefined,
+      });
+
+      const links = await taskService.getTaskWorkLinks(String(taskDetail.task_id));
+      setTaskDetail((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          links,
+          links_count: links.length,
+        };
+      });
+
+      setLinkDraft({ url: '', label: '' });
+      pushModalToast('Work link added');
+      await loadTasks({ refresh: true });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to add link.');
+    } finally {
+      setLinkSubmitting(false);
+    }
+  };
+
+  const handleDeleteLink = async (workLinkId: string) => {
+    if (!taskDetail) {
+      return;
+    }
+
+    const link = taskDetail.links.find((item) => item.work_link_id === workLinkId);
+    if (!link) {
+      return;
+    }
+
+    const canDelete = canDeleteAnyLink || (canDeleteOwnLink && link.submitted_by === currentUserId);
+    if (!canDelete) {
+      setServerError('You do not have permission to delete this link.');
+      return;
+    }
+
+    setLinkDeletingId(workLinkId);
+    setServerError('');
+
+    try {
+      await taskService.deleteTaskWorkLink(String(taskDetail.task_id), workLinkId);
+      const links = await taskService.getTaskWorkLinks(String(taskDetail.task_id));
+
+      setTaskDetail((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          links,
+          links_count: links.length,
+        };
+      });
+
+      pushModalToast('Work link deleted');
+      await loadTasks({ refresh: true });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to delete link.');
+    } finally {
+      setLinkDeletingId(null);
+    }
+  };
+
+  const handleCopyLink = async (workLinkId: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLinkId(workLinkId);
+      pushModalToast('Link copied');
+      window.setTimeout(() => {
+        setCopiedLinkId((prev) => (prev === workLinkId ? null : prev));
+      }, 1200);
+    } catch {
+      setServerError('Copy failed.');
+    }
   };
 
   const handleCreateTask = async (event: React.FormEvent) => {
     event.preventDefault();
+    setCreateError('');
 
-    const errors = validateCreateForm();
-    setCreateErrors(errors);
-    if (Object.keys(errors).length > 0) {
+    if (!createForm.title.trim()) {
+      setCreateError('Task title is required.');
       return;
     }
 
-    setIsSubmitting(true);
-    setServerError('');
+    if (!createForm.dueDate || !createForm.dueTime) {
+      setCreateError('Deadline date and time are required.');
+      return;
+    }
+
+    const deadline = new Date(`${createForm.dueDate}T${createForm.dueTime}`);
+    if (Number.isNaN(deadline.getTime())) {
+      setCreateError('Invalid deadline value.');
+      return;
+    }
+
+    const selectedAssignees = [...new Set(assigneeIds)];
+    if (isIntern && currentUserId && !selectedAssignees.includes(currentUserId)) {
+      selectedAssignees.push(currentUserId);
+    }
+
+    if (!selectedAssignees.length) {
+      setCreateError('Please select at least one assignee.');
+      return;
+    }
+
+    setIsCreatingTask(true);
 
     try {
-      const composedDeadline = new Date(`${scheduleDate}T${scheduleTime}`);
-      if (Number.isNaN(composedDeadline.getTime())) {
-        setCreateErrors((prev) => ({ ...prev, deadline_date: 'Invalid schedule date/time.' }));
-        setIsSubmitting(false);
-        return;
-      }
-
       const payload: CreateTaskPayload = {
-        ...createForm,
         title: createForm.title.trim(),
-        description: createForm.description?.trim() || undefined,
-        deadline: composedDeadline.toISOString(),
-        assigned_to:
-          createForm.assigned_to && createForm.assigned_to.length > 0
-            ? createForm.assigned_to
-            : (currentUserId ? [currentUserId] : []),
+        description: createForm.description.trim() || undefined,
+        priority: createForm.priority,
+        deadline: deadline.toISOString(),
+        assigned_to: selectedAssignees,
       };
 
-      if (isInternAssigner && currentUserId && !(payload.assigned_to || []).includes(currentUserId)) {
-        payload.assigned_to = [...(payload.assigned_to || []), currentUserId];
-      }
-
       await taskService.createTask(payload);
-
-      await loadTasksData({ silent: true });
 
       setCreateForm({
         title: '',
         description: '',
         priority: 'Medium',
-        deadline: '',
-        assigned_to: currentUserId ? [currentUserId] : [],
+        dueDate: '',
+        dueTime: '',
       });
-      setScheduleDate('');
-      setScheduleTime('');
-      setCreateErrors({});
+      setAssigneeIds(currentUserId ? [currentUserId] : []);
       setIsCreateModalOpen(false);
+      pushModalToast('Task created');
+      await loadTasks({ refresh: true });
     } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to create task.');
+      setCreateError(error?.response?.data?.message || 'Failed to create task.');
     } finally {
-      setIsSubmitting(false);
+      setIsCreatingTask(false);
     }
   };
 
-  const getActionsForTask = (task: Task) =>
-    getTaskStatusActions(task, {
-      currentUserId,
-      isGlobalManager,
-      isDepartmentManager,
-    });
-
-  const loadTaskFeedback = async (taskId: string) => {
-    setFeedbackLoadingTaskId(taskId);
-    try {
-      const feedback = await taskService.getTaskFeedback(taskId);
-      setFeedbackByTaskId((prev) => ({ ...prev, [taskId]: feedback }));
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to load task feedback.');
-    } finally {
-      setFeedbackLoadingTaskId(null);
-    }
-  };
-
-  const loadTaskWorkLinks = async (taskId: string) => {
-    setWorkLinksLoadingTaskId(taskId);
-    try {
-      const links = await taskService.getTaskWorkLinks(taskId);
-      setWorkLinksByTaskId((prev) => ({ ...prev, [taskId]: links }));
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to load task work links.');
-    } finally {
-      setWorkLinksLoadingTaskId(null);
-    }
-  };
-
-  const openTaskWorkLinksModal = async (taskId: string) => {
-    setWorkLinksModalTaskId(taskId);
-    if (!workLinksByTaskId[taskId]) {
-      await loadTaskWorkLinks(taskId);
-    }
-  };
-
-  const openTaskTimelineModal = async (taskId: string) => {
-    setTimelineModalTaskId(taskId);
-    if (!historyByTaskId[taskId]) {
-      await loadTaskStatusHistory(taskId);
-    }
-  };
-
-  const handleAddTaskWorkLink = async (taskId: string) => {
-    const draft = workLinkDraftByTaskId[taskId] || { url: '', label: '' };
-    const url = draft.url.trim();
-    const label = draft.label.trim();
-
-    if (!url) {
-      setServerError('Work link URL is required.');
-      return;
-    }
-
-    setWorkLinksSubmittingTaskId(taskId);
-    setServerError('');
-
-    try {
-      await taskService.addTaskWorkLink(taskId, {
-        url,
-        label: label || undefined,
-      });
-
-      const links = await taskService.getTaskWorkLinks(taskId);
-      setWorkLinksByTaskId((prev) => ({ ...prev, [taskId]: links }));
-      setWorkLinkDraftByTaskId((prev) => ({
-        ...prev,
-        [taskId]: { url: '', label: '' },
-      }));
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to attach work link.');
-    } finally {
-      setWorkLinksSubmittingTaskId(null);
-    }
-  };
-
-  const handleCopyWorkLink = async (workLinkId: string, url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-
-      setCopiedWorkLinkId(workLinkId);
-      window.setTimeout(() => {
-        setCopiedWorkLinkId((prev) => (prev === workLinkId ? null : prev));
-      }, 1400);
-    } catch {
-      setServerError('Copy failed. Please copy the URL manually.');
-    }
-  };
-
-  const requestDeleteTaskWorkLink = (taskId: string, link: TaskWorkLink) => {
-    setPendingWorkLinkDeletion({
-      taskId,
-      workLinkId: link.work_link_id,
-      label: link.label?.trim() || link.url,
-    });
-  };
-
-  const confirmDeleteTaskWorkLink = async () => {
-    if (!pendingWorkLinkDeletion) {
-      return;
-    }
-
-    const { taskId, workLinkId } = pendingWorkLinkDeletion;
-    setPendingWorkLinkDeletion(null);
-    await handleDeleteTaskWorkLink(taskId, workLinkId);
-  };
-
-  const handleDeleteTaskWorkLink = async (taskId: string, workLinkId: string) => {
-    setWorkLinksDeletingId(workLinkId);
-    setServerError('');
-
-    try {
-      await taskService.deleteTaskWorkLink(taskId, workLinkId);
-
-      setWorkLinksByTaskId((prev) => ({
-        ...prev,
-        [taskId]: (prev[taskId] || []).filter((item) => item.work_link_id !== workLinkId),
-      }));
-
-      if (copiedWorkLinkId === workLinkId) {
-        setCopiedWorkLinkId(null);
-      }
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to remove task work link.');
-    } finally {
-      setWorkLinksDeletingId(null);
-    }
-  };
-
-  const toggleTaskFeedback = async (taskId: string) => {
-    const isOpen = !!feedbackOpenByTaskId[taskId];
-    const nextOpen = !isOpen;
-
-    setFeedbackOpenByTaskId((prev) => ({
-      ...prev,
-      [taskId]: nextOpen,
-    }));
-
-    if (nextOpen && !feedbackByTaskId[taskId]) {
-      await loadTaskFeedback(taskId);
-    }
-  };
-
-  const handleAddTaskFeedback = async (taskId: string) => {
-    const comments = (feedbackDraftByTaskId[taskId] || '').trim();
-    if (comments.length < 3) {
-      setServerError('Feedback must be at least 3 characters.');
-      return;
-    }
-
-    setFeedbackSubmittingTaskId(taskId);
-    setServerError('');
-
-    try {
-      await taskService.addTaskFeedback(taskId, { comments });
-      const updatedFeedback = await taskService.getTaskFeedback(taskId);
-
-      setFeedbackByTaskId((prev) => ({ ...prev, [taskId]: updatedFeedback }));
-      setFeedbackDraftByTaskId((prev) => ({ ...prev, [taskId]: '' }));
-      setFeedbackOpenByTaskId((prev) => ({ ...prev, [taskId]: true }));
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to submit task feedback.');
-    } finally {
-      setFeedbackSubmittingTaskId(null);
-    }
-  };
-
-  const loadTaskStatusHistory = async (taskId: string) => {
-    setHistoryLoadingTaskId(taskId);
-    try {
-      const history = await taskService.getTaskStatusHistory(taskId);
-      setHistoryByTaskId((prev) => ({ ...prev, [taskId]: history }));
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to load task status history.');
-    } finally {
-      setHistoryLoadingTaskId(null);
-    }
-  };
-
-  const handleAssignUsersToTask = async (taskId: string) => {
-    const selectedAssignees = assignDraftByTaskId[taskId] || [];
-    if (selectedAssignees.length === 0) {
-      setServerError('Select at least one assignee to add.');
-      return;
-    }
-
-    setAssignSubmittingTaskId(taskId);
-    setServerError('');
-
-    try {
-      const payload = [...selectedAssignees];
-      if (isInternAssigner && currentUserId && !payload.includes(currentUserId)) {
-        payload.push(currentUserId);
-      }
-
-      await taskService.assignTask(taskId, payload);
-      await loadTasksData({ silent: true });
-      setAssignDraftByTaskId((prev) => ({ ...prev, [taskId]: [] }));
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to assign users to task.');
-    } finally {
-      setAssignSubmittingTaskId(null);
-    }
-  };
-
-  const handleUpdateTaskStatus = async (task: Task, nextStatus: TaskStatus) => {
-    const taskId = String(task.task_id);
-    if (nextStatus === task.status) {
-      return;
-    }
-
-    setStatusUpdatingTaskId(taskId);
-    setServerError('');
-
-    try {
-      await taskService.updateTaskStatus(taskId, {
-        status: nextStatus,
-      });
-
-      await loadTasksData({ silent: true });
-
-      if (timelineModalTaskId === taskId) {
-        await loadTaskStatusHistory(taskId);
-      }
-    } catch (error: any) {
-      setServerError(error?.response?.data?.message || 'Failed to update task status.');
-    } finally {
-      setStatusUpdatingTaskId(null);
-    }
-  };
+  const modalComments = taskDetail?.comments || [];
+  const modalLinks: TaskWorkLink[] = taskDetail?.links || [];
+  const totalPages = Math.max(1, taskList.total_pages || 1);
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="mx-auto max-w-7xl space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Tasks</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {isGlobalManager
-              ? 'Create and assign tasks across all departments.'
-              : 'Create and assign tasks for your current department.'}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            {lastSyncedAt ? `Last update: ${lastSyncedAt.toLocaleTimeString()}` : 'Waiting for first sync...'}
-            {isRefreshing ? ' (refreshing...)' : ''}
-          </p>
+          <p className="mt-1 text-sm text-slate-500">Table view for quick scanning, modal view for full task details.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            loading={isRefreshing}
-            onClick={() => void loadTasksData({ silent: true })}
-          >
+          <Button type="button" variant="outline" size="sm" loading={isRefreshing} onClick={() => void loadTasks({ refresh: true })}>
             Refresh
           </Button>
-          <Button variant="primary" size="md" onClick={() => setIsCreateModalOpen(true)}>
-            + New Task
+          <Button type="button" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+            Add Task
           </Button>
         </div>
       </div>
 
-      {serverError && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-          {serverError}
-        </div>
-      )}
+      {serverError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{serverError}</div>
+      ) : null}
 
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {ALL_STATUSES.map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`rounded-xl border p-3 text-left transition-colors ${
-              filter === status ? 'border-blue-300 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white/80 hover:bg-white'
-            }`}
-          >
-            <p className="text-lg font-semibold text-slate-900">{statusCounts[status]}</p>
-            <p className="mt-0.5 text-xs text-slate-500">{status}</p>
-          </button>
-        ))}
-      </div>
+      <TaskFilters
+        search={search}
+        status={statusFilter}
+        priority={priorityFilter}
+        createdDate={createdDateFilter}
+        sortBy={sortBy}
+        limit={limit}
+        onSearchChange={setSearch}
+        onStatusChange={setStatusFilter}
+        onPriorityChange={setPriorityFilter}
+        onCreatedDateChange={setCreatedDateFilter}
+        onSortByChange={setSortBy}
+        onLimitChange={setLimit}
+      />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {(['All', ...ALL_STATUSES] as const).map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              filter === status ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            {status} {status !== 'All' && `(${statusCounts[status]})`}
-          </button>
-        ))}
-      </div>
+      <TaskTable tasks={taskList.items} isLoading={isLoading} onRowClick={setSelectedTaskId} />
 
-      <div className="bg-transparent p-0 shadow-none">
-        {isLoading ? (
-          <p className="text-center text-gray-400 py-8 text-sm">Loading tasks...</p>
-        ) : filteredTasks.length === 0 ? (
-          <p className="text-center text-gray-400 py-8 text-sm">No tasks in this category</p>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {pagedTasks.map((task) => {
-              const statusActions = getActionsForTask(task);
-              const taskId = String(task.task_id);
-              const selectedAssignees = assignDraftByTaskId[taskId] || [];
-              const feedbackItems = feedbackByTaskId[taskId] || [];
-              const assigneeDisplayNames = (task.assignees || []).map((assigneeId) => {
-                const found = users.find((item) => getUserId(item) === assigneeId);
-                return found ? getUserDisplay(found) : 'Team member';
-              });
+      <TaskPagination
+        page={page}
+        totalPages={totalPages}
+        total={taskList.total}
+        limit={limit}
+        onPageChange={setPage}
+      />
 
-              return (
-                <TaskCard
-                  key={task.task_id}
-                  task={task}
-                  statusActions={statusActions}
-                  statusUpdating={statusUpdatingTaskId === taskId}
-                  historyLoading={historyLoadingTaskId === taskId}
-                  workLinksLoading={workLinksLoadingTaskId === taskId}
-                  workLinksCount={(workLinksByTaskId[taskId] || []).length}
-                  assigneeDisplayNames={assigneeDisplayNames}
-                  onOpenHistory={() => void openTaskTimelineModal(taskId)}
-                  onAdvance={(nextStatus) => void handleUpdateTaskStatus(task, nextStatus)}
-                  onRevert={(previousStatus) => void handleUpdateTaskStatus(task, previousStatus)}
-                  onOpenLinks={() => void openTaskWorkLinksModal(taskId)}
-                  canAssign={canAssign && users.length > 0}
-                  availableUsers={users
-                    .map((item) => {
-                      const itemId = getUserId(item);
-                      return itemId ? { id: itemId, display: getUserDisplay(item) } : null;
-                    })
-                    .filter((item): item is { id: string; display: string } => !!item)}
-                  selectedAssignees={selectedAssignees}
-                  onToggleAssignee={(userId) => {
-                    setAssignDraftByTaskId((prev) => ({
-                      ...prev,
-                      [taskId]: toggleSelection(prev[taskId] || [], userId),
-                    }));
-                  }}
-                  onAssignUsers={() => void handleAssignUsersToTask(taskId)}
-                  assignSubmitting={assignSubmittingTaskId === taskId}
-                  isInternAssigner={isInternAssigner}
-                  currentUserId={currentUserId}
-                  feedbackOpen={!!feedbackOpenByTaskId[taskId]}
-                  feedbackLoading={feedbackLoadingTaskId === taskId}
-                  feedbackSubmitting={feedbackSubmittingTaskId === taskId}
-                  feedbackItems={feedbackItems}
-                  feedbackDraft={feedbackDraftByTaskId[taskId] || ''}
-                  canSubmitFeedback={isGlobalManager || isDepartmentManager}
-                  onToggleFeedback={() => void toggleTaskFeedback(taskId)}
-                  onFeedbackDraftChange={(value) => {
-                    setFeedbackDraftByTaskId((prev) => ({ ...prev, [taskId]: value }));
-                  }}
-                  onSubmitFeedback={() => void handleAddTaskFeedback(taskId)}
-                />
-              );
-            })}
-          </div>
-        )}
-
-        {!isLoading && filteredTasks.length > TASKS_PER_PAGE && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
-            <p className="text-xs text-gray-500">
-              Page {currentPage} of {totalPages}
-            </p>
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                title="First page"
-              >
-                First
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Back
-              </Button>
-              {visiblePageNumbers.map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  onClick={() => setCurrentPage(pageNumber)}
-                  className={`min-w-8 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                    currentPage === pageNumber
-                      ? 'border-blue-500 bg-blue-600 text-white'
-                      : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                title="Last page"
-              >
-                Last
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <WorkLinksModal
-        open={!!workLinksModalTaskId}
-        task={workLinksTask}
-        links={workLinksModalTaskId ? (workLinksByTaskId[workLinksModalTaskId] || []) : []}
-        loading={!!workLinksModalTaskId && workLinksLoadingTaskId === workLinksModalTaskId}
-        canEdit={!!workLinksTask && canEditWorkLinks(workLinksTask, getActionsForTask(workLinksTask))}
-        draft={workLinksTask ? (workLinkDraftByTaskId[String(workLinksTask.task_id)] || { url: '', label: '' }) : { url: '', label: '' }}
-        submitting={!!workLinksTask && workLinksSubmittingTaskId === String(workLinksTask.task_id)}
-        deletingId={workLinksDeletingId}
-        copiedId={copiedWorkLinkId}
-        onClose={() => setWorkLinksModalTaskId(null)}
-        onCopy={(workLinkId, url) => void handleCopyWorkLink(workLinkId, url)}
-        onRequestDelete={requestDeleteTaskWorkLink}
-        onDraftChange={(draft) => {
-          if (!workLinksTask) return;
-          setWorkLinkDraftByTaskId((prev) => ({
-            ...prev,
-            [String(workLinksTask.task_id)]: draft,
-          }));
+      <TaskModal
+        open={!!selectedTaskId}
+        task={taskDetail}
+        isLoading={detailLoading}
+        statusUpdating={statusUpdating}
+        commentsSubmitting={commentSubmitting}
+        linksSubmitting={linkSubmitting}
+        linkDeletingId={linkDeletingId}
+        copiedLinkId={copiedLinkId}
+        commentDraft={commentDraft}
+        linkDraft={linkDraft}
+        onClose={() => {
+          setSelectedTaskId(null);
+          setCommentDraft('');
+          setLinkDraft({ url: '', label: '' });
+          setModalToasts([]);
         }}
-        onSubmitLink={(taskId) => void handleAddTaskWorkLink(taskId)}
+        onCommentDraftChange={setCommentDraft}
+        onLinkDraftChange={setLinkDraft}
+        onUpdateStatus={(nextStatus) => void handleUpdateStatus(nextStatus)}
+        onAddComment={() => void handleAddComment()}
+        onAddLink={() => void handleAddLink()}
+        onDeleteLink={(workLinkId) => void handleDeleteLink(workLinkId)}
+        onCopyLink={(workLinkId, url) => void handleCopyLink(workLinkId, url)}
+        comments={modalComments}
+        links={modalLinks}
+        currentUserId={currentUserId}
+        canAddLinks={canAddLinks}
+        canDeleteAnyLink={canDeleteAnyLink}
+        canDeleteOwnLink={canDeleteOwnLink}
       />
 
-      <Modal
-        open={!!pendingWorkLinkDeletion}
-        onClose={() => setPendingWorkLinkDeletion(null)}
-        title="Confirm Link Removal"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-700">
-            Remove this work link from the task?
-          </p>
-          <p className="rounded-md border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700 break-all">
-            {pendingWorkLinkDeletion?.label}
-          </p>
-          <p className="text-xs text-gray-500">
-            This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setPendingWorkLinkDeletion(null)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              loading={!!pendingWorkLinkDeletion && workLinksDeletingId === pendingWorkLinkDeletion.workLinkId}
-              onClick={() => void confirmDeleteTaskWorkLink()}
-            >
-              Remove Link
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <TimelineModal
-        open={!!timelineModalTaskId}
-        task={timelineTask}
-        history={timelineModalTaskId ? (historyByTaskId[timelineModalTaskId] || []) : []}
-        loading={!!timelineModalTaskId && historyLoadingTaskId === timelineModalTaskId}
-        onClose={() => setTimelineModalTaskId(null)}
-      />
-
-      <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create Task">
-        <form onSubmit={handleCreateTask} className="space-y-3">
+      <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create Task" className="max-w-xl">
+        <form className="space-y-3" onSubmit={handleCreateTask}>
           <Input
             label="Title"
             value={createForm.title}
-            onChange={(e) => setCreateForm((prev) => ({ ...prev, title: e.target.value }))}
-            error={createErrors.title}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, title: event.target.value }))}
             placeholder="Enter task title"
           />
 
-          <Input
-            label="Description"
-            value={createForm.description}
-            onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Optional description"
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-700">Description</span>
+            <textarea
+              rows={3}
+              value={createForm.description}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Optional details"
+            />
+          </label>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700" htmlFor="priority">Priority</label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-slate-700">Priority</span>
               <select
-                id="priority"
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
                 value={createForm.priority}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, priority: e.target.value as TaskPriority }))}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, priority: event.target.value as TaskPriority }))}
               >
-                {ALL_PRIORITIES.map((priority) => (
-                  <option key={priority} value={priority}>{priority}</option>
-                ))}
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
               </select>
-            </div>
+            </label>
 
             <Input
-              label="Schedule Date"
+              label="Due Date"
               type="date"
-              value={scheduleDate}
-              onChange={(e) => setScheduleDate(e.target.value)}
-              error={createErrors.deadline_date}
+              value={createForm.dueDate}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, dueDate: event.target.value }))}
             />
 
             <Input
-              label="Schedule Time"
+              label="Due Time"
               type="time"
-              value={scheduleTime}
-              onChange={(e) => setScheduleTime(e.target.value)}
-              error={createErrors.deadline_time}
+              value={createForm.dueTime}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, dueTime: event.target.value }))}
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700" htmlFor="assignee">Assignee</label>
-            {canAssign ? (
-              <div className={`rounded-md border px-3 py-2 ${createErrors.assigned_to ? 'border-red-400' : 'border-gray-300'}`}>
-                <div className="max-h-40 overflow-y-auto space-y-1">
-                  {users.map((item) => {
-                    const itemId = getUserId(item);
-                    if (!itemId) return null;
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-slate-700">Assign To</p>
+            <p className="text-xs text-slate-500">{assignmentHint}</p>
 
-                    const selfLocked = isInternAssigner && itemId === currentUserId;
-                    const checked = selfLocked || (createForm.assigned_to || []).includes(itemId);
-                    return (
-                      <label key={itemId} className="flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={selfLocked}
-                          onChange={() => {
-                            if (selfLocked) return;
-                            setCreateForm((prev) => ({
-                              ...prev,
-                              assigned_to: toggleSelection(prev.assigned_to || [], itemId),
-                            }));
-                          }}
-                        />
-                        <span>{getUserDisplay(item)}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <Input label="Assigned to" value={getUserDisplay(user as RawUser)} disabled />
-            )}
-            {createErrors.assigned_to && <p className="text-xs text-red-600">{createErrors.assigned_to}</p>}
-            {canAssign && <p className="text-[11px] text-gray-500">Choose one or more people.</p>}
-            {isInternAssigner && <p className="text-[11px] text-blue-600">Intern assignments always include you.</p>}
+            <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+              {usersLoading ? (
+                <p className="text-xs text-slate-500">Loading users...</p>
+              ) : assignableUsers.length ? (
+                assignableUsers.map((user) => {
+                  const userName = `${user.first_name} ${user.last_name}`.trim() || user.email;
+                  const checked = assigneeIds.includes(user.user_id);
+                  const lockToSelf = isSelfOnlyAssignee && user.user_id !== currentUserId;
+                  const lockInternSelf = isIntern && user.user_id === currentUserId;
+
+                  return (
+                    <label key={user.user_id} className="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50">
+                      <span className="min-w-0 truncate">{userName}</span>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={checked}
+                        disabled={lockToSelf || lockInternSelf}
+                        onChange={(event) => {
+                          const nextChecked = event.target.checked;
+                          setAssigneeIds((prev) => {
+                            if (nextChecked) {
+                              return [...new Set([...prev, user.user_id])];
+                            }
+
+                            return prev.filter((id) => id !== user.user_id);
+                          });
+                        }}
+                      />
+                    </label>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-slate-500">No users available for your role scope.</p>
+              )}
+            </div>
           </div>
 
-          <div className="pt-2 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+          {createError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{createError}</div>
+          ) : null}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" loading={isSubmitting}>
-              Create Task
+            <Button type="submit" size="sm" loading={isCreatingTask}>
+              Create
             </Button>
           </div>
         </form>
       </Modal>
+
+      {modalToasts.length > 0 ? (
+        <div className="pointer-events-none fixed bottom-4 right-4 z-[70] space-y-2">
+          {modalToasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`${toast.exiting ? 'task-toast-out' : 'task-toast'} w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-white/95 px-3.5 py-2.5 text-sm text-slate-800 shadow-lg backdrop-blur`}
+            >
+              {toast.message}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

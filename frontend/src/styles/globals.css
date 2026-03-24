@@ -15,3 +15,137 @@ body {
     -apple-system,
     sans-serif;
 }
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-backdrop-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modal-panel-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.992);
+  }
+}
+
+@keyframes task-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes task-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+@keyframes timeline-page-in {
+  from {
+    opacity: 0;
+    transform: scale(0.997);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-backdrop {
+  animation: modal-backdrop-in 180ms ease-out;
+}
+
+.modal-backdrop-out {
+  animation: modal-backdrop-out 180ms ease-in forwards;
+}
+
+.modal-panel {
+  animation: modal-panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+}
+
+.modal-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-panel::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-color: rgba(148, 163, 184, 0.8);
+  background-clip: content-box;
+}
+
+.modal-panel::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.9);
+}
+
+.modal-panel-out {
+  animation: modal-panel-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+}
+
+.task-toast {
+  animation: task-toast-in 180ms ease-out;
+}
+
+.task-toast-out {
+  animation: task-toast-out 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.timeline-page {
+  animation: timeline-page-in 140ms ease-out;
+  will-change: opacity, transform;
+}
