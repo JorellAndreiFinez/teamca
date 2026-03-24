@@ -34,14 +34,19 @@ const formatAssignees = (task: TaskListItem) => {
 };
 
 export default function TaskRow({ task, onClick }: TaskRowProps) {
+  const isCompleted = task.status === 'Completed';
+
   return (
-    <tr className="cursor-pointer border-b border-slate-100 hover:bg-slate-50" onClick={onClick}>
+    <tr
+      className={`cursor-pointer border-b border-slate-100 ${isCompleted ? 'bg-slate-100 text-slate-600 hover:bg-slate-200/70' : 'hover:bg-slate-50'}`}
+      onClick={onClick}
+    >
       <td className="whitespace-nowrap px-3 py-3">
         <span className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS_STYLES[task.status]}`}>
           {task.status}
         </span>
       </td>
-      <td className="px-3 py-3 text-sm font-medium text-slate-900">{task.title}</td>
+      <td className={`px-3 py-3 text-sm font-medium ${isCompleted ? 'text-slate-700' : 'text-slate-900'}`}>{task.title}</td>
       <td className="px-3 py-3 text-sm text-slate-600">{formatAssignees(task)}</td>
       <td className="whitespace-nowrap px-3 py-3">
         <span className={`rounded-full px-2 py-1 text-xs font-medium ${PRIORITY_STYLES[task.priority]}`}>
@@ -49,7 +54,7 @@ export default function TaskRow({ task, onClick }: TaskRowProps) {
         </span>
       </td>
       <td className="whitespace-nowrap px-3 py-3 text-sm text-slate-600">{formatDate(task.deadline)}</td>
-      <td className="whitespace-nowrap px-3 py-3 text-sm text-slate-600">{task.links_count}</td>
+      <td className="w-20 whitespace-nowrap py-3 pl-3 pr-6 text-center text-sm text-slate-600">{task.comments_count}</td>
     </tr>
   );
 }

@@ -34,7 +34,7 @@ export default function TaskTable({ tasks, isLoading, onRowClick }: TaskTablePro
             <th className="px-3 py-3">Assigned Users</th>
             <th className="px-3 py-3">Priority</th>
             <th className="px-3 py-3">Deadline</th>
-            <th className="px-3 py-3">Links</th>
+            <th className="w-20 py-3 pl-3 pr-6 text-center">Comments</th>
           </tr>
         </thead>
         <tbody>

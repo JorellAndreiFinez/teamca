@@ -27,7 +27,7 @@ export interface TaskDepartmentSummary {
 
 export interface TaskListItem extends Task {
   assigned_users: TaskUserSummary[];
-  links_count: number;
+  comments_count: number;
 }
 
 export interface PaginatedTaskListResponse {

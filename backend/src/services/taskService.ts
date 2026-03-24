@@ -81,7 +81,7 @@ export type TaskDepartmentSummary = {
 
 export type TaskListItem = ReturnType<typeof normalizeTask> & {
   assigned_users: TaskUserSummary[];
-  links_count: number;
+  comments_count: number;
 };
 
 export type PaginatedTasksResponse = {
@@ -434,6 +434,24 @@ const getTaskLinksCountMap = async (taskIds: string[]) => {
   return map;
 };
 
+const getTaskCommentsCountMap = async (taskIds: string[]) => {
+  if (taskIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await TaskComment.aggregate<{ _id: Types.ObjectId; count: number }>([
+    { $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } } },
+    { $group: { _id: "$task_id", count: { $sum: 1 } } },
+  ]);
+
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    map.set(String(row._id), row.count);
+  }
+
+  return map;
+};
+
 const getUsersByIds = async (userIds: string[]) => {
   if (userIds.length === 0) {
     return new Map<string, TaskUserSummary>();
@@ -703,7 +721,7 @@ export const listAccessibleTasksPaginated = async (
 
   const taskIds = allTasks.map((task) => String(task.task_id));
   const assigneeMap = await getTaskAssigneeIdsMap(taskIds);
-  const linksCountMap = await getTaskLinksCountMap(taskIds);
+  const commentsCountMap = await getTaskCommentsCountMap(taskIds);
 
   const userIds = [...new Set(allTasks.flatMap((task) => [
     String(task.created_by),
@@ -804,7 +822,7 @@ export const listAccessibleTasksPaginated = async (
     return {
       ...task,
       assigned_users: assignedUsers,
-      links_count: linksCountMap.get(String(task.task_id)) ?? 0,
+      comments_count: commentsCountMap.get(String(task.task_id)) ?? 0,
     };
   });
 

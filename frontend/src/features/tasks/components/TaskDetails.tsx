@@ -37,7 +37,23 @@ const formatDateTime = (value: string | Date) => {
   return `${DATE_TIME_FORMATTER.format(date)} (${TIME_ONLY_FORMATTER.format(date)})`;
 };
 
+const formatUserName = (user: TaskDetail['assigned_users'][number] | null | undefined) => {
+  if (!user) {
+    return 'Unknown user';
+  }
+
+  return `${user.first_name} ${user.last_name}`.trim() || user.email || 'Unknown user';
+};
+
 export default function TaskDetails({ task }: TaskDetailsProps) {
+  const historyByLatest = [...task.history].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  const approvedByEntry = historyByLatest.find(
+    (item) => item.previous_status === 'Under Review' && item.new_status === 'Completed'
+  );
+
   return (
     <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <h4 className="text-sm font-semibold text-slate-900">Task Information</h4>
@@ -58,13 +74,21 @@ export default function TaskDetails({ task }: TaskDetailsProps) {
         </div>
       </div>
 
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400">Assigned Users</p>
-        <p className="text-sm text-slate-700">
-          {task.assigned_users.length
-            ? task.assigned_users.map((user) => `${user.first_name} ${user.last_name}`.trim() || user.email).join(', ')
-            : 'Unassigned'}
-        </p>
+      <div className="grid grid-cols-1 gap-2 text-sm text-slate-600 sm:grid-cols-2">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-slate-400">Assigned Users</p>
+          <p className="text-sm text-slate-700">
+            {task.assigned_users.length
+              ? task.assigned_users.map((user) => `${user.first_name} ${user.last_name}`.trim() || user.email).join(', ')
+              : 'Unassigned'}
+          </p>
+        </div>
+        {task.status === 'Completed' && approvedByEntry ? (
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Approved By</p>
+            <p className="text-sm text-slate-700">{formatUserName(approvedByEntry.updated_by_user || null)}</p>
+          </div>
+        ) : null}
       </div>
 
       <div>

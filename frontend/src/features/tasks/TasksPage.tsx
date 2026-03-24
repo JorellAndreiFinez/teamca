@@ -32,10 +32,13 @@ const DEFAULT_LIST: PaginatedTaskListResponse = {
   total_pages: 1,
 };
 
+const getUserIdentifier = (user: User): string => String(user.user_id || (user as any)._id || '').trim();
+
 export default function TasksPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentUser = useAuthStore((state) => state.user);
   const currentUserId = useAuthStore((state) => state.user?.user_id || '');
+  const resolvedCurrentUserId = currentUserId || String((currentUser as any)?._id || '');
 
   const [mounted, setMounted] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -104,9 +107,10 @@ export default function TasksPage() {
 
   const isSuperadmin = currentUser?.global_role === 'Superadmin';
   const isAdmin = currentUser?.global_role === 'Admin';
+  const isStandardUser = currentUser?.global_role === 'Standard_User';
   const isHeadOrSupervisor = currentUser?.department_role === 'Head' || currentUser?.department_role === 'Supervisor';
   const isIntern = currentUser?.department_role === 'Intern';
-  const isSelfOnlyAssignee = !isSuperadmin && !isAdmin && !isHeadOrSupervisor && !isIntern;
+  const isSelfOnlyAssignee = isStandardUser;
 
   const assignableUsers = useMemo(() => {
     if (!currentUser) {
@@ -116,7 +120,9 @@ export default function TasksPage() {
     const activeUsers = allUsers.filter((user) => user.is_active);
     let scopedUsers: User[];
 
-    if (isSuperadmin || isAdmin) {
+    if (isSelfOnlyAssignee) {
+      scopedUsers = activeUsers.filter((user) => getUserIdentifier(user) === resolvedCurrentUserId);
+    } else if (isSuperadmin || isAdmin) {
       scopedUsers = activeUsers;
     } else if (isHeadOrSupervisor || isIntern) {
       const departmentId = currentUser.department_id;
@@ -129,27 +135,45 @@ export default function TasksPage() {
           String(user.department_id) === String(departmentId)
       );
     } else {
-      scopedUsers = activeUsers.filter((user) => user.user_id === currentUserId);
+      scopedUsers = activeUsers.filter((user) => getUserIdentifier(user) === currentUserId);
     }
 
-    if (!scopedUsers.some((user) => user.user_id === currentUserId) && currentUser.is_active) {
+    if (!scopedUsers.some((user) => getUserIdentifier(user) === resolvedCurrentUserId) && resolvedCurrentUserId) {
       scopedUsers = [...scopedUsers, currentUser];
     }
 
-    return [...scopedUsers].sort((a, b) => {
+    const seen = new Set<string>();
+    const uniqueUsers = scopedUsers.filter((user) => {
+      const id = getUserIdentifier(user) || user.email;
+      if (!id || seen.has(id)) {
+        return false;
+      }
+      seen.add(id);
+      return true;
+    });
+
+    return [...uniqueUsers].sort((a, b) => {
       const aName = `${a.first_name} ${a.last_name}`.trim() || a.email;
       const bName = `${b.first_name} ${b.last_name}`.trim() || b.email;
       return aName.localeCompare(bName);
     });
-  }, [allUsers, currentUser, currentUserId, isAdmin, isHeadOrSupervisor, isIntern, isSuperadmin]);
+  }, [allUsers, currentUser, isAdmin, isHeadOrSupervisor, isIntern, isSelfOnlyAssignee, isSuperadmin, resolvedCurrentUserId]);
 
-  const assignmentHint = isSuperadmin || isAdmin
+  const assignmentHint = isSelfOnlyAssignee
+    ? 'Automatically assigned to your account.'
+    : isSuperadmin || isAdmin
     ? 'You can assign any active user.'
     : isHeadOrSupervisor
       ? 'You can assign users in your department.'
       : isIntern
         ? 'You can assign users in your department and your account will always be included.'
         : 'You can only assign tasks to your own account.';
+
+  const orderedTasks = useMemo(() => {
+    const unfinished = taskList.items.filter((task) => task.status !== 'Completed');
+    const completed = taskList.items.filter((task) => task.status === 'Completed');
+    return [...unfinished, ...completed];
+  }, [taskList.items]);
 
   const loadTasks = useCallback(async (options?: { refresh?: boolean }) => {
     if (!options?.refresh) {
@@ -234,7 +258,12 @@ export default function TasksPage() {
   }, [isAuthenticated, isCreateModalOpen]);
 
   useEffect(() => {
-    if (!isCreateModalOpen || !currentUserId) {
+    if (!isCreateModalOpen || !resolvedCurrentUserId) {
+      return;
+    }
+
+    if (isSelfOnlyAssignee) {
+      setAssigneeIds([resolvedCurrentUserId]);
       return;
     }
 
@@ -243,20 +272,26 @@ export default function TasksPage() {
         return prev;
       }
 
-      return [currentUserId];
+      return [resolvedCurrentUserId];
     });
-  }, [currentUserId, isCreateModalOpen]);
+  }, [isCreateModalOpen, isSelfOnlyAssignee, resolvedCurrentUserId]);
 
   useEffect(() => {
     setAssigneeIds((prev) => {
-      const scoped = prev.filter((id) => assignableUsers.some((user) => user.user_id === id));
-      if (isIntern && currentUserId && !scoped.includes(currentUserId)) {
-        return [...scoped, currentUserId];
+      const scoped = prev.filter((id) => assignableUsers.some((user) => getUserIdentifier(user) === id));
+
+      const canSelectSelf = !!resolvedCurrentUserId && assignableUsers.some((user) => getUserIdentifier(user) === resolvedCurrentUserId);
+      if (scoped.length === 0 && canSelectSelf) {
+        return [resolvedCurrentUserId];
+      }
+
+      if (isIntern && resolvedCurrentUserId && !scoped.includes(resolvedCurrentUserId)) {
+        return [...scoped, resolvedCurrentUserId];
       }
 
       return scoped;
     });
-  }, [assignableUsers, currentUserId, isIntern]);
+  }, [assignableUsers, isIntern, resolvedCurrentUserId]);
 
   const handleSocketComment = useCallback((payload: any) => {
     const taskId = payload?.task_id;
@@ -528,8 +563,13 @@ export default function TasksPage() {
     }
 
     const selectedAssignees = [...new Set(assigneeIds)];
-    if (isIntern && currentUserId && !selectedAssignees.includes(currentUserId)) {
-      selectedAssignees.push(currentUserId);
+    if (isSelfOnlyAssignee && resolvedCurrentUserId) {
+      selectedAssignees.length = 0;
+      selectedAssignees.push(resolvedCurrentUserId);
+    }
+
+    if (isIntern && resolvedCurrentUserId && !selectedAssignees.includes(resolvedCurrentUserId)) {
+      selectedAssignees.push(resolvedCurrentUserId);
     }
 
     if (!selectedAssignees.length) {
@@ -557,7 +597,7 @@ export default function TasksPage() {
         dueDate: '',
         dueTime: '',
       });
-      setAssigneeIds(currentUserId ? [currentUserId] : []);
+      setAssigneeIds(resolvedCurrentUserId ? [resolvedCurrentUserId] : []);
       setIsCreateModalOpen(false);
       pushModalToast('Task created');
       await loadTasks({ refresh: true });
@@ -608,7 +648,7 @@ export default function TasksPage() {
         onLimitChange={setLimit}
       />
 
-      <TaskTable tasks={taskList.items} isLoading={isLoading} onRowClick={setSelectedTaskId} />
+      <TaskTable tasks={orderedTasks} isLoading={isLoading} onRowClick={setSelectedTaskId} />
 
       <TaskPagination
         page={page}
@@ -706,15 +746,20 @@ export default function TasksPage() {
             <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
               {usersLoading ? (
                 <p className="text-xs text-slate-500">Loading users...</p>
+              ) : isSelfOnlyAssignee ? (
+                <div className="rounded bg-slate-50 px-2 py-2 text-sm text-slate-700">
+                  {currentUser ? `${currentUser.first_name} ${currentUser.last_name}`.trim() || currentUser.email : 'Your account'}
+                </div>
               ) : assignableUsers.length ? (
                 assignableUsers.map((user) => {
+                  const userIdentifier = getUserIdentifier(user);
                   const userName = `${user.first_name} ${user.last_name}`.trim() || user.email;
-                  const checked = assigneeIds.includes(user.user_id);
-                  const lockToSelf = isSelfOnlyAssignee && user.user_id !== currentUserId;
-                  const lockInternSelf = isIntern && user.user_id === currentUserId;
+                  const checked = assigneeIds.includes(userIdentifier);
+                  const lockToSelf = isSelfOnlyAssignee && userIdentifier !== currentUserId;
+                  const lockInternSelf = isIntern && userIdentifier === currentUserId;
 
                   return (
-                    <label key={user.user_id} className="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50">
+                    <label key={userIdentifier || user.email} className="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50">
                       <span className="min-w-0 truncate">{userName}</span>
                       <input
                         type="checkbox"
@@ -725,10 +770,10 @@ export default function TasksPage() {
                           const nextChecked = event.target.checked;
                           setAssigneeIds((prev) => {
                             if (nextChecked) {
-                              return [...new Set([...prev, user.user_id])];
+                              return [...new Set([...prev, userIdentifier])];
                             }
 
-                            return prev.filter((id) => id !== user.user_id);
+                            return prev.filter((id) => id !== userIdentifier);
                           });
                         }}
                       />
