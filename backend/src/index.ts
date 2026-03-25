@@ -2,9 +2,11 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import http from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db";
+import { initTaskSocket } from "./socket/io";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
@@ -80,20 +82,23 @@ import authRoutes from "./routes/authRoutes";
 import departmentRoutes from "./routes/departmentRoutes";
 import userRoutes from "./routes/userRoutes";
 // import dtrRoutes from "./routes/dtrRoutes";
-// import taskRoutes from "./routes/taskRoutes";
+import taskRoutes from "./routes/taskRoutes";
 
 app.use(apiLimiter);
 app.use("/auth", authLimiter, authRoutes);
 app.use("/departments", departmentRoutes);
 app.use("/users", userRoutes);
 // app.use("/dtr", apiLimiter, dtrRoutes);
-// app.use("/tasks", apiLimiter, taskRoutes);
+app.use("/tasks", apiLimiter, taskRoutes);
 
 // ── Health check
 app.get("/health", (_req, res) =>
   res.json({ status: "ok", timestamp: new Date().toISOString() }),
 );
 
-app.listen(PORT, () =>
+const server = http.createServer(app);
+initTaskSocket(server, allowedOrigins);
+
+server.listen(PORT, () =>
   console.log(`Server running at http://localhost:${PORT}`),
 );

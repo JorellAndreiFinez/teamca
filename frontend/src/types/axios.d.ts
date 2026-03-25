@@ -38,6 +38,7 @@ declare module 'axios' {
     get<T = unknown>(url: string, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
     post<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
     put<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
+    patch<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
     delete<T = unknown>(url: string, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
   }
 
