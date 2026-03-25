@@ -7,7 +7,7 @@ export interface IUser extends Document {
   password_hash: string;
   global_role: "Superadmin" | "Admin" | "Standard_User";
   department_role?: "Head" | "Supervisor" | "Intern";
-  department_id?: number;
+  department_id?: string;
   is_active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +25,7 @@ const userSchema = new Schema<IUser>(
       default: "Standard_User",
     },
     department_role: { type: String, enum: ["Head", "Supervisor", "Intern"] },
-    department_id: Number,
+    department_id: String,
     is_active: { type: Boolean, default: true },
   },
   { timestamps: true },

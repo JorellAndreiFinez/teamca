@@ -1,15 +1,8 @@
 import api from './api';
+import type { User } from '../types/user';
 
-type AuthApiUser = {
+type AuthApiUser = User & {
   _id?: string;
-  user_id?: string;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  global_role?: 'Superadmin' | 'Admin' | 'Standard_User';
-  department_role?: 'Head' | 'Supervisor' | 'Intern';
-  department_id?: number | string;
-  is_active?: boolean;
   departments?: Array<{
     department_id?: number | string;
     department_role?: 'Head' | 'Supervisor' | 'Intern';
@@ -31,7 +24,7 @@ export interface FirstTimeSetupData {
   first_name: string;
   last_name: string;
   password: string;
-  department_id: string;
+  department_id: string | number;
   school_university: string;
   required_hours: number;
 }

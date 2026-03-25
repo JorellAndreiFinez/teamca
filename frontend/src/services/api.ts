@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { config } from '../config/env';
 
 const api = axios.create({
@@ -25,7 +25,7 @@ api.interceptors.request.use(
     }
     return reqConfig;
   },
-  (error: AxiosError) => {
+  (error) => {
     return Promise.reject(error);
   }
 );

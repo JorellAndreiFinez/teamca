@@ -27,7 +27,7 @@ export const listDepartments = async (_req: Request, res: Response) => {
       return res.status(200).json(departments);
     }
 
-    const departmentIds = reqUser.departments.map((department) => String(department.department_id));
+    const departmentIds = reqUser.department_id ? [String(reqUser.department_id)] : [];
     const departments = await getDepartmentsByIds(departmentIds);
     return res.status(200).json(departments);
   } catch (error) {
@@ -51,9 +51,9 @@ export const getDepartment = async (req: Request, res: Response) => {
       return res.status(200).json(department);
     }
 
-    const hasDepartmentAccess = req.user.departments.some(
-      (entry) => String(entry.department_id) === requestedDepartmentId
-    );
+    const hasDepartmentAccess =
+      typeof req.user.department_id !== 'undefined' &&
+      String(req.user.department_id) === requestedDepartmentId;
 
     if (!hasDepartmentAccess) {
       return res.status(403).json({ message: 'Insufficient permissions to view this department.' });

@@ -6,7 +6,6 @@ import CalendarWidget from '../dashboard/components/CalendarWidget';
 import DTRAnalyticsWidget from '../dashboard/components/DTRAnalyticsWidget';
 
 export default function DTRPage() {
-  const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [clockedIn, setClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);

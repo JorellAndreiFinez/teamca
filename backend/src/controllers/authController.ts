@@ -6,16 +6,22 @@ import User from "../models/User";
 const JWT_SECRET =
   process.env.JWT_SECRET || "teamca-dev-secret-change-in-production";
 
+if (
+  process.env.NODE_ENV === "production" &&
+  JWT_SECRET === "teamca-dev-secret-change-in-production"
+) {
+  throw new Error("JWT_SECRET must be set in production.");
+}
+
 /**
  * Check if an email exists and if it needs setup
  */
 export const checkEmail = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
     if (!email) return res.status(400).json({ message: "Email is required" });
 
-    const normalized = email.toLowerCase();
-    const user = await User.findOne({ email: normalized });
+    const user = await User.findOne({ email });
 
     if (user) return res.json({ exists: true, needsSetup: false });
 
@@ -32,13 +38,14 @@ export const checkEmail = async (req: Request, res: Response) => {
  */
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const password = String(req.body?.password ?? "");
     if (!email || !password)
       return res
         .status(400)
         .json({ message: "Email and password are required" });
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email });
     if (!user)
       return res.status(401).json({ message: "Invalid email or password" });
 
@@ -68,12 +75,22 @@ export const login = async (req: Request, res: Response) => {
  */
 export const completeSetup = async (req: Request, res: Response) => {
   try {
-    const { email, first_name, last_name, password } = req.body;
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const first_name = String(req.body?.first_name ?? "").trim();
+    const last_name = String(req.body?.last_name ?? "").trim();
+    const password = String(req.body?.password ?? "");
+
     if (!email || !first_name || !last_name || !password) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 8 characters long" });
+    }
+
+    const existingUser = await User.findOne({ email });
     if (existingUser)
       return res
         .status(409)
@@ -81,7 +98,7 @@ export const completeSetup = async (req: Request, res: Response) => {
 
     const password_hash = await bcrypt.hash(password, 10);
     const newUser = await User.create({
-      email: email.toLowerCase(),
+      email,
       first_name,
       last_name,
       password_hash,

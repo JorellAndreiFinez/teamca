@@ -1,13 +1,15 @@
 // account setup for init login
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
+import { departmentService } from '../../services/departmentService';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import type { Department } from '../../types/user';
 
 interface FirstTimeSetupFormProps {
   email: string;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupFormProps) {
@@ -16,13 +18,14 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     last_name: '',
     password: '',
     confirmPassword: '',
-    department_id: 1,
+    department_id: '',
     school_university: '',
     required_hours: 480,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   const login = useAuthStore((state) => state.login);
 
@@ -31,28 +34,42 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const data = await departmentService.getAllDepartments();
+        setDepartments(data);
+
+        if (!formData.department_id && data.length > 0) {
+          const first = data[0];
+          const firstId = first.department_id ?? first._id;
+          if (typeof firstId !== 'undefined') {
+            setFormData((prev) => ({ ...prev, department_id: String(firstId) }));
+          }
+        }
+      } catch {
+        setServerError('Failed to load departments. Please refresh and try again.');
+      }
+    };
+
+    void loadDepartments();
+    // Intentionally run once for initial department options load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!formData.first_name.trim()) errs.first_name = 'First name is required';
     if (!formData.last_name.trim()) errs.last_name = 'Last name is required';
     if (formData.password.length < 8) errs.password = 'Password must be at least 8 characters';
     if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    if (!formData.department_id) errs.department_id = 'Department is required';
     if (!formData.school_university.trim()) errs.school_university = 'School/University is required';
     if (formData.required_hours < 1) errs.required_hours = 'Required hours must be at least 1';
     return errs;
   };
 
-    void loadDepartments();
-  }, []);
-
-  const setField = (field: keyof typeof formData, value: string) => {
-    setFormData((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -75,9 +92,8 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
       });
       login(result.token, result.user);
       window.location.href = '/dashboard';
-    } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setServerError(message || 'Setup failed. Please try again.');
+    } catch (err: any) {
+      setServerError(err?.response?.data?.message || 'Setup failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -143,6 +159,32 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
             placeholder="e.g. University of the Philippines"
           />
 
+          <div className="flex flex-col gap-1">
+            <label htmlFor="department" className="text-sm font-medium text-gray-700">
+              Department
+            </label>
+            <select
+              id="department"
+              value={formData.department_id}
+              onChange={(e) => handleChange('department_id', e.target.value)}
+              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.department_id ? 'border-red-400 focus:ring-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select a department</option>
+              {departments.map((department) => {
+                const departmentValue = department.department_id ?? department._id;
+                if (typeof departmentValue === 'undefined') return null;
+                return (
+                  <option key={String(departmentValue)} value={String(departmentValue)}>
+                    {department.department_name}
+                  </option>
+                );
+              })}
+            </select>
+            {errors.department_id && <p className="text-xs text-red-600">{errors.department_id}</p>}
+          </div>
+
           <Input
             label="Required Internship Hours"
             type="number"
@@ -156,13 +198,15 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
           <Button type="submit" loading={loading} className="w-full" size="lg">
             Complete Setup
           </Button>
-          <button
-            type="button"
-            onClick={onBack}
-            className="w-full text-sm text-gray-500 hover:text-gray-700 text-center"
-          >
-            ← Back
-          </button>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 text-center"
+            >
+              ← Back
+            </button>
+          )}
         </form>
       </div>
     </div>

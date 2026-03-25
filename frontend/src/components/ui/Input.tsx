@@ -1,13 +1,12 @@
-import * as React from 'react';
-import { cn } from '../../lib/utils';
+import React from 'react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   helperText?: string;
 }
 
-export default function Input({ label, error, helperText, className = '', id, ...props }: InputProps) {
+export function Input({ label, error, helperText, className = '', id, ...props }: InputProps) {
   const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
   return (
@@ -31,3 +30,5 @@ export default function Input({ label, error, helperText, className = '', id, ..
     </div>
   );
 }
+
+export default Input;

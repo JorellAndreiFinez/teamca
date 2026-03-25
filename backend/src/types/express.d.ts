@@ -6,11 +6,9 @@ declare global {
       user_id: Types.ObjectId;
       email: string;
       global_role: 'Superadmin' | 'Admin' | 'Standard_User';
+      department_role?: 'Head' | 'Supervisor' | 'Intern';
+      department_id?: string;
       is_active: boolean;
-      departments: Array<{
-        department_id: Types.ObjectId;
-        department_role: 'Head' | 'Supervisor' | 'Intern';
-      }>;
     }
 
     interface Request {

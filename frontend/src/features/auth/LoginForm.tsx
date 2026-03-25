@@ -34,8 +34,7 @@ export default function LoginForm() {
         setError('This email is not registered or whitelisted. Please contact your administrator.');
       }
     } catch {
-      // Backend not available during development; fall through to password step.
-      // Remove this fallback before deploying to production.
+      // If backend not available, still allow progressing to password step for development
       setStep('password');
     } finally {
       setLoading(false);

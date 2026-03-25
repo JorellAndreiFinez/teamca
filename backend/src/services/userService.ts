@@ -1,4 +1,3 @@
-import type { Types } from 'mongoose';
 import User from '../models/User';
 import InternProfile from '../models/InternProfile';
 
@@ -6,16 +5,6 @@ const SAFE_USER_SELECT = '-password_hash';
 
 type GlobalRole = 'Superadmin' | 'Admin' | 'Standard_User';
 type DepartmentRole = 'Head' | 'Supervisor' | 'Intern';
-
-type DepartmentAssignment = {
-  department_id: Types.ObjectId;
-  department_role: DepartmentRole;
-};
-
-type DepartmentAssignmentInput = {
-  department_id: string;
-  department_role: DepartmentRole;
-};
 
 export type CreateWhitelistedUserInput = {
   email: string;
@@ -26,7 +15,8 @@ export type ActivateWhitelistedUserInput = {
   last_name: string;
   password_hash: string;
   global_role: GlobalRole;
-  departments?: DepartmentAssignment[];
+  department_id?: string;
+  department_role?: DepartmentRole;
 };
 
 export type UpdateUserInput = {
@@ -34,7 +24,8 @@ export type UpdateUserInput = {
   last_name?: string;
   password_hash?: string;
   global_role?: GlobalRole;
-  departments?: DepartmentAssignmentInput[];
+  department_id?: string;
+  department_role?: DepartmentRole;
   is_active?: boolean;
 };
 
@@ -44,7 +35,8 @@ export type CreateUserInput = {
   email: string;
   password_hash: string;
   global_role: GlobalRole;
-  departments?: DepartmentAssignmentInput[];
+  department_id?: string;
+  department_role?: DepartmentRole;
   is_active?: boolean;
 };
 
@@ -54,17 +46,6 @@ export type UpsertInternProfileInput = {
   rendered_hours_total?: number;
   expected_end_date?: Date;
   actual_end_date?: Date | null;
-};
-
-const toDepartmentAssignments = (departments?: DepartmentAssignmentInput[]): DepartmentAssignment[] => {
-  if (!departments || departments.length === 0) {
-    return [];
-  }
-
-  return departments.map((department) => ({
-    department_id: department.department_id as unknown as Types.ObjectId,
-    department_role: department.department_role,
-  }));
 };
 
 export const getAllUsers = async () => {
@@ -92,11 +73,10 @@ export const createWhitelistedUser = async (payload: CreateWhitelistedUserInput)
   const created = await User.create({
     email,
     is_active: false,
-    first_name: null,
-    last_name: null,
-    password_hash: null,
-    global_role: null,
-    departments: [],
+    first_name: '',
+    last_name: '',
+    password_hash: '',
+    global_role: 'Standard_User',
   });
 
   return getUserById(String(created._id));
@@ -112,7 +92,12 @@ export const activateWhitelistedUser = async (userId: string, payload: ActivateW
   user.last_name = payload.last_name;
   user.password_hash = payload.password_hash;
   user.global_role = payload.global_role;
-  user.set('departments', payload.departments ?? []);
+  if (typeof payload.department_id !== 'undefined') {
+    user.department_id = payload.department_id;
+  }
+  if (typeof payload.department_role !== 'undefined') {
+    user.department_role = payload.department_role;
+  }
   user.is_active = true;
 
   await user.save();
@@ -132,7 +117,8 @@ export const createUser = async (payload: CreateUserInput) => {
     password_hash: payload.password_hash,
     global_role: payload.global_role,
     is_active: payload.is_active ?? true,
-    departments: toDepartmentAssignments(payload.departments),
+    department_id: payload.department_id,
+    department_role: payload.department_role,
   });
 
   return getUserById(String(created._id));
@@ -156,8 +142,11 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   if (typeof payload.global_role !== 'undefined') {
     user.global_role = payload.global_role;
   }
-  if (typeof payload.departments !== 'undefined') {
-    user.set('departments', toDepartmentAssignments(payload.departments));
+  if (typeof payload.department_id !== 'undefined') {
+    user.department_id = payload.department_id;
+  }
+  if (typeof payload.department_role !== 'undefined') {
+    user.department_role = payload.department_role;
   }
   if (typeof payload.is_active !== 'undefined') {
     user.is_active = payload.is_active;

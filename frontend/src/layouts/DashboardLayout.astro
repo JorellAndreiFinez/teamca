@@ -1,6 +1,6 @@
 ---
-import '../styles/globals.css';
-import Sidebar from '../components/common/Sidebar';
+import "../styles/globals.css";
+import Sidebar from "../components/common/Sidebar";
 ---
 
 <html lang="en">
@@ -10,17 +10,19 @@ import Sidebar from '../components/common/Sidebar';
     <title>TeamCA</title>
     <script>
       // Client-side auth guard
-      const stored = localStorage.getItem('auth-storage');
+      const stored = localStorage.getItem("auth-storage");
       if (!stored) {
-        window.location.replace('/login');
+        window.location.replace("/login");
       } else {
         try {
           const parsed = JSON.parse(stored);
-          if (!parsed?.state?.isAuthenticated || !parsed?.state?.token) {
-            window.location.replace('/login');
+          const hasToken = Boolean(parsed?.state?.token);
+          const hasUser = Boolean(parsed?.state?.user);
+          if (!hasToken || !hasUser) {
+            window.location.replace("/login");
           }
         } catch {
-          window.location.replace('/login');
+          window.location.replace("/login");
         }
       }
     </script>
@@ -34,12 +36,6 @@ import Sidebar from '../components/common/Sidebar';
       <main class="min-h-screen p-6">
         <slot />
       </main>
-      </div>
     </div>
-
-    <script>
-      // Dynamically adjust main content margin when sidebar collapses
-      // TODO: listen for sidebar collapse events and update #main-content margin
-    </script>
   </body>
 </html>
