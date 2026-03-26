@@ -1,87 +1,118 @@
-// login form component
-import React, { useState } from 'react';
-import { authService } from '../../services/authService';
-import { useAuthStore } from '../../store/authStore';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
-import FirstTimeSetupForm from './FirstTimeSetupForm';
+import React, { useState } from "react";
+import { authService } from "../../services/authService";
+import { useAuthStore } from "../../store/authStore";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import FirstTimeSetupForm from "./FirstTimeSetupForm";
+import { getDashboardRouteForUser } from "../../lib/roleRoutes";
 
-type LoginStep = 'email' | 'password' | 'setup';
+type LoginStep = "email" | "password" | "setup";
+
+interface NormalizedUser {
+  _id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  global_role: string;
+  department_role?: string;
+  is_active: boolean;
+  departments?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function LoginForm() {
-  const [step, setStep] = useState<LoginStep>('email');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [step, setStep] = useState<LoginStep>("email");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const login = useAuthStore((state) => state.login);
 
+  /** Step 1: Email check */
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
-    setError('');
     setLoading(true);
+    setError("");
 
     try {
       const result = await authService.checkEmail(email.trim());
-      if (result.needsSetup) {
-        setStep('setup');
-      } else if (result.exists) {
-        setStep('password');
-      } else {
-        setError('This email is not registered or whitelisted. Please contact your administrator.');
-      }
-    } catch {
-      // If backend not available, still allow progressing to password step for development
-      setStep('password');
+      if (result.needsSetup) setStep("setup");
+      else if (result.exists) setStep("password");
+      else
+        setError(
+          "This email is not registered or whitelisted. Please contact your administrator.",
+        );
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to check email.");
     } finally {
       setLoading(false);
     }
   };
 
+  /** Step 2: Password login */
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) return;
 
-    setError('');
     setLoading(true);
+    setError("");
 
     try {
       const result = await authService.login({ email, password });
-      login(result.token, result.user);
-      window.location.href = '/dashboard';
+
+      const user: NormalizedUser = {
+        ...result.user,
+        user_id: result.user._id,
+        global_role: result.user.global_role ?? (result.user as any).globalRole,
+        department_role:
+          result.user.department_role ?? (result.user as any).departmentRole,
+      };
+
+      const token = result.token;
+
+      login(token, user);
+
+      const dashboardRoute = getDashboardRouteForUser(user);
+      window.location.replace(dashboardRoute);
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Invalid credentials. Please try again.');
+      setError(
+        err?.response?.data?.message ||
+          "Invalid credentials. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleBack = () => {
-    setStep('email');
-    setPassword('');
-    setError('');
+    setStep("email");
+    setPassword("");
+    setError("");
   };
 
-  if (step === 'setup') {
+  if (step === "setup") {
     return <FirstTimeSetupForm email={email} onBack={handleBack} />;
   }
 
   return (
     <div className="w-full max-w-md">
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-        {/* Logo / Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 mb-4">
             <span className="text-white font-bold text-lg">TC</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome to TeamCA</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome to TeamCA
+          </h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
         </div>
 
-        {step === 'email' && (
+        {step === "email" && (
           <form onSubmit={handleEmailSubmit} className="space-y-4">
             <Input
               label="Email address"
@@ -93,13 +124,18 @@ export default function LoginForm() {
               autoFocus
               required
             />
-            <Button type="submit" loading={loading} className="w-full" size="lg">
+            <Button
+              type="submit"
+              loading={loading}
+              className="w-full"
+              size="lg"
+            >
               Continue
             </Button>
           </form>
         )}
 
-        {step === 'password' && (
+        {step === "password" && (
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg mb-2">
               <span className="text-sm text-gray-600">{email}</span>
@@ -111,6 +147,7 @@ export default function LoginForm() {
                 Change
               </button>
             </div>
+
             <Input
               label="Password"
               type="password"
@@ -121,9 +158,16 @@ export default function LoginForm() {
               autoFocus
               required
             />
-            <Button type="submit" loading={loading} className="w-full" size="lg">
+
+            <Button
+              type="submit"
+              loading={loading}
+              className="w-full"
+              size="lg"
+            >
               Sign In
             </Button>
+
             <button
               type="button"
               onClick={handleBack}
