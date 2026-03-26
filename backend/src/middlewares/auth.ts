@@ -1,6 +1,6 @@
-import type { NextFunction, Request, Response } from 'express';
-import jwt, { type JwtPayload } from 'jsonwebtoken';
-import User from '../models/User';
+import type { NextFunction, Request, Response } from "express";
+import jwt, { type JwtPayload } from "jsonwebtoken";
+import User from "../models/User";
 
 type TokenPayload = JwtPayload & {
   sub?: string;
@@ -14,43 +14,53 @@ const getTokenFromHeader = (req: Request): string | null => {
     return null;
   }
 
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme !== 'Bearer' || !token) {
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme !== "Bearer" || !token) {
     return null;
   }
 
   return token;
 };
 
-export const authenticateJWT = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateJWT = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const token = getTokenFromHeader(req);
     if (!token) {
-      return res.status(401).json({ message: 'Authentication token is required.' });
+      return res
+        .status(401)
+        .json({ message: "Authentication token is required." });
     }
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      return res.status(500).json({ message: 'JWT secret is not configured.' });
+      return res.status(500).json({ message: "JWT secret is not configured." });
     }
 
     const decoded = jwt.verify(token, jwtSecret) as TokenPayload;
     const userId = decoded.sub || decoded.user_id || decoded.id;
 
     if (!userId) {
-      return res.status(401).json({ message: 'Invalid token payload.' });
+      return res.status(401).json({ message: "Invalid token payload." });
     }
 
     const user = await User.findById(userId)
-      .select('email global_role department_role department_id is_active')
+      .select("email global_role department_role department_id is_active")
       .lean();
 
     if (!user || !user.is_active) {
-      return res.status(403).json({ message: 'Account is not active or does not exist.' });
+      return res
+        .status(403)
+        .json({ message: "Account is not active or does not exist." });
     }
 
     if (!user.global_role) {
-      return res.status(403).json({ message: 'Account role is not configured.' });
+      return res
+        .status(403)
+        .json({ message: "Account role is not configured." });
     }
 
     req.user = {
@@ -64,7 +74,9 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
 
     return next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid or expired token.', error });
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired token.", error });
   }
 };
 
