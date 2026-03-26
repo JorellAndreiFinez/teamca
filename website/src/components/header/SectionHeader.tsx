@@ -7,18 +7,27 @@ interface SectionHeaderProps {
   description?: string;
   align?: "left" | "center" | "right" | "hybrid";
   size?: "sm" | "md" | "lg" | "xl";
+  contrast?: "light" | "dark";
   hasButton?: boolean;
   buttonText?: string;
   onButtonClick?: () => void;
 }
 
-const alignments = {
+const alignments: Record<"left" | "center" | "right", string> = {
   left: "text-left items-start mx-0",
   center: "text-center items-center mx-auto",
   right: "text-right items-end ml-auto",
 };
 
-const sizes = {
+const contrasts: Record<"light" | "dark", React.CSSProperties> = {
+  light: { color: "var(--primary-color)" },
+  dark: { color: "var(--secondary-color)" },
+};
+
+const sizes: Record<
+  "sm" | "md" | "lg" | "xl",
+  { subtitle: string; title: string; description: string }
+> = {
   sm: {
     subtitle: "text-xs",
     title: "text-2xl md:text-3xl",
@@ -45,6 +54,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   subtitle,
   title,
   description,
+  contrast = "light",
   align = "center",
   size = "md",
   hasButton = false,
@@ -58,7 +68,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
       <div className="w-full">
         {subtitle && (
           <p
-            className={`${currentSize.subtitle} uppercase font-semibold tracking-widest text-[--primary-color] mb-4 text-center lg:text-left`}
+            className={`${currentSize.subtitle} uppercase font-semibold tracking-widest ${contrasts[contrast]} mb-4 text-center lg:text-left`}
           >
             {subtitle}
           </p>
@@ -93,7 +103,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     <div className={`flex flex-col space-y-6 max-w-3xl ${alignments[align]}`}>
       {subtitle && (
         <p
-          className={`${currentSize.subtitle} uppercase font-semibold tracking-widest -mb-3 text-[--primary-color]`}
+          className={`${currentSize.subtitle} uppercase font-semibold tracking-widest -mb-3 ${contrasts[contrast]}`}
         >
           {subtitle}
         </p>

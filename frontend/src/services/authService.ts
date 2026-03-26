@@ -1,55 +1,45 @@
-import api from './api';
-import type { User } from '../types/user';
+// frontend/src/services/authService.ts
+import api from "./api";
 
-type AuthApiUser = User & {
-  _id?: string;
-  departments?: Array<{
-    department_id?: number | string;
-    department_role?: 'Head' | 'Supervisor' | 'Intern';
-  }>;
-};
+interface LoginPayload {
+  email: string;
+  password: string;
+}
 
-export type AuthResponse = {
+export interface LoginResponse {
   token: string;
-  user: AuthApiUser;
-};
+  user: {
+    _id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    global_role: string;
+    department_role?: string;
+    is_active: boolean;
+    departments?: string[];
+    createdAt: string;
+    updatedAt: string;
+  };
+}
 
-export type CheckEmailResponse = {
+export interface CheckEmailResponse {
   exists: boolean;
   needsSetup: boolean;
-};
-
-export interface FirstTimeSetupData {
-  email: string;
-  first_name: string;
-  last_name: string;
-  password: string;
-  department_id: string | number;
-  school_university: string;
-  required_hours: number;
 }
 
 export const authService = {
-  // Check if email exists and needs first-time setup
-  checkEmail: async (email: string): Promise<CheckEmailResponse> => {
-    const response = await api.post<CheckEmailResponse>('/auth/check-email', { email });
-    return response.data; // { exists: boolean, needsSetup: boolean }
+  login: async ({ email, password }: LoginPayload): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>("/auth/login", {
+      email,
+      password,
+    });
+    return response.data;
   },
 
-  // login if yes
-  login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
-    return response.data;
-  },
-  
-  // setup acc if no
-  completeSetup: async (setupData: FirstTimeSetupData): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/complete-setup', setupData);
-    return response.data;
-  },
-  
-  logout: async () => {
-    const response = await api.post('/auth/logout');
+  checkEmail: async (email: string): Promise<CheckEmailResponse> => {
+    const response = await api.post<CheckEmailResponse>("/auth/check-email", {
+      email,
+    });
     return response.data;
   },
 };

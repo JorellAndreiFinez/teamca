@@ -1,71 +1,48 @@
-import api from './api';
-import type { User, InternProfile } from '../types/user';
-
-export interface UpsertUserPayload {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  password?: string;
-  global_role?: User['global_role'];
-  is_active?: boolean;
-  departments?: Array<{
-    department_id: string | number;
-    department_role: User['department_role'];
-  }>;
-}
-
-export interface UpsertInternProfilePayload {
-  school_university?: string;
-  required_hours?: number;
-  rendered_hours_total?: number;
-  expected_end_date?: string;
-  actual_end_date?: string | null;
-}
-
-export interface UserProfileResponse extends User {
-  intern_profile?: InternProfile;
-}
+// frontend/src/services/userService.ts
+import api from "./api";
+import { User } from "../types/user";
 
 export const userService = {
-  getProfile: async (userId: string): Promise<UserProfileResponse> => {
-    const { data } = await api.get<UserProfileResponse>(`/users/${userId}`);
-    return data;
-  },
-  
   getAllUsers: async (): Promise<User[]> => {
-    const { data } = await api.get<User[]>('/users');
-    return data;
+    try {
+      const { data } = await api.get<User[]>("/users");
+      return data;
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+      return [];
+    }
   },
 
-  createUser: async (payload: UpsertUserPayload): Promise<UserProfileResponse> => {
-    const { data } = await api.post<UserProfileResponse>('/users', payload);
-    return data;
+  createUser: async (payload: any): Promise<User> => {
+    try {
+      const { data } = await api.post<User>("/users", payload);
+      console.log("[createUser] success:", data);
+      return data;
+    } catch (err) {
+      console.error("[createUser] error:", err);
+      throw err;
+    }
   },
 
-  updateProfile: async (userId: string, payload: UpsertUserPayload): Promise<UserProfileResponse> => {
-    const { data } = await api.put<UserProfileResponse>(`/users/${userId}`, payload);
-    return data;
+  updateUser: async (userId: string, payload: Partial<User>): Promise<User> => {
+    try {
+      const { data } = await api.put<User>(`/users/${userId}`, payload);
+      console.log("[updateUser] success:", data);
+      return data;
+    } catch (err) {
+      console.error("[updateUser] error:", err);
+      throw err;
+    }
   },
 
-  upsertInternProfile: async (
-    userId: string,
-    payload: UpsertInternProfilePayload
-  ): Promise<UserProfileResponse> => {
-    const { data } = await api.put<UserProfileResponse>(`/users/${userId}/intern-profile`, payload);
-    return data;
-  },
-  
-  // add new user w/ email (superadmin only)
-  whitelistEmail: async (email: string): Promise<{ message: string; user: User }> => {
-    const { data } = await api.post<{ message: string; user: User }>('/users/whitelist', { email });
-    return data;
-  },
-
-  activateWhitelistedUser: async (
-    userId: string,
-    payload: UpsertUserPayload
-  ): Promise<UserProfileResponse> => {
-    const { data } = await api.put<UserProfileResponse>(`/users/${userId}/activate`, payload);
-    return data;
+  // DELETE USER
+  deleteUser: async (userId: string): Promise<void> => {
+    try {
+      await api.delete(`/users/${userId}`);
+      console.log(`[deleteUser] User ${userId} deleted successfully`);
+    } catch (err) {
+      console.error(`[deleteUser] Failed to delete user ${userId}:`, err);
+      throw err;
+    }
   },
 };
