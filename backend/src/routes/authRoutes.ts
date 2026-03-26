@@ -1,3 +1,4 @@
+// backend\src\routes\authRoutes.ts
 import express from "express";
 import rateLimit from "express-rate-limit";
 import {
@@ -21,7 +22,9 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-  message: { message: "Too many login attempts. Please try again in 15 minutes." },
+  message: {
+    message: "Too many login attempts. Please try again in 15 minutes.",
+  },
 });
 
 const completeSetupLimiter = rateLimit({

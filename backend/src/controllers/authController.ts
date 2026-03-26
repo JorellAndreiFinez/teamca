@@ -1,3 +1,4 @@
+// backend\src\controllers\authController.ts
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -18,7 +19,9 @@ if (
  */
 export const checkEmail = async (req: Request, res: Response) => {
   try {
-    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const user = await User.findOne({ email });
@@ -36,9 +39,16 @@ export const checkEmail = async (req: Request, res: Response) => {
 /**
  * Login user
  */
+// backend/controllers/authController.ts
 export const login = async (req: Request, res: Response) => {
+  console.log("\n🔐 [LOGIN ATTEMPT FROM FRONTEND]");
+  console.log("➡️ Email:", req.body.email);
+  console.log("⏱ Timestamp:", new Date().toISOString());
+
   try {
-    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
     const password = String(req.body?.password ?? "");
     if (!email || !password)
       return res
@@ -63,6 +73,12 @@ export const login = async (req: Request, res: Response) => {
     });
 
     const { password_hash, ...userData } = user.toObject();
+
+    console.log("✅ Login successful");
+    console.log("👤 User ID:", user._id.toString());
+    console.log("🎭 Role:", user.global_role);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
     res.json({ token, user: userData });
   } catch (err) {
     console.error(err);
@@ -75,7 +91,9 @@ export const login = async (req: Request, res: Response) => {
  */
 export const completeSetup = async (req: Request, res: Response) => {
   try {
-    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
     const first_name = String(req.body?.first_name ?? "").trim();
     const last_name = String(req.body?.last_name ?? "").trim();
     const password = String(req.body?.password ?? "");

@@ -1,4 +1,11 @@
+// backend/src/models/User.ts
+
 import mongoose, { Schema, Document } from "mongoose";
+
+export interface IUserDepartment {
+  department_id: Schema.Types.ObjectId;
+  department_role: "Head" | "Supervisor" | "Intern";
+}
 
 export interface IUser extends Document {
   first_name: string;
@@ -6,12 +13,27 @@ export interface IUser extends Document {
   email: string;
   password_hash: string;
   global_role: "Superadmin" | "Admin" | "Standard_User";
-  department_role?: "Head" | "Supervisor" | "Intern";
-  department_id?: string;
+  departments: IUserDepartment[];
   is_active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const userDepartmentSchema = new Schema<IUserDepartment>(
+  {
+    department_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+    },
+    department_role: {
+      type: String,
+      enum: ["Head", "Supervisor", "Intern"],
+      required: true,
+    },
+  },
+  { _id: false }, // prevent Mongoose from creating _id for each subdocument
+);
 
 const userSchema = new Schema<IUser>(
   {
@@ -24,8 +46,7 @@ const userSchema = new Schema<IUser>(
       enum: ["Superadmin", "Admin", "Standard_User"],
       default: "Standard_User",
     },
-    department_role: { type: String, enum: ["Head", "Supervisor", "Intern"] },
-    department_id: String,
+    departments: { type: [userDepartmentSchema], default: [] }, // array of departments
     is_active: { type: Boolean, default: true },
   },
   { timestamps: true },
