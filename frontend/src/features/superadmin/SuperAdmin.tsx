@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
-import { userService } from '../../services/userService';
-import UserDirectory from './UserDirectory';
-import type { User } from '../../types/user';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
+import { useEffect, useMemo, useState } from "react";
+import { userService } from "../../services/userService";
+import UserDirectory from "./UserDirectory";
+import type { User } from "../../types/user";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/Card";
 
-export default function SuperadminDashboard() {
+export default function SuperAdmin() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +22,7 @@ export default function SuperadminDashboard() {
         const data = await userService.getAllUsers();
         setUsers(data);
       } catch {
-        setError('Unable to load dashboard summary.');
+        setError("Unable to load dashboard summary.");
       } finally {
         setIsLoading(false);
       }
@@ -30,7 +36,8 @@ export default function SuperadminDashboard() {
     const activeUsers = users.filter((user) => user.is_active).length;
     const whitelistedUsers = users.filter((user) => !user.is_active).length;
     const managementUsers = users.filter(
-      (user) => user.global_role === 'Superadmin' || user.global_role === 'Admin'
+      (user) =>
+        user.global_role === "Superadmin" || user.global_role === "Admin",
     ).length;
 
     return {
@@ -46,34 +53,42 @@ export default function SuperadminDashboard() {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">Total Users</CardDescription>
+            <CardDescription className="text-xs uppercase tracking-wide">
+              Total Users
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <CardTitle>{isLoading ? '-' : summary.totalUsers}</CardTitle>
+            <CardTitle>{isLoading ? "-" : summary.totalUsers}</CardTitle>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">Active Users</CardDescription>
+            <CardDescription className="text-xs uppercase tracking-wide">
+              Active Users
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <CardTitle>{isLoading ? '-' : summary.activeUsers}</CardTitle>
+            <CardTitle>{isLoading ? "-" : summary.activeUsers}</CardTitle>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">Whitelisted</CardDescription>
+            <CardDescription className="text-xs uppercase tracking-wide">
+              Whitelisted
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <CardTitle>{isLoading ? '-' : summary.whitelistedUsers}</CardTitle>
+            <CardTitle>{isLoading ? "-" : summary.whitelistedUsers}</CardTitle>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">Management</CardDescription>
+            <CardDescription className="text-xs uppercase tracking-wide">
+              Management
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <CardTitle>{isLoading ? '-' : summary.managementUsers}</CardTitle>
+            <CardTitle>{isLoading ? "-" : summary.managementUsers}</CardTitle>
           </CardContent>
         </Card>
       </section>

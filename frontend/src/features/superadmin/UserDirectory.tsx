@@ -1,181 +1,177 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { userService } from '../../services/userService';
-import { useAuthStore } from '../../store/authStore';
-import type { User } from '../../types/user';
-import { Button } from '../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
+// src/features/superadmin/UserDirectory.tsx
 
-const getDepartmentRoleLabel = (user: User): string => {
-  const userRecord = user as User & {
-    departments?: Array<{ department_role?: string }>;
-  };
+import React, { useEffect, useState } from "react";
+import { useAuthStore } from "@/store/authStore";
+import { userService } from "@/services/userService";
+import { User } from "../../types/user";
 
-  const toPosition = (role?: string) => {
-    if (!role) return undefined;
-    if (role === 'Intern') return 'Member';
-    return role;
-  };
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
-  if (user.department_role) {
-    return toPosition(user.department_role) ?? 'Not assigned';
-  }
+import AddUserModal from "../../components/superadmin/AddUserModal";
+import UpdateUserModal from "../../components/superadmin/UpdateUserModal";
 
-  if (userRecord.departments && userRecord.departments.length > 0) {
-    return userRecord.departments
-      .map((department) => toPosition(department.department_role))
-      .filter(Boolean)
-      .join(', ') || 'Not assigned';
-  }
-
-  return 'Not assigned';
-};
-
-const getAccessLevelLabel = (user: User): string => {
-  if (user.global_role === 'Superadmin') {
-    return 'Full Access';
-  }
-
-  if (user.global_role === 'Admin') {
-    return 'Management Access';
-  }
-
-  if (user.global_role === 'Standard_User') {
-    return 'Standard Access';
-  }
-
-  return 'Pending setup';
-};
+import { Edit, Trash2 } from "lucide-react";
 
 export default function UserDirectory() {
-  const canAccessUserDirectory = useAuthStore((state) => state.canAccessUserDirectory);
-  const canManageUsers = useAuthStore((state) => state.canManageUsers);
-  const canWhitelistEmails = useAuthStore((state) => state.canWhitelistEmails);
-
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [newEmail, setNewEmail] = useState('');
-  const [isWhitelisting, setIsWhitelisting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const allowedToView = useMemo(() => canAccessUserDirectory(), [canAccessUserDirectory]);
+  const [openAddModal, setOpenAddModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [openUpdateModal, setOpenUpdateModal] = useState(false);
 
-  const loadUsers = async () => {
-    if (!allowedToView) {
-      setIsLoading(false);
-      return;
-    }
+  const { token, isHydrated } = useAuthStore();
 
+  const fetchUsers = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      setLoading(true);
       const data = await userService.getAllUsers();
       setUsers(data);
-    } catch {
-      setError('Failed to load users. Please try again.');
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadUsers();
-  }, [allowedToView]);
-
-  const handleWhitelist = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!newEmail.trim() || !canWhitelistEmails()) {
+    if (!isHydrated) return;
+    if (!token) {
+      setLoading(false);
       return;
     }
 
+    fetchUsers();
+  }, [token, isHydrated]);
+
+  const handleEdit = (user: User) => {
+    setSelectedUser(user);
+    setOpenUpdateModal(true);
+  };
+
+  const handleDelete = async (user: User) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete ${user.first_name} ${user.last_name}?`,
+      )
+    )
+      return;
     try {
-      setIsWhitelisting(true);
-      setError(null);
-      await userService.whitelistEmail(newEmail.trim().toLowerCase());
-      setNewEmail('');
-      await loadUsers();
-    } catch {
-      setError('Failed to whitelist email. Please check input and try again.');
-    } finally {
-      setIsWhitelisting(false);
+      await userService.deleteUser(user._id!); // assuming _id exists
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to delete user:", err);
     }
   };
 
-  if (!allowedToView) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">User Directory</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-600">You do not have permission to access this page.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!isHydrated) return <div>Initializing session...</div>;
+  if (loading) return <div>Loading users...</div>;
 
   return (
-    <Card className="space-y-4">
-      <CardHeader className="pb-0">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <CardTitle className="text-xl">User Directory</CardTitle>
-        <Button type="button" variant="outline" onClick={() => void loadUsers()}>
-          Refresh
+        <div>
+          <h1 className="text-2xl font-semibold">User Directory</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage system users and roles
+          </p>
+        </div>
+
+        <Button
+          onClick={() => setOpenAddModal(true)}
+          className="rounded-xl px-5"
+        >
+          + Add User
         </Button>
       </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
 
-      {canWhitelistEmails() && (
-        <form onSubmit={handleWhitelist} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            type="email"
-            value={newEmail}
-            onChange={(event) => setNewEmail(event.target.value)}
-            placeholder="intern@example.com"
-            className="w-full"
-          />
-          <Button type="submit" disabled={isWhitelisting}>
-            {isWhitelisting ? 'Whitelisting...' : 'Whitelist Email'}
-          </Button>
-        </form>
-      )}
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {isLoading ? (
-        <p className="text-sm text-slate-600">Loading users...</p>
-      ) : (
+      {/* Table */}
+      <Card className="p-0 overflow-hidden rounded-2xl shadow-sm border">
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-2 py-3">Name</th>
-                <th className="px-2 py-3">Email</th>
-                <th className="px-2 py-3">Access</th>
-                <th className="px-2 py-3">Position</th>
-                <th className="px-2 py-3">Status</th>
+          <table className="w-full min-w-[800px] text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left p-4">Name</th>
+                <th className="text-left p-4">Email</th>
+                <th className="text-left p-4">Role</th>
+                <th className="text-left p-4">Department</th>
+                <th className="text-left p-4">Status</th>
+                <th className="text-left p-4">Actions</th>
               </tr>
             </thead>
+
             <tbody>
-              {users.map((user) => (
-                <tr key={user.user_id} className="border-b border-slate-100 text-sm text-slate-700">
-                  <td className="px-2 py-3">{`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || 'Pending setup'}</td>
-                  <td className="px-2 py-3">{user.email}</td>
-                  <td className="px-2 py-3">{getAccessLevelLabel(user)}</td>
-                  <td className="px-2 py-3">{getDepartmentRoleLabel(user)}</td>
-                  <td className="px-2 py-3">{user.is_active ? 'Active' : 'Whitelisted'}</td>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center">
+                    No users found
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                users.map((u) => (
+                  <tr key={u._id} className="border-t hover:bg-muted/30">
+                    <td className="p-4">{`${u.first_name || ""} ${u.last_name || ""}`}</td>
+                    <td className="p-4">{u.email}</td>
+                    <td className="p-4">{u.global_role || "N/A"}</td>
+                    <td className="p-4">
+                      {(u.departments || []).length > 0
+                        ? u.departments.map((d) => d.department_role).join(", ")
+                        : "None"}
+                    </td>
+                    <td className="p-4">
+                      <span
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          u.is_active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        {u.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="p-4 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="p-2"
+                        onClick={() => handleEdit(u)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="p-2 text-red-600 border-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(u)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      )}
+      </Card>
 
-      {!canManageUsers() && (
-        <p className="text-xs text-slate-500">You can view users, but account management actions are restricted.</p>
-      )}
-      </CardContent>
-    </Card>
+      {/* ADD USER MODAL */}
+      <AddUserModal
+        open={openAddModal}
+        onClose={() => setOpenAddModal(false)}
+        onSuccess={fetchUsers}
+      />
+
+      {/* UPDATE USER MODAL */}
+      <UpdateUserModal
+        open={openUpdateModal}
+        onClose={() => setOpenUpdateModal(false)}
+        onSuccess={fetchUsers}
+        user={selectedUser}
+      />
+    </div>
   );
 }
