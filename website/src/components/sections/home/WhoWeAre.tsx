@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import SectionHeader from "../../header/SectionHeader";
 
 const teamData = [
@@ -6,89 +6,31 @@ const teamData = [
     title: "Ms. Christelle Ann",
     description:
       "Ms. Christelle Ann provides leadership and strategic direction for Team CA, ensuring the organization continues to grow and innovate.",
-    images: [
-      "https://placehold.co/800x500?text=Christelle+1",
-      "https://placehold.co/800x500?text=Christelle+2",
-      "https://placehold.co/800x500?text=Christelle+3",
-    ],
+    image: "/images/home/ms-ann.jpg",
   },
   {
     title: "Financial Advisors",
     description:
       "Our financial advisors guide the organization in maintaining sustainability and responsible financial planning.",
-    images: [
-      "https://placehold.co/800x500?text=Advisor+1",
-      "https://placehold.co/800x500?text=Advisor+2",
-      "https://placehold.co/800x500?text=Advisor+3",
-    ],
+    image: "/images/home/financial-advisors.jpg",
   },
   {
     title: "Interns",
     description:
       "Our interns bring fresh ideas and support ongoing initiatives through collaboration, research, and development.",
-    images: [
-      "https://placehold.co/800x500?text=Intern+1",
-      "https://placehold.co/800x500?text=Intern+2",
-      "https://placehold.co/800x500?text=Intern+3",
-    ],
+    image: "/images/home/interns.jpg",
   },
 ];
 
 export default function WhoWeAre() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const galleryRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(0);
 
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeft = useRef(0);
-
-  // Scroll to the second image initially
-  useEffect(() => {
-    if (galleryRef.current) {
-      const container = galleryRef.current;
-      const children = container.children;
-      if (children.length > 1) {
-        const secondImage = children[1] as HTMLElement;
-        container.scrollTo({
-          left: secondImage.offsetLeft - container.clientWidth / 4,
-        });
-      }
-    }
-  }, [activeIndex]);
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!galleryRef.current) return;
-    isDragging.current = true;
-    startX.current = e.pageX - galleryRef.current.offsetLeft;
-    scrollLeft.current = galleryRef.current.scrollLeft;
+  const handleToggle = (index: number) => {
+    setActiveIndex(activeIndex === index ? null : index);
   };
-
-  const onMouseLeave = () => (isDragging.current = false);
-  const onMouseUp = () => (isDragging.current = false);
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current || !galleryRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - galleryRef.current.offsetLeft;
-    const walk = (x - startX.current) * 2;
-    galleryRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (!galleryRef.current) return;
-    isDragging.current = true;
-    startX.current = e.touches[0].pageX - galleryRef.current.offsetLeft;
-    scrollLeft.current = galleryRef.current.scrollLeft;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current || !galleryRef.current) return;
-    const x = e.touches[0].pageX - galleryRef.current.offsetLeft;
-    const walk = (x - startX.current) * 2;
-    galleryRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-  const onTouchEnd = () => (isDragging.current = false);
 
   return (
-    <section className="py-24 px-6 md:px-12 lg:px-20">
+    <section className="py-16 md:py-20 lg:py-24 px-4 md:px-10 lg:px-20">
       <div className="max-w-7xl mx-auto">
         <SectionHeader
           subtitle="About"
@@ -98,49 +40,82 @@ export default function WhoWeAre() {
           size="lg"
         />
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start mt-20">
+        <div className="grid md:grid-cols-2 gap-10 lg:gap-14 items-start mt-16">
           <div className="space-y-4">
             {teamData.map((item, index) => (
               <div
                 key={index}
-                className="border-b pb-4 cursor-pointer"
-                onClick={() => setActiveIndex(index)}
+                className="border-b pb-4 cursor-pointer select-none"
+                onClick={() => handleToggle(index)}
               >
-                <h3 className="text-xl font-semibold text-gray-900 flex justify-between">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 flex justify-between items-center">
                   {item.title}
-                  <span>{activeIndex === index ? "-" : "+"}</span>
+                  <span className="ml-2">
+                    {activeIndex === index ? "-" : "+"}
+                  </span>
                 </h3>
+
                 {activeIndex === index && (
-                  <p className="text-gray-600 mt-3">{item.description}</p>
+                  <p className="text-gray-600 mt-3 text-sm sm:text-base md:text-base transition-all duration-300">
+                    {item.description}
+                  </p>
                 )}
               </div>
             ))}
+
+            <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 sm:gap-6 mt-8 max-w-full">
+              <img
+                src="/images/home/black-orca.png"
+                alt="Black Orca"
+                className="h-8 sm:h-10 md:h-12 w-auto object-contain grayscale hover:grayscale-0 transition"
+              />
+              <img
+                src="/images/home/pru-life.png"
+                alt="Pru Life"
+                className="h-20 sm:h-22 md:h-24 w-auto object-contain grayscale hover:grayscale-0 transition"
+              />
+              <img
+                src="/images/home/maperaang-pilipino.png"
+                alt="Maperaang Pilipino"
+                className="h-20 w-auto object-contain grayscale hover:grayscale-0 transition"
+              />
+            </div>
           </div>
 
-          <div
-            ref={galleryRef}
-            className="flex gap-6 overflow-x-hidden select-none cursor-grab"
-            onMouseDown={onMouseDown}
-            onMouseLeave={onMouseLeave}
-            onMouseUp={onMouseUp}
-            onMouseMove={onMouseMove}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            {teamData[activeIndex].images.map((img, idx) => (
+          <div className="relative rounded-xl overflow-hidden">
+            <img
+              src={teamData[activeIndex ?? 0].image}
+              alt={teamData[activeIndex ?? 0].title}
+              className="w-full h-[400px] sm:h-[420px] md:h-[450px] lg:h-[550px] object-cover bg-right contrast-110 saturate-110"
+            />
+
+            {/* <div className="absolute top-4 right-4 z-10">
+              <img
+                src="/images/home/team-ca.png"
+                alt="Team CA Logo"
+                className="h-10 sm:h-12 md:h-16 lg:h-20 object-contain"
+              />
+            </div> */}
+
+            <div className="absolute inset-0 pointer-events-none">
               <div
-                key={idx}
-                className="flex-shrink-0 w-[85%] md:w-[75%] lg:w-[65%] rounded-xl overflow-hidden snap-center"
-              >
-                <img
-                  src={img}
-                  alt={`team-${idx}`}
-                  className="w-full h-[420px] object-cover rounded-xl shadow-lg"
-                  draggable={false}
-                />
-              </div>
-            ))}
+                className="absolute w-[100px] sm:w-[120px] h-[100px] sm:h-[120px] blur-[60px] -top-10 -left-10"
+                style={{ background: "var(--primary-color)" }}
+              />
+              <div
+                className="absolute w-[80px] sm:w-[100px] h-[80px] sm:h-[100px] blur-[50px] -top-20 -left-6"
+                style={{ background: "var(--light-primary-color)" }}
+              />
+
+              <div
+                className="absolute w-[100px] sm:w-[120px] h-[100px] sm:h-[120px] blur-[60px] -bottom-10 -right-10"
+                style={{ background: "var(--accent-color)" }}
+              />
+              <div
+                className="absolute w-[80px] sm:w-[100px] h-[80px] sm:h-[100px] blur-[50px] -bottom-20 -right-6"
+                style={{ background: "var(--light-primary-color)" }}
+              />
+            </div>
           </div>
         </div>
       </div>

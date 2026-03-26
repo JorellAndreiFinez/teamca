@@ -5,6 +5,7 @@ import SectionHeader from "../header/SectionHeader";
 interface CTAProps {
   title: string;
   subtitle?: string;
+  contrast?: "light" | "dark";
   buttonText?: string;
   buttonLink?: string;
   bgImage: string;
@@ -13,6 +14,7 @@ interface CTAProps {
 const CTA: React.FC<CTAProps> = ({
   title,
   subtitle,
+  contrast = "light",
   buttonText,
   buttonLink,
   bgImage,
@@ -30,12 +32,23 @@ const CTA: React.FC<CTAProps> = ({
         style={{ backgroundImage: `url(${bgImage})` }}
       />
 
-      <div className="absolute inset-0 bg-gradient from-white/70 via-white/40 to-black/50" />
+      <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(circle at bottom left, rgb(210, 155, 41, 0.2), transparent 20%),
+            radial-gradient(circle at top right, rgb(210, 155, 41, 0.2), transparent 20%)
+          `,
+        }}
+      ></div>
+
+      <div className="absolute inset-0 bg-black/90"></div>
 
       <div className="relative z-10 px-4 text-white max-w-3xl">
         <SectionHeader
           title={title}
           subtitle={subtitle}
+          contrast={contrast}
           align="center"
           size="lg"
           hasButton={!!buttonText}

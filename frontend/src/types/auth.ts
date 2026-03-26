@@ -1,3 +1,5 @@
+// frontend\src\types\auth.ts
+
 // auth and registration types
 
 export interface LoginCredentials {

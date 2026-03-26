@@ -1,3 +1,4 @@
+// backend\src\index.ts
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -20,12 +21,17 @@ const configuredOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowedOrigins = Array.from(new Set([...defaultOrigins, ...configuredOrigins]));
+const allowedOrigins = Array.from(
+  new Set([...defaultOrigins, ...configuredOrigins]),
+);
 
 const isLocalDevOrigin = (origin: string): boolean => {
   try {
     const parsed = new URL(origin);
-    return parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname);
+    return (
+      parsed.protocol === "http:" &&
+      ["localhost", "127.0.0.1"].includes(parsed.hostname)
+    );
   } catch {
     return false;
   }
@@ -34,12 +40,16 @@ const isLocalDevOrigin = (origin: string): boolean => {
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // allow non-browser clients (no origin header).
-    if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      isLocalDevOrigin(origin)
+    ) {
       return callback(null, true);
     }
     return callback(null, false);
   },
-  credentials: true,
+  credentials: false,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
