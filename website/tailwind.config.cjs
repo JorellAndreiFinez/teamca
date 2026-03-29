@@ -1,8 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{astro,js,ts,jsx,tsx}"],
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        heading: ["var(--font-heading)", "sans-serif"],
+        body: ["var(--font-body)", "sans-serif"],
+      },
+      colors: {
+        primary: "rgb(172, 18, 18)",
+        lightPrimary: "rgb(210, 159, 34)",
+        white: "rgb(245, 245, 245)",
+        black: "rgb(25, 23, 27)",
+      },
+    },
   },
   plugins: [],
 };
