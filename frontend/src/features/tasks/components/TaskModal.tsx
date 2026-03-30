@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '../../../components/ui/Modal';
+import Button from '../../../components/ui/Button';
 import type { TaskComment, TaskDetail, TaskFeedback, TaskStatus, TaskWorkLink } from '../../../types/task';
 import TaskActions from './TaskActions';
 import TaskComments from './TaskComments';
@@ -39,6 +40,8 @@ type TaskModalProps = {
   canAddLinks: boolean;
   canDeleteAnyLink: boolean;
   canDeleteOwnLink: boolean;
+  canEditTaskDetails: boolean;
+  onEditTaskDetails: () => void;
 };
 
 export default function TaskModal({
@@ -72,6 +75,8 @@ export default function TaskModal({
   canAddLinks,
   canDeleteAnyLink,
   canDeleteOwnLink,
+  canEditTaskDetails,
+  onEditTaskDetails,
 }: TaskModalProps) {
   const [displayTask, setDisplayTask] = useState<TaskDetail | null>(task);
 
@@ -82,7 +87,17 @@ export default function TaskModal({
   }, [task]);
 
   return (
-    <Modal open={open} onClose={onClose} title={displayTask?.title} className="max-w-5xl">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={displayTask?.title}
+      className="max-w-5xl"
+      headerAction={canEditTaskDetails ? (
+        <Button type="button" variant="outline" size="sm" onClick={onEditTaskDetails}>
+          Edit details
+        </Button>
+      ) : undefined}
+    >
       {isLoading ? (
         <div className="flex min-h-56 items-center justify-center">
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-5">

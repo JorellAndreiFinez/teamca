@@ -52,6 +52,17 @@ const getMetadataString = (item: NotificationItem, key: string): string | null =
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 };
 
+const getChangedFields = (item: NotificationItem): string[] => {
+  const value = item.metadata?.changed_fields;
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((field): field is string => typeof field === 'string' && field.trim().length > 0)
+    .map((field) => field.replace(/_/g, ' ').trim());
+};
+
 const getStatusBadgeClass = (status: string) => {
   if (status === 'Completed') {
     return 'border-green-200 bg-green-50 text-green-700';
@@ -68,12 +79,79 @@ const getStatusBadgeClass = (status: string) => {
   return 'border-slate-200 bg-slate-50 text-slate-700';
 };
 
+const getDeadlineBadgeClass = (type: 'due_today' | 'overdue') => {
+  if (type === 'overdue') {
+    return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+
+  return 'border-amber-200 bg-amber-50 text-amber-700';
+};
+
 const renderNotificationDetail = (item: NotificationItem) => {
   const taskTitle = getTaskTitle(item);
   const taskStatus = getTaskStatus(item);
   const actorFirstName = getMetadataString(item, 'actor_first_name') || 'Someone';
   const previousStatus = getMetadataString(item, 'previous_status');
   const newStatus = getMetadataString(item, 'new_status') || taskStatus;
+  const changedFields = getChangedFields(item);
+
+  if (item.event_type === 'task_details_updated' && taskTitle) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-600">
+        <span>{actorFirstName}</span>
+        <span>updated</span>
+        {changedFields.length > 0
+          ? changedFields.map((field) => (
+              <span key={`field-${field}`} className="rounded-full border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
+                {field}
+              </span>
+            ))
+          : <span>task details</span>}
+        <span>for</span>
+        <span className="font-semibold text-slate-800">"{taskTitle}"</span>
+        <span>.</span>
+      </p>
+    );
+  }
+
+  if (item.event_type === 'task_deleted' && taskTitle) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-600">
+        <span>{actorFirstName}</span>
+        <span>deleted</span>
+        <span className="font-semibold text-slate-800">"{taskTitle}"</span>
+        {taskStatus ? (
+          <>
+            <span>with status</span>
+            <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(taskStatus)}`}>
+              {taskStatus}
+            </span>
+          </>
+        ) : null}
+        <span>.</span>
+      </p>
+    );
+  }
+
+  if (item.event_type === 'task_due_today' && taskTitle) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-600">
+        <span>Make sure to submit your work on</span>
+        <span className="font-semibold text-slate-800">"{taskTitle}"</span>
+        <span>for reviewing.</span>
+      </p>
+    );
+  }
+
+  if (item.event_type === 'task_overdue' && taskTitle) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-600">
+        <span>Please accomplish</span>
+        <span className="font-semibold text-slate-800">"{taskTitle}"</span>
+        <span>at your earliest convenience.</span>
+      </p>
+    );
+  }
 
   const isStatusEvent = item.event_type === 'task_moved_back'
     || item.event_type === 'task_status_changed'

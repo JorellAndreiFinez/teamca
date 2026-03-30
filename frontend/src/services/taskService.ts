@@ -5,6 +5,7 @@ import type {
   AddTaskWorkLinkPayload,
   CreateTaskResponse,
   CreateTaskPayload,
+  DeleteTasksResponse,
   PaginatedTaskListResponse,
   Task,
   TaskAssignment,
@@ -14,6 +15,7 @@ import type {
   TaskListQuery,
   TaskStatusHistory,
   TaskWorkLink,
+  UpdateTaskDetailsPayload,
   UpdateTaskStatusPayload,
   UpdateTaskStatusResponse,
 } from '../types/task';
@@ -63,6 +65,11 @@ export const taskService = {
     return response.data;
   },
 
+  updateTaskDetails: async (taskId: string, payload: UpdateTaskDetailsPayload): Promise<Task> => {
+    const response = await api.patch<Task>(`/tasks/${taskId}`, payload);
+    return response.data;
+  },
+
   getTaskStatusHistory: async (taskId: string): Promise<TaskStatusHistory[]> => {
     const response = await api.get<TaskStatusHistory[]>(`/tasks/${taskId}/status-history`);
     return response.data;
@@ -99,6 +106,17 @@ export const taskService = {
 
   addTaskComment: async (taskId: string, payload: AddTaskCommentPayload): Promise<TaskComment> => {
     const response = await api.post<TaskComment>(`/tasks/${taskId}/comments`, payload);
+    return response.data;
+  },
+
+  deleteTasks: async (taskIds: string[]): Promise<DeleteTasksResponse> => {
+    const response = await api.delete<DeleteTasksResponse>('/tasks', {
+      headers: {},
+      data: {
+        task_ids: taskIds,
+      },
+    });
+
     return response.data;
   },
 };

@@ -5,11 +5,12 @@ interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }
 
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, headerAction, children, className }: ModalProps) {
   const [isRendered, setIsRendered] = React.useState(open);
   const [isClosing, setIsClosing] = React.useState(false);
 
@@ -56,7 +57,12 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
               className,
             )}
           >
-            {title && <h3 className="mb-4 text-lg font-semibold text-slate-900">{title}</h3>}
+            {(title || headerAction) ? (
+              <div className="mb-4 flex items-center justify-between gap-3">
+                {title ? <h3 className="text-lg font-semibold text-slate-900">{title}</h3> : <div />}
+                {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+              </div>
+            ) : null}
             {children}
           </div>
         </div>

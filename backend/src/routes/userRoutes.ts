@@ -25,7 +25,7 @@ router.get(
 router.get(
   "/",
   authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"], ["Supervisor"]),
+  requireAnyRole(["Superadmin", "Admin"], ["Head", "Supervisor", "Intern"]),
   getUsers,
 );
 

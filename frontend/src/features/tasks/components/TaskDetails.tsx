@@ -61,7 +61,7 @@ export default function TaskDetails({ task }: TaskDetailsProps) {
   return (
     <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <h4 className="text-sm font-semibold text-slate-900">Task Information</h4>
-      <p className="text-sm text-slate-600">{task.description || 'No description.'}</p>
+      <p className="max-h-28 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-sm text-slate-600">{task.description || 'No description.'}</p>
       <div className="flex flex-wrap gap-2">
         <span className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS_STYLES[task.status]}`}>{task.status}</span>
         <span className={`rounded-full px-2 py-1 text-xs font-medium ${PRIORITY_STYLES[task.priority]}`}>{task.priority}</span>

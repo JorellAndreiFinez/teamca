@@ -29,9 +29,33 @@ const getActiveSuperadminIds = async (): Promise<string[]> => {
 /**
  * Get all users
  */
-export const getUsers = async (_req: Request, res: Response) => {
+export const getUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find({}, "-password_hash");
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
+    const isGlobalManager = req.user.global_role === "Superadmin" || req.user.global_role === "Admin";
+    const isDepartmentScoped = req.user.department_role === "Head"
+      || req.user.department_role === "Supervisor"
+      || req.user.department_role === "Intern";
+
+    let users;
+    if (isGlobalManager) {
+      users = await User.find({}, "-password_hash");
+    } else if (isDepartmentScoped && req.user.department_id) {
+      users = await User.find({
+        is_active: true,
+        departments: {
+          $elemMatch: {
+            department_id: req.user.department_id,
+          },
+        },
+      }, "-password_hash");
+    } else {
+      users = await User.find({ _id: req.user.user_id }, "-password_hash");
+    }
+
     console.log("[getUsers] users fetched:", users);
     res.json(users);
   } catch (err) {

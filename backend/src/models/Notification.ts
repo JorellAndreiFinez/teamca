@@ -10,6 +10,10 @@ export type NotificationEventType =
   | "task_moved_back"
   | "task_status_under_review"
   | "task_status_completed"
+  | "task_details_updated"
+  | "task_deleted"
+  | "task_due_today"
+  | "task_overdue"
   | "user_profile_updated"
   | "user_role_changed"
   | "user_activation_changed"
@@ -45,6 +49,10 @@ const notificationSchema = new Schema<INotification>({
       "task_moved_back",
       "task_status_under_review",
       "task_status_completed",
+      "task_details_updated",
+      "task_deleted",
+      "task_due_today",
+      "task_overdue",
       "user_profile_updated",
       "user_role_changed",
       "user_activation_changed",

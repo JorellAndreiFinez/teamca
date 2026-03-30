@@ -17,6 +17,9 @@ type TaskFiltersProps = {
   onCreatedDateChange: (value: CreatedDateFilter) => void;
   onSortByChange: (value: SortBy) => void;
   onLimitChange: (value: number) => void;
+  deleteMode: boolean;
+  selectedDeleteCount: number;
+  onDeleteModeClick: () => void;
 };
 
 export default function TaskFilters({
@@ -32,6 +35,9 @@ export default function TaskFilters({
   onCreatedDateChange,
   onSortByChange,
   onLimitChange,
+  deleteMode,
+  selectedDeleteCount,
+  onDeleteModeClick,
 }: TaskFiltersProps) {
   const [openPanel, setOpenPanel] = useState<'filter' | 'sort' | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +102,21 @@ export default function TaskFilters({
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M7 12h10M10 17h4" />
         </svg>
         Sort
+      </button>
+
+      <button
+        type="button"
+        onClick={onDeleteModeClick}
+        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+          deleteMode
+            ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100'
+            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+        }`}
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M9 7V5h6v2m-8 0l1 12h6l1-12" />
+        </svg>
+        {deleteMode ? (selectedDeleteCount > 0 ? `Delete (${selectedDeleteCount})` : 'Cancel') : 'Delete'}
       </button>
 
       {openPanel === 'filter' ? (

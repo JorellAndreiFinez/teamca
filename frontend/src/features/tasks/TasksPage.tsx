@@ -11,8 +11,10 @@ import type {
   TaskComment,
   TaskDetail,
   TaskFeedback,
+  TaskListItem,
   TaskPriority,
   TaskStatus,
+  TaskStatusHistory,
   TaskWorkLink,
 } from '../../types/task';
 import type { User } from '../../types/user';
@@ -33,6 +35,8 @@ const DEFAULT_LIST: PaginatedTaskListResponse = {
   total_pages: 1,
 };
 
+const TASK_DESCRIPTION_MAX_LENGTH = 1000;
+
 const getUserIdentifier = (user: User): string => String(user.user_id || (user as any)._id || '').trim();
 
 const getTodayInputDate = (): string => {
@@ -41,6 +45,38 @@ const getTodayInputDate = (): string => {
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const toLocalInputDateTime = (value?: string | Date) => {
+  if (!value) {
+    return { date: '', time: '' };
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { date: '', time: '' };
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const hours = String(parsed.getHours()).padStart(2, '0');
+  const minutes = String(parsed.getMinutes()).padStart(2, '0');
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  };
+};
+
+const prependUniqueHistoryItem = (
+  history: TaskStatusHistory[],
+  nextItem: TaskStatusHistory,
+): TaskStatusHistory[] => {
+  if (history.some((item) => item.history_id === nextItem.history_id)) {
+    return history;
+  }
+
+  return [nextItem, ...history];
 };
 
 export default function TasksPage() {
@@ -53,6 +89,10 @@ export default function TasksPage() {
   const [serverError, setServerError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeletingTasks, setIsDeletingTasks] = useState(false);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
@@ -87,6 +127,21 @@ export default function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskDetail, setTaskDetail] = useState<TaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [isEditDetailsModalOpen, setIsEditDetailsModalOpen] = useState(false);
+  const [isSavingTaskDetails, setIsSavingTaskDetails] = useState(false);
+  const [editDetailsError, setEditDetailsError] = useState('');
+  const [editNoDueDateTime, setEditNoDueDateTime] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    description: string;
+    dueDate: string;
+    dueTime: string;
+  }>({
+    title: '',
+    description: '',
+    dueDate: '',
+    dueTime: '',
+  });
 
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [commentDraft, setCommentDraft] = useState('');
@@ -126,6 +181,30 @@ export default function TasksPage() {
   const isIntern = currentDepartmentRole === 'Intern';
   const canSubmitFeedback = isSuperadmin || isAdmin || isHeadOrSupervisor;
   const isSelfOnlyAssignee = isStandardUser;
+
+  const canDeleteTask = useCallback((task: TaskListItem) => {
+    if (task.status === 'Completed') {
+      return isSuperadmin;
+    }
+
+    if (isSuperadmin || isAdmin) {
+      return true;
+    }
+
+    return String(task.created_by) === resolvedCurrentUserId;
+  }, [isAdmin, isSuperadmin, resolvedCurrentUserId]);
+
+  const canEditTaskDetails = useMemo(() => {
+    if (!taskDetail) {
+      return false;
+    }
+
+    if (isSuperadmin || isAdmin) {
+      return true;
+    }
+
+    return String(taskDetail.created_by) === resolvedCurrentUserId;
+  }, [isAdmin, isSuperadmin, resolvedCurrentUserId, taskDetail]);
 
   const assignableUsers = useMemo(() => {
     if (!currentUser) {
@@ -187,6 +266,13 @@ export default function TasksPage() {
     const completed = taskList.items.filter((task) => task.status === 'Completed');
     return [...unfinished, ...completed];
   }, [taskList.items]);
+
+  useEffect(() => {
+    setSelectedTaskIds((prev) => prev.filter((taskId) => {
+      const task = orderedTasks.find((item) => String(item.task_id) === taskId);
+      return !!task && canDeleteTask(task);
+    }));
+  }, [canDeleteTask, orderedTasks]);
 
   const loadTasks = useCallback(async (options?: { refresh?: boolean }) => {
     if (!options?.refresh) {
@@ -280,13 +366,25 @@ export default function TasksPage() {
       return;
     }
 
+    const canFetchAllUsers = isSuperadmin
+      || isAdmin
+      || currentDepartmentRole === 'Head'
+      || currentDepartmentRole === 'Supervisor'
+      || currentDepartmentRole === 'Intern';
+    if (!canFetchAllUsers) {
+      setAllUsers(currentUser ? [currentUser] : []);
+      setCreateError('');
+      setUsersLoading(false);
+      return;
+    }
+
     setUsersLoading(true);
     void userService
       .getAllUsers()
       .then((users) => setAllUsers(users))
       .catch(() => setCreateError('Failed to load assignable users.'))
       .finally(() => setUsersLoading(false));
-  }, [isAuthenticated, isCreateModalOpen]);
+  }, [currentDepartmentRole, currentUser, isAdmin, isAuthenticated, isCreateModalOpen, isSuperadmin]);
 
   useEffect(() => {
     if (!isCreateModalOpen || !resolvedCurrentUserId) {
@@ -367,7 +465,7 @@ export default function TasksPage() {
       return {
         ...prev,
         status: nextTask.status,
-        history: [history, ...prev.history],
+        history: prependUniqueHistoryItem(prev.history, history),
       };
     });
 
@@ -416,7 +514,7 @@ export default function TasksPage() {
         return {
           ...prev,
           status: response.task.status,
-          history: [response.history, ...prev.history],
+          history: prependUniqueHistoryItem(prev.history, response.history),
         };
       });
 
@@ -682,6 +780,131 @@ export default function TasksPage() {
     }
   };
 
+  const handleToggleTaskSelection = (taskId: string) => {
+    setSelectedTaskIds((prev) => (
+      prev.includes(taskId)
+        ? prev.filter((id) => id !== taskId)
+        : [...prev, taskId]
+    ));
+  };
+
+  const handleDeleteModeClick = () => {
+    if (!isDeleteMode) {
+      setIsDeleteMode(true);
+      setSelectedTaskIds([]);
+      return;
+    }
+
+    if (selectedTaskIds.length === 0) {
+      setIsDeleteMode(false);
+      return;
+    }
+
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteTasks = async () => {
+    if (selectedTaskIds.length === 0) {
+      setIsDeleteConfirmOpen(false);
+      setIsDeleteMode(false);
+      return;
+    }
+
+    setIsDeletingTasks(true);
+    setServerError('');
+
+    try {
+      await taskService.deleteTasks(selectedTaskIds);
+      setIsDeleteConfirmOpen(false);
+      setIsDeleteMode(false);
+      setSelectedTaskIds([]);
+      pushModalToast('Selected tasks deleted');
+      await loadTasks({ refresh: true });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to delete selected tasks.');
+    } finally {
+      setIsDeletingTasks(false);
+    }
+  };
+
+  const handleOpenEditTaskDetails = () => {
+    if (!taskDetail) {
+      return;
+    }
+
+    const localDateTime = toLocalInputDateTime(taskDetail.deadline);
+    setEditForm({
+      title: taskDetail.title,
+      description: taskDetail.description || '',
+      dueDate: localDateTime.date,
+      dueTime: localDateTime.time,
+    });
+    setEditNoDueDateTime(!taskDetail.deadline);
+    setEditDetailsError('');
+    setIsEditDetailsModalOpen(true);
+  };
+
+  const handleSaveTaskDetails = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!taskDetail) {
+      return;
+    }
+
+    const title = editForm.title.trim();
+    if (!title) {
+      setEditDetailsError('Task title is required.');
+      return;
+    }
+
+    let deadline: string | null | undefined;
+    if (editNoDueDateTime) {
+      deadline = null;
+    } else {
+      if (!editForm.dueDate || !editForm.dueTime) {
+        setEditDetailsError('Set both due date and due time, or check No deadline.');
+        return;
+      }
+
+      const todayDate = getTodayInputDate();
+      if (editForm.dueDate < todayDate) {
+        setEditDetailsError('Deadline cannot be in the past.');
+        return;
+      }
+
+      const parsed = new Date(`${editForm.dueDate}T${editForm.dueTime}`);
+      if (Number.isNaN(parsed.getTime())) {
+        setEditDetailsError('Invalid deadline value.');
+        return;
+      }
+
+      deadline = parsed.toISOString();
+    }
+
+    setIsSavingTaskDetails(true);
+    setEditDetailsError('');
+
+    try {
+      await taskService.updateTaskDetails(String(taskDetail.task_id), {
+        title,
+        description: editForm.description.trim() || '',
+        deadline,
+      });
+
+      await Promise.all([
+        loadTaskDetail(String(taskDetail.task_id)),
+        loadTasks({ refresh: true }),
+      ]);
+
+      setIsEditDetailsModalOpen(false);
+      pushModalToast('Task details updated');
+    } catch (error: any) {
+      setEditDetailsError(error?.response?.data?.message || 'Failed to update task details.');
+    } finally {
+      setIsSavingTaskDetails(false);
+    }
+  };
+
   const modalComments = taskDetail?.comments || [];
   const modalLinks: TaskWorkLink[] = taskDetail?.links || [];
   const totalPages = Math.max(1, taskList.total_pages || 1);
@@ -734,9 +957,28 @@ export default function TasksPage() {
         onCreatedDateChange={setCreatedDateFilter}
         onSortByChange={setSortBy}
         onLimitChange={setLimit}
+        deleteMode={isDeleteMode}
+        selectedDeleteCount={selectedTaskIds.length}
+        onDeleteModeClick={handleDeleteModeClick}
       />
 
-      <TaskTable tasks={orderedTasks} isLoading={isLoading} onRowClick={setSelectedTaskId} />
+      {isDeleteMode ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+          Reminder: Completed tasks can only be deleted by superadmins. For non-completed tasks,
+          admins can delete any task while others can only delete tasks they created.
+          Tasks you cannot delete are marked with a "Not deletable" label.
+        </div>
+      ) : null}
+
+      <TaskTable
+        tasks={orderedTasks}
+        isLoading={isLoading}
+        onRowClick={setSelectedTaskId}
+        selectionMode={isDeleteMode}
+        selectedTaskIds={selectedTaskIds}
+        canSelectTask={canDeleteTask}
+        onToggleTaskSelection={handleToggleTaskSelection}
+      />
 
       <TaskPagination
         page={page}
@@ -788,6 +1030,8 @@ export default function TasksPage() {
         canAddLinks={canAddLinks}
         canDeleteAnyLink={canDeleteAnyLink}
         canDeleteOwnLink={canDeleteOwnLink}
+        canEditTaskDetails={canEditTaskDetails}
+        onEditTaskDetails={handleOpenEditTaskDetails}
       />
 
       <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create Task" className="max-w-xl">
@@ -804,10 +1048,17 @@ export default function TasksPage() {
             <textarea
               rows={3}
               value={createForm.description}
-              onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              maxLength={TASK_DESCRIPTION_MAX_LENGTH}
+              onChange={(event) => setCreateForm((prev) => ({
+                ...prev,
+                description: event.target.value.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
+              }))}
+              className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
               placeholder="Optional details"
             />
+            <span className="text-[11px] text-slate-500">
+              {createForm.description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
+            </span>
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -919,6 +1170,110 @@ export default function TasksPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={isEditDetailsModalOpen}
+        onClose={() => setIsEditDetailsModalOpen(false)}
+        title="Edit Task Details"
+        className="max-w-xl"
+      >
+        <form className="space-y-3" onSubmit={handleSaveTaskDetails}>
+          <Input
+            label="Title"
+            value={editForm.title}
+            onChange={(event) => setEditForm((prev) => ({ ...prev, title: event.target.value }))}
+            placeholder="Enter task title"
+          />
+
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-700">Description</span>
+            <textarea
+              rows={3}
+              value={editForm.description}
+              maxLength={TASK_DESCRIPTION_MAX_LENGTH}
+              onChange={(event) => setEditForm((prev) => ({
+                ...prev,
+                description: event.target.value.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
+              }))}
+              className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Optional details"
+            />
+            <span className="text-[11px] text-slate-500">
+              {editForm.description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Due Date"
+              type="date"
+              value={editForm.dueDate}
+              min={getTodayInputDate()}
+              disabled={editNoDueDateTime}
+              onChange={(event) => setEditForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+            />
+
+            <Input
+              label="Due Time"
+              type="time"
+              value={editForm.dueTime}
+              disabled={editNoDueDateTime}
+              onChange={(event) => setEditForm((prev) => ({ ...prev, dueTime: event.target.value }))}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={editNoDueDateTime}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setEditNoDueDateTime(checked);
+                setEditDetailsError('');
+                if (checked) {
+                  setEditForm((prev) => ({ ...prev, dueDate: '', dueTime: '' }));
+                }
+              }}
+            />
+            <span>No deadline?</span>
+          </label>
+
+          {editDetailsError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{editDetailsError}</div>
+          ) : null}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsEditDetailsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" loading={isSavingTaskDetails}>
+              Save
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        title="Delete Selected Tasks"
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-700">
+            You are about to delete {selectedTaskIds.length} selected task{selectedTaskIds.length === 1 ? '' : 's'}. This action cannot be undone.
+          </p>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" loading={isDeletingTasks} onClick={() => void handleConfirmDeleteTasks()}>
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {modalToasts.length > 0 ? (

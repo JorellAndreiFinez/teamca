@@ -9,8 +9,7 @@ export const userService = {
     try {
       const { data } = await api.get<User[]>("/users");
       return data;
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
+    } catch {
       return [];
     }
   },

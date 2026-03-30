@@ -116,6 +116,21 @@ export interface UpdateTaskStatusResponse {
   history: TaskStatusHistory;
 }
 
+export interface UpdateTaskDetailsPayload {
+  title?: string;
+  description?: string;
+  deadline?: string | null;
+}
+
+export interface DeleteTasksPayload {
+  task_ids: string[];
+}
+
+export interface DeleteTasksResponse {
+  deleted_count: number;
+  deleted_task_ids: string[];
+}
+
 export interface AddTaskFeedbackPayload {
   comments: string;
 }

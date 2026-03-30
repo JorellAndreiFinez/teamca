@@ -36,6 +36,17 @@ export type UpdateTaskStatusInput = {
   updateNotes?: string;
 };
 
+export type UpdateTaskDetailsInput = {
+  taskId: string;
+  title?: string;
+  description?: string;
+  deadline?: Date | null;
+};
+
+export type DeleteTasksInput = {
+  taskIds: string[];
+};
+
 export type AddTaskFeedbackInput = {
   taskId: string;
   comments: string;
@@ -429,6 +440,32 @@ const canChangeTaskStatus = async (
   }
 
   return false;
+};
+
+const canManageOrOwnTask = (
+  actor: Express.AuthUser,
+  task: { created_by: Types.ObjectId | string },
+): boolean => {
+  if (canManageGlobally(actor.global_role)) {
+    return true;
+  }
+
+  return String(task.created_by) === String(actor.user_id);
+};
+
+const canDeleteTaskByPolicy = (
+  actor: Express.AuthUser,
+  task: { created_by: Types.ObjectId | string; status: TaskStatus },
+): boolean => {
+  if (task.status === "Completed" && actor.global_role !== "Superadmin") {
+    return false;
+  }
+
+  if (canManageGlobally(actor.global_role)) {
+    return true;
+  }
+
+  return String(task.created_by) === String(actor.user_id);
 };
 
 const resolveTaskOrThrow = async (taskId: string) => {
@@ -1243,6 +1280,77 @@ export const addTaskComment = async (actor: Express.AuthUser, input: AddTaskComm
     message: created.message,
     created_at: created.created_at,
   }, userMap);
+};
+
+export const updateTaskDetails = async (actor: Express.AuthUser, input: UpdateTaskDetailsInput) => {
+  const task = await Task.findById(input.taskId);
+  if (!task) {
+    throw new Error("Task not found.");
+  }
+
+  if (!canManageOrOwnTask(actor, { created_by: task.created_by as Types.ObjectId })) {
+    throw new Error("You do not have permission to update this task.");
+  }
+
+  if (input.title !== undefined) {
+    task.title = input.title.trim();
+  }
+
+  if (input.description !== undefined) {
+    task.description = input.description.trim() || undefined;
+  }
+
+  if (input.deadline !== undefined) {
+    task.deadline = input.deadline || undefined;
+  }
+
+  await task.save();
+  return normalizeTask(task);
+};
+
+export const deleteTasks = async (actor: Express.AuthUser, input: DeleteTasksInput) => {
+  const uniqueTaskIds = [...new Set(
+    input.taskIds
+      .map((taskId) => taskId.trim())
+      .filter((taskId) => taskId.length > 0),
+  )];
+
+  if (uniqueTaskIds.length === 0) {
+    throw new Error("At least one task id is required.");
+  }
+
+  const tasks = await Task.find({ _id: { $in: uniqueTaskIds } })
+    .select("_id created_by status")
+    .lean();
+
+  if (tasks.length === 0) {
+    throw new Error("Task not found.");
+  }
+
+  const undeletableTask = tasks.find((task) => !canDeleteTaskByPolicy(actor, {
+    created_by: task.created_by,
+    status: task.status,
+  }));
+  if (undeletableTask) {
+    throw new Error("You do not have permission to delete one or more selected tasks.");
+  }
+
+  const deletableTaskIds = tasks.map((task) => String(task._id));
+  const objectIds = deletableTaskIds.map((taskId) => new Types.ObjectId(taskId));
+
+  await Promise.all([
+    Task.deleteMany({ _id: { $in: objectIds } }),
+    TaskAssignment.deleteMany({ task_id: { $in: objectIds } }),
+    TaskComment.deleteMany({ task_id: { $in: objectIds } }),
+    TaskFeedback.deleteMany({ task_id: { $in: objectIds } }),
+    TaskStatusHistory.deleteMany({ task_id: { $in: objectIds } }),
+    TaskWorkLink.deleteMany({ task_id: { $in: objectIds } }),
+  ]);
+
+  return {
+    deleted_count: deletableTaskIds.length,
+    deleted_task_ids: deletableTaskIds,
+  };
 };
 
 export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Promise<TaskDetailResponse> => {
