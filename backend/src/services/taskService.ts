@@ -633,6 +633,11 @@ export const assignTask = async (actor: Express.AuthUser, input: AssignTaskInput
     }
   }
 
+  await TaskAssignment.deleteMany({
+    task_id: task._id,
+    assigned_to: { $nin: assigneeUserIds },
+  });
+
   const assignmentDocs = await Promise.all(
     assigneeUserIds.map((assigneeUserId) =>
       TaskAssignment.findOneAndUpdate(

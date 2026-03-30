@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import NotificationBell from './NotificationBell';
 
 interface NavItem {
   label: string;
@@ -123,7 +124,7 @@ export default function Sidebar() {
       ? 'Super Admin'
       : user?.global_role === 'Admin'
       ? 'Admin'
-      : user?.department_role || 'Intern'
+      : user?.departments?.[0]?.department_role || 'Intern'
     : '';
 
   if (!sidebarOpen) {
@@ -133,6 +134,9 @@ export default function Sidebar() {
           <button onClick={toggleSidebar} className="text-slate-400 hover:text-white transition-colors">
             <MenuIcon />
           </button>
+        </div>
+        <div className="flex items-center justify-center border-b border-slate-700 py-2">
+          <NotificationBell compact />
         </div>
         <nav className="flex-1 py-4">
           {navItems.map((item) => (
@@ -170,10 +174,11 @@ export default function Sidebar() {
           <span className="text-white font-bold text-sm">TC</span>
         </div>
         <span className="text-white font-semibold text-lg flex-1">TeamCA</span>
+        <NotificationBell />
         <button onClick={toggleSidebar} className="text-slate-400 hover:text-white transition-colors">
-          <MenuIcon />
-        </button>
-      </div>
+            <MenuIcon />
+          </button>
+        </div>
 
       {/* User info */}
       <div className="px-4 py-3 border-b border-slate-700">

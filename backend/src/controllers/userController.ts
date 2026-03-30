@@ -7,10 +7,23 @@ import {
   updateUser as updateUserService,
   deleteWhitelistedUser as deleteUserService,
 } from "../services/userService";
+import { createNotificationsForRecipients } from "../services/notificationService";
+import { emitUsersNotification } from "../socket/io";
 
 const getUserIdParam = (req: Request): string => {
   const raw = req.params.userId;
   return Array.isArray(raw) ? raw[0] : raw;
+};
+
+const getActiveSuperadminIds = async (): Promise<string[]> => {
+  const superadmins = await User.find({
+    global_role: "Superadmin",
+    is_active: true,
+  })
+    .select("_id")
+    .lean();
+
+  return [...new Set(superadmins.map((item) => String(item._id)))];
 };
 
 /**
@@ -96,6 +109,13 @@ export const updateUser = async (req: Request, res: Response) => {
   try {
     const userId = getUserIdParam(req);
     const payload = req.body;
+    const previousUser = await User.findById(userId)
+      .select("global_role is_active departments")
+      .lean();
+
+    if (!previousUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const updatedUser = await updateUserService(userId, payload);
 
@@ -106,6 +126,77 @@ export const updateUser = async (req: Request, res: Response) => {
     console.log(
       `[updateUser] User updated: ${updatedUser.first_name} ${updatedUser.last_name} (${updatedUser.email})`,
     );
+
+    const recipientIds = await getActiveSuperadminIds();
+    const actorId = req.user ? String(req.user.user_id) : undefined;
+    const updatedFields = Object.keys(payload || {}).filter((key) => payload?.[key] !== undefined);
+    const updatedEntityId = String(updatedUser._id || userId);
+
+    const notifications = await createNotificationsForRecipients(recipientIds, {
+      actorId,
+      eventType: "user_profile_updated",
+      title: "User profile updated",
+      message: `${updatedUser.first_name || "User"} ${updatedUser.last_name || ""}`.trim() + " updated their profile information.",
+      entityType: "user",
+      entityId: updatedEntityId,
+      metadata: {
+        user_id: updatedEntityId,
+        updated_fields: updatedFields,
+      },
+    });
+
+    for (const notification of notifications) {
+      emitUsersNotification([notification.recipient_id], notification);
+    }
+
+    const previousDepartmentRole = previousUser.departments?.[0]?.department_role;
+    const updatedDepartmentRole = updatedUser.departments?.[0]?.department_role;
+    const roleChanged = previousUser.global_role !== updatedUser.global_role
+      || previousDepartmentRole !== updatedDepartmentRole;
+
+    if (roleChanged) {
+      const roleRecipientIds = [...new Set([...recipientIds, updatedEntityId])];
+      const roleNotifications = await createNotificationsForRecipients(roleRecipientIds, {
+        actorId,
+        eventType: "user_role_changed",
+        title: "User role updated",
+        message: `${updatedUser.first_name || "User"} ${updatedUser.last_name || ""}`.trim() + " role assignment was updated.",
+        entityType: "user",
+        entityId: updatedEntityId,
+        metadata: {
+          user_id: updatedEntityId,
+          previous_global_role: previousUser.global_role,
+          new_global_role: updatedUser.global_role,
+          previous_department_role: previousDepartmentRole,
+          new_department_role: updatedDepartmentRole,
+        },
+      });
+
+      for (const notification of roleNotifications) {
+        emitUsersNotification([notification.recipient_id], notification);
+      }
+    }
+
+    if (previousUser.is_active !== updatedUser.is_active) {
+      const activationRecipientIds = [...new Set([...recipientIds, updatedEntityId])];
+      const activationNotifications = await createNotificationsForRecipients(activationRecipientIds, {
+        actorId,
+        eventType: "user_activation_changed",
+        title: "User activation status changed",
+        message: `${updatedUser.first_name || "User"} ${updatedUser.last_name || ""}`.trim() + ` was ${updatedUser.is_active ? "activated" : "deactivated"}.`,
+        entityType: "user",
+        entityId: updatedEntityId,
+        metadata: {
+          user_id: updatedEntityId,
+          previous_is_active: previousUser.is_active,
+          new_is_active: updatedUser.is_active,
+        },
+      });
+
+      for (const notification of activationNotifications) {
+        emitUsersNotification([notification.recipient_id], notification);
+      }
+    }
 
     res.json(updatedUser);
   } catch (err: any) {
@@ -143,8 +234,35 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const userId = getUserIdParam(req);
+    const userToDelete = await User.findById(userId)
+      .select("first_name last_name email")
+      .lean();
+
+    if (!userToDelete) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
     const result = await deleteUserService(userId);
+
+    const recipientIds = await getActiveSuperadminIds();
+    const actorId = req.user ? String(req.user.user_id) : undefined;
+
+    const notifications = await createNotificationsForRecipients(recipientIds, {
+      actorId,
+      eventType: "user_deleted",
+      title: "User deleted",
+      message: `${userToDelete.first_name || "User"} ${userToDelete.last_name || ""}`.trim() + " was deleted by an admin.",
+      entityType: "user",
+      entityId: userId,
+      metadata: {
+        user_id: userId,
+        email: userToDelete.email,
+      },
+    });
+
+    for (const notification of notifications) {
+      emitUsersNotification([notification.recipient_id], notification);
+    }
 
     res.json(result);
   } catch (err: any) {

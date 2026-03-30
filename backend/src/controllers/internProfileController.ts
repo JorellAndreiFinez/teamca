@@ -5,11 +5,14 @@ import {
   updateInternProfileByUserId,
 } from "../services/internProfileService";
 import { getUserById } from "../services/userService";
+import User from "../models/User";
 import {
   hasDepartmentRoleIn,
   hasSharedDepartment,
   isSameUser,
 } from "../middlewares/rbac";
+import { createNotificationsForRecipients } from "../services/notificationService";
+import { emitUsersNotification } from "../socket/io";
 
 const getUserIdParam = (req: Request): string => {
   const raw = req.params.userId;
@@ -19,6 +22,26 @@ const getUserIdParam = (req: Request): string => {
 const getPrimaryDepartmentId = (user: { departments?: Array<{ department_id?: unknown }> }): string | undefined => {
   const departmentId = user.departments?.[0]?.department_id;
   return departmentId ? String(departmentId) : undefined;
+};
+
+const getSupervisorAndHeadIdsByDepartmentId = async (departmentId?: string): Promise<string[]> => {
+  if (!departmentId) {
+    return [];
+  }
+
+  const users = await User.find({
+    is_active: true,
+    departments: {
+      $elemMatch: {
+        department_id: departmentId,
+        department_role: { $in: ["Head", "Supervisor"] },
+      },
+    },
+  })
+    .select("_id")
+    .lean();
+
+  return [...new Set(users.map((user) => String(user._id)))];
 };
 
 export const getInternProfileByUser = async (req: Request, res: Response) => {
@@ -218,6 +241,23 @@ export const updateInternProfileByUser = async (
         : undefined,
       actual_end_date: actualEndDate,
     });
+
+    const recipientIds = await getSupervisorAndHeadIdsByDepartmentId(getPrimaryDepartmentId(targetUser));
+    const notifications = await createNotificationsForRecipients(recipientIds, {
+      actorId: String(req.user.user_id),
+      eventType: "intern_profile_updated",
+      title: "Intern profile updated",
+      message: `${targetUser.first_name || "Intern"} ${targetUser.last_name || ""}`.trim() + " profile details were updated.",
+      entityType: "user",
+      entityId: targetUserId,
+      metadata: {
+        user_id: targetUserId,
+      },
+    });
+
+    for (const notification of notifications) {
+      emitUsersNotification([notification.recipient_id], notification);
+    }
 
     return res.status(200).json(updated);
   } catch (error) {
