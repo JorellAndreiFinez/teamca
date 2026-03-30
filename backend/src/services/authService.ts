@@ -1,11 +1,9 @@
-// backend\src\services\authService.ts
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/User";
 import InternProfile from "../models/InternProfile";
 
-const SAFE_USER_SELECT = "-password_hash";
 const SAFE_USER_SELECT = "-password_hash";
 
 type LoginInput = {
@@ -27,11 +25,9 @@ const issueToken = (userId: string) => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT secret is not configured.");
-    throw new Error("JWT secret is not configured.");
   }
 
-  return jwt.sign({ sub: userId }, secret, { expiresIn: "1d" });
-  return jwt.sign({ sub: userId }, secret, { expiresIn: "1d" });
+  return jwt.sign({ sub: userId, user_id: userId }, secret, { expiresIn: "1d" });
 };
 
 export const checkEmail = async (email: string) => {
@@ -55,29 +51,17 @@ export const login = async (payload: LoginInput) => {
   const user = await User.findOne({
     email: payload.email.trim().toLowerCase(),
   });
-  const user = await User.findOne({
-    email: payload.email.trim().toLowerCase(),
-  });
+
   if (!user || !user.password_hash) {
-    throw new Error("Invalid credentials.");
     throw new Error("Invalid credentials.");
   }
 
-  const isValidPassword = await bcrypt.compare(
-    payload.password,
-    user.password_hash,
-  );
-  const isValidPassword = await bcrypt.compare(
-    payload.password,
-    user.password_hash,
-  );
+  const isValidPassword = await bcrypt.compare(payload.password, user.password_hash);
   if (!isValidPassword) {
-    throw new Error("Invalid credentials.");
     throw new Error("Invalid credentials.");
   }
 
   if (!user.is_active) {
-    throw new Error("Account setup is incomplete.");
     throw new Error("Account setup is incomplete.");
   }
 
@@ -85,12 +69,8 @@ export const login = async (payload: LoginInput) => {
   const safeUser = await User.findById(user._id)
     .select(SAFE_USER_SELECT)
     .lean();
-  const safeUser = await User.findById(user._id)
-    .select(SAFE_USER_SELECT)
-    .lean();
 
   if (!safeUser) {
-    throw new Error("User not found after login.");
     throw new Error("User not found after login.");
   }
 
@@ -104,16 +84,12 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   const user = await User.findOne({
     email: payload.email.trim().toLowerCase(),
   });
-  const user = await User.findOne({
-    email: payload.email.trim().toLowerCase(),
-  });
+
   if (!user) {
-    throw new Error("Email is not whitelisted.");
     throw new Error("Email is not whitelisted.");
   }
 
   if (user.is_active) {
-    throw new Error("Account is already active.");
     throw new Error("Account is already active.");
   }
 
@@ -122,7 +98,6 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   user.first_name = payload.first_name;
   user.last_name = payload.last_name;
   user.password_hash = password_hash;
-  user.global_role = user.global_role ?? "Standard_User";
   user.global_role = user.global_role ?? "Standard_User";
   user.is_active = true;
 
@@ -155,12 +130,8 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   const safeUser = await User.findById(user._id)
     .select(SAFE_USER_SELECT)
     .lean();
-  const safeUser = await User.findById(user._id)
-    .select(SAFE_USER_SELECT)
-    .lean();
 
   if (!safeUser) {
-    throw new Error("User not found after setup.");
     throw new Error("User not found after setup.");
   }
 
@@ -173,7 +144,5 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
 export const logout = async () => {
   return {
     message: "Logged out successfully.",
-    message: "Logged out successfully.",
   };
 };
-

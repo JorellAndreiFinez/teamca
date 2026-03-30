@@ -1,5 +1,3 @@
-// backend/src/routes/userRoutes.ts
-// backend/src/routes/userRoutes.ts
 import express from "express";
 import {
   getUsers,
@@ -8,17 +6,12 @@ import {
   getWhitelistedUsers,
   createUser,
   deleteUser,
-  getWhitelistedUsers,
-  createUser,
-  deleteUser,
 } from "../controllers/userController";
 import { authMiddleware } from "../middlewares/authMiddleware";
-import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
 import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
 
 const router = express.Router();
 
-// Only Superadmin can access whitelist
 router.get(
   "/whitelisted",
   authMiddleware,
@@ -26,7 +19,6 @@ router.get(
   getWhitelistedUsers,
 );
 
-// Superadmin OR Admin can access all users
 router.get(
   "/",
   authMiddleware,
@@ -36,20 +28,6 @@ router.get(
 
 router.get("/:userId", authMiddleware, getUserById);
 router.put("/:userId", authMiddleware, updateUser);
-
-router.post(
-  "/",
-  authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"]),
-  createUser,
-);
-
-router.delete(
-  "/:userId",
-  authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"]),
-  deleteUser,
-);
 
 router.post(
   "/",

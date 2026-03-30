@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import type { Request, Response } from "express";
 import {
   createInternProfile,
   getInternProfileByUserId,
@@ -49,75 +48,40 @@ export const getInternProfileByUser = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required." });
-      return res.status(401).json({ message: "Authentication required." });
     }
 
     const targetUserId = getUserIdParam(req);
     const targetUser = await getUserById(targetUserId);
     if (!targetUser) {
       return res.status(404).json({ message: "User not found." });
-      return res.status(404).json({ message: "User not found." });
     }
 
     const isSuperadmin = req.user.global_role === "Superadmin";
     const isAdmin = req.user.global_role === "Admin";
-    const isSuperadmin = req.user.global_role === "Superadmin";
-    const isAdmin = req.user.global_role === "Admin";
     const isSelf = isSameUser(req.user, targetUserId);
     const canManageTeam = hasDepartmentRoleIn(req.user, ["Head", "Supervisor"]);
-    const sharesDepartment = hasSharedDepartment(
-      req.user,
-      getPrimaryDepartmentId(targetUser),
-    );
+    const sharesDepartment = hasSharedDepartment(req.user, getPrimaryDepartmentId(targetUser));
 
-    if (
-      !isSuperadmin &&
-      !isAdmin &&
-      !isSelf &&
-      !(canManageTeam && sharesDepartment)
-    ) {
-      return res
-        .status(403)
-        .json({
-          message: "Insufficient permissions to view this intern profile.",
-        });
-    if (
-      !isSuperadmin &&
-      !isAdmin &&
-      !isSelf &&
-      !(canManageTeam && sharesDepartment)
-    ) {
-      return res
-        .status(403)
-        .json({
-          message: "Insufficient permissions to view this intern profile.",
-        });
+    if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
+      return res.status(403).json({
+        message: "Insufficient permissions to view this intern profile.",
+      });
     }
 
     const profile = await getInternProfileByUserId(targetUserId);
     if (!profile) {
       return res.status(404).json({ message: "Intern profile not found." });
-      return res.status(404).json({ message: "Intern profile not found." });
     }
 
     return res.status(200).json(profile);
-  } catch (error) {
-    return res.status(500).json({ message: "Failed to fetch intern profile." });
+  } catch {
     return res.status(500).json({ message: "Failed to fetch intern profile." });
   }
 };
 
-export const createInternProfileHandler = async (
-  req: Request,
-  res: Response,
-) => {
-export const createInternProfileHandler = async (
-  req: Request,
-  res: Response,
-) => {
+export const createInternProfileHandler = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Authentication required." });
       return res.status(401).json({ message: "Authentication required." });
     }
 
@@ -131,79 +95,40 @@ export const createInternProfileHandler = async (
       actual_end_date?: string | null;
     };
 
+    const school = (payload.school ?? payload.school_university ?? "").trim();
+    if (!payload.user_id || !school || typeof payload.required_hours !== "number" || !payload.expected_end_date) {
+      return res.status(400).json({
+        message: "user_id, school, required_hours, and expected_end_date are required.",
+      });
+    }
+
     let actualEndDate: Date | null | undefined;
     if (payload.actual_end_date === null) {
       actualEndDate = null;
     } else if (typeof payload.actual_end_date === "string") {
-    } else if (typeof payload.actual_end_date === "string") {
       actualEndDate = new Date(payload.actual_end_date);
-    }
-
-    if (
-      !payload.user_id ||
-      !(payload.school || payload.school_university) ||
-      !payload.required_hours ||
-      !payload.expected_end_date
-    ) {
-    if (
-      !payload.user_id ||
-      !(payload.school || payload.school_university) ||
-      !payload.required_hours ||
-      !payload.expected_end_date
-    ) {
-      return res.status(400).json({
-        message:
-          "user_id, school, required_hours, and expected_end_date are required.",
-        message:
-          "user_id, school, required_hours, and expected_end_date are required.",
-      });
     }
 
     const targetUser = await getUserById(payload.user_id);
     if (!targetUser) {
       return res.status(404).json({ message: "User not found." });
-      return res.status(404).json({ message: "User not found." });
     }
 
-    const isSuperadmin = req.user.global_role === "Superadmin";
-    const isAdmin = req.user.global_role === "Admin";
     const isSuperadmin = req.user.global_role === "Superadmin";
     const isAdmin = req.user.global_role === "Admin";
     const isSelf = isSameUser(req.user, payload.user_id);
     const canManageTeam = hasDepartmentRoleIn(req.user, ["Head", "Supervisor"]);
-    const sharesDepartment = hasSharedDepartment(
-      req.user,
-      getPrimaryDepartmentId(targetUser),
-    );
+    const sharesDepartment = hasSharedDepartment(req.user, getPrimaryDepartmentId(targetUser));
 
-    if (
-      !isSuperadmin &&
-      !isAdmin &&
-      !isSelf &&
-      !(canManageTeam && sharesDepartment)
-    ) {
-      return res
-        .status(403)
-        .json({
-          message: "Insufficient permissions to create this intern profile.",
-        });
-    if (
-      !isSuperadmin &&
-      !isAdmin &&
-      !isSelf &&
-      !(canManageTeam && sharesDepartment)
-    ) {
-      return res
-        .status(403)
-        .json({
-          message: "Insufficient permissions to create this intern profile.",
-        });
+    if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
+      return res.status(403).json({
+        message: "Insufficient permissions to create this intern profile.",
+      });
     }
 
     const created = await createInternProfile({
       user_id: payload.user_id,
-      school: payload.school ?? payload.school_university ?? "",
-      school: payload.school ?? payload.school_university ?? "",
+      school,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
       expected_end_date: new Date(payload.expected_end_date),
@@ -213,35 +138,19 @@ export const createInternProfileHandler = async (
     return res.status(201).json(created);
   } catch (error) {
     if (
-      error instanceof Error &&
-      (error.message === "User not found." ||
-        error.message === "Intern profile already exists.")
-      (error.message === "User not found." ||
-        error.message === "Intern profile already exists.")
+      error instanceof Error
+      && (error.message === "User not found." || error.message === "Intern profile already exists.")
     ) {
       return res.status(409).json({ message: error.message });
     }
 
-    return res
-      .status(500)
-      .json({ message: "Failed to create intern profile." });
-    return res
-      .status(500)
-      .json({ message: "Failed to create intern profile." });
+    return res.status(500).json({ message: "Failed to create intern profile." });
   }
 };
 
-export const updateInternProfileByUser = async (
-  req: Request,
-  res: Response,
-) => {
-export const updateInternProfileByUser = async (
-  req: Request,
-  res: Response,
-) => {
+export const updateInternProfileByUser = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Authentication required." });
       return res.status(401).json({ message: "Authentication required." });
     }
 
@@ -249,42 +158,18 @@ export const updateInternProfileByUser = async (
     const targetUser = await getUserById(targetUserId);
     if (!targetUser) {
       return res.status(404).json({ message: "User not found." });
-      return res.status(404).json({ message: "User not found." });
     }
 
     const isSuperadmin = req.user.global_role === "Superadmin";
     const isAdmin = req.user.global_role === "Admin";
-    const isSuperadmin = req.user.global_role === "Superadmin";
-    const isAdmin = req.user.global_role === "Admin";
     const isSelf = isSameUser(req.user, targetUserId);
     const canManageTeam = hasDepartmentRoleIn(req.user, ["Head", "Supervisor"]);
-    const sharesDepartment = hasSharedDepartment(
-      req.user,
-      getPrimaryDepartmentId(targetUser),
-    );
+    const sharesDepartment = hasSharedDepartment(req.user, getPrimaryDepartmentId(targetUser));
 
-    if (
-      !isSuperadmin &&
-      !isAdmin &&
-      !isSelf &&
-      !(canManageTeam && sharesDepartment)
-    ) {
-      return res
-        .status(403)
-        .json({
-          message: "Insufficient permissions to update this intern profile.",
-        });
-    if (
-      !isSuperadmin &&
-      !isAdmin &&
-      !isSelf &&
-      !(canManageTeam && sharesDepartment)
-    ) {
-      return res
-        .status(403)
-        .json({
-          message: "Insufficient permissions to update this intern profile.",
-        });
+    if (!isSuperadmin && !isAdmin && !isSelf && !(canManageTeam && sharesDepartment)) {
+      return res.status(403).json({
+        message: "Insufficient permissions to update this intern profile.",
+      });
     }
 
     const payload = req.body as {
@@ -300,7 +185,6 @@ export const updateInternProfileByUser = async (
     if (payload.actual_end_date === null) {
       actualEndDate = null;
     } else if (typeof payload.actual_end_date === "string") {
-    } else if (typeof payload.actual_end_date === "string") {
       actualEndDate = new Date(payload.actual_end_date);
     }
 
@@ -308,9 +192,6 @@ export const updateInternProfileByUser = async (
       school: payload.school ?? payload.school_university,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
-      expected_end_date: payload.expected_end_date
-        ? new Date(payload.expected_end_date)
-        : undefined,
       expected_end_date: payload.expected_end_date
         ? new Date(payload.expected_end_date)
         : undefined,
@@ -336,23 +217,11 @@ export const updateInternProfileByUser = async (
 
     return res.status(200).json(updated);
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "Intern profile not found."
-    ) {
-    if (
-      error instanceof Error &&
-      error.message === "Intern profile not found."
-    ) {
+    if (error instanceof Error && error.message === "Intern profile not found.") {
       return res.status(404).json({ message: error.message });
     }
 
-    return res
-      .status(500)
-      .json({ message: "Failed to update intern profile." });
-    return res
-      .status(500)
-      .json({ message: "Failed to update intern profile." });
+    return res.status(500).json({ message: "Failed to update intern profile." });
   }
 };
 
@@ -361,4 +230,3 @@ export default {
   createInternProfileHandler,
   updateInternProfileByUser,
 };
-

@@ -1,22 +1,11 @@
-// frontend\src\store\authStore.ts
-
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-// frontend\src\store\authStore.ts
-
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface AuthState {
   token: string | null;
   user: any | null;
-  user: any | null;
   isAuthenticated: boolean;
 
-  isHydrated: boolean;
-  setHydrated: (state: boolean) => void;
-
-  login: (token: string, user: any) => void;
   isHydrated: boolean;
   setHydrated: (state: boolean) => void;
 
@@ -31,12 +20,8 @@ interface AuthState {
   getUserFullName: () => string;
   isSuperadmin: () => boolean;
   isAdmin: () => boolean;
-  isSuperadmin: () => boolean;
-  isAdmin: () => boolean;
 }
 
-export const useAuthStore = create(
-  persist<AuthState>(
 export const useAuthStore = create(
   persist<AuthState>(
     (set, get) => ({
@@ -46,8 +31,6 @@ export const useAuthStore = create(
 
       isHydrated: false,
       setHydrated: (state: boolean) => set({ isHydrated: state }),
-      isHydrated: false,
-      setHydrated: (state: boolean) => set({ isHydrated: state }),
 
       login: (token, user) =>
         set({
@@ -55,19 +38,7 @@ export const useAuthStore = create(
           user,
           isAuthenticated: true,
         }),
-      login: (token, user) =>
-        set({
-          token,
-          user,
-          isAuthenticated: true,
-        }),
 
-      logout: () =>
-        set({
-          token: null,
-          user: null,
-          isAuthenticated: false,
-        }),
       logout: () =>
         set({
           token: null,
@@ -77,13 +48,7 @@ export const useAuthStore = create(
 
       canManageUsers: () => {
         const user = get().user;
-        return (
-          user?.global_role === "Admin" || user?.global_role === "Superadmin"
-        );
-        const user = get().user;
-        return (
-          user?.global_role === "Admin" || user?.global_role === "Superadmin"
-        );
+        return user?.global_role === "Admin" || user?.global_role === "Superadmin";
       },
 
       canWhitelistEmails: () => {
@@ -109,33 +74,19 @@ export const useAuthStore = create(
 
       getUserFullName: () => {
         const user = get().user;
-        return user
-          ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
-          : "";
-        const user = get().user;
-        return user
-          ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
-          : "";
+        return user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() : "";
       },
 
       isSuperadmin: () => {
         const user = get().user;
         return user?.global_role === "Superadmin";
       },
-      isAdmin: () => {
-        const user = get().user;
-        return user?.global_role === "Admin";
-      isSuperadmin: () => {
-        const user = get().user;
-        return user?.global_role === "Superadmin";
-      },
+
       isAdmin: () => {
         const user = get().user;
         return user?.global_role === "Admin";
       },
     }),
-
-
     {
       name: "auth-storage",
       storage: {
@@ -150,28 +101,9 @@ export const useAuthStore = create(
           localStorage.removeItem(key);
         },
       },
-
-      name: "auth-storage",
-      storage: {
-        getItem: (key) => {
-          const value = localStorage.getItem(key);
-          return value ? JSON.parse(value) : null;
-        },
-        setItem: (key, value) => {
-          localStorage.setItem(key, JSON.stringify(value));
-        },
-        removeItem: (key) => {
-          localStorage.removeItem(key);
-        },
-      },
-
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
-        state?.setHydrated(true);
       },
-    },
-  ),
     },
   ),
 );
-

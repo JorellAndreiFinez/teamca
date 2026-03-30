@@ -191,6 +191,7 @@ const renderNotificationDetail = (item: {
 };
 
 export default function NotificationsPage() {
+  const pageSize = 8;
   const items = useNotificationStore((state) => state.items);
   const loading = useNotificationStore((state) => state.loading);
   const page = useNotificationStore((state) => state.page);
@@ -200,8 +201,8 @@ export default function NotificationsPage() {
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
 
   useEffect(() => {
-    void fetchPage(1, 30);
-  }, [fetchPage]);
+    void fetchPage(1, pageSize);
+  }, [fetchPage, pageSize]);
 
   useEffect(() => {
     if (loading) {
@@ -228,7 +229,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Notifications</h1>
-          <p className="mt-1 text-sm text-slate-500">Recent activity updates</p>
+          <p className="mt-1 text-sm text-slate-500">See recent activity updates.</p>
         </div>
 
         <button
@@ -274,7 +275,7 @@ export default function NotificationsPage() {
         <button
           type="button"
           disabled={page <= 1 || loading}
-          onClick={() => void fetchPage(Math.max(1, page - 1), 30)}
+          onClick={() => void fetchPage(Math.max(1, page - 1), pageSize)}
           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Previous
@@ -285,7 +286,7 @@ export default function NotificationsPage() {
         <button
           type="button"
           disabled={page >= totalPages || loading}
-          onClick={() => void fetchPage(Math.min(totalPages, page + 1), 30)}
+          onClick={() => void fetchPage(Math.min(totalPages, page + 1), pageSize)}
           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next

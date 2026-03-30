@@ -5,22 +5,9 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import FirstTimeSetupForm from "./FirstTimeSetupForm";
 import { getDashboardRouteForUser } from "../../lib/roleRoutes";
+import type { User } from "../../types/user";
 
 type LoginStep = "email" | "password" | "setup";
-
-interface NormalizedUser {
-  _id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  global_role: string;
-  department_role?: string;
-  is_active: boolean;
-  departments?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function LoginForm() {
   const [step, setStep] = useState<LoginStep>("email");
@@ -65,12 +52,9 @@ export default function LoginForm() {
     try {
       const result = await authService.login({ email, password });
 
-      const user: NormalizedUser = {
+      const user: User = {
         ...result.user,
         user_id: result.user._id,
-        global_role: result.user.global_role ?? (result.user as any).globalRole,
-        department_role:
-          result.user.department_role ?? (result.user as any).departmentRole,
       };
 
       const token = result.token;
