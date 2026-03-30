@@ -16,3 +16,4 @@ router.use("/intern-profiles", internProfileRoutes);
 router.use("/notifications", notificationRoutes);
 
 export default router;
+

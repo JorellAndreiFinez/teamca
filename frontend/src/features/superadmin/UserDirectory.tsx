@@ -12,6 +12,20 @@ import AddUserModal from "../../components/superadmin/AddUserModal";
 import UpdateUserModal from "../../components/superadmin/UpdateUserModal";
 
 import { Edit, Trash2 } from "lucide-react";
+// src/features/superadmin/UserDirectory.tsx
+
+import React, { useEffect, useState } from "react";
+import { useAuthStore } from "@/store/authStore";
+import { userService } from "@/services/userService";
+import { User } from "../../types/user";
+
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+
+import AddUserModal from "../../components/superadmin/AddUserModal";
+import UpdateUserModal from "../../components/superadmin/UpdateUserModal";
+
+import { Edit, Trash2 } from "lucide-react";
 
 export default function UserDirectory() {
   const [users, setUsers] = useState<User[]>([]);
@@ -20,22 +34,36 @@ export default function UserDirectory() {
   const [openAddModal, setOpenAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  const [openAddModal, setOpenAddModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [openUpdateModal, setOpenUpdateModal] = useState(false);
+
+  const { token, isHydrated } = useAuthStore();
   const { token, isHydrated } = useAuthStore();
 
   const fetchUsers = async () => {
+  const fetchUsers = async () => {
     try {
+      setLoading(true);
       setLoading(true);
       const data = await userService.getAllUsers();
       setUsers(data);
     } catch (err) {
       console.error("Failed to fetch users:", err);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
     } finally {
+      setLoading(false);
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!isHydrated) return;
+    if (!token) {
+      setLoading(false);
     if (!isHydrated) return;
     if (!token) {
       setLoading(false);
@@ -67,11 +95,50 @@ export default function UserDirectory() {
 
   if (!isHydrated) return <div>Initializing session...</div>;
   if (loading) return <div>Loading users...</div>;
+    fetchUsers();
+  }, [token, isHydrated]);
+
+  const handleEdit = (user: User) => {
+    setSelectedUser(user);
+    setOpenUpdateModal(true);
+  };
+
+  const handleDelete = async (user: User) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete ${user.first_name} ${user.last_name}?`,
+      )
+    )
+      return;
+    try {
+      await userService.deleteUser(user._id!); // assuming _id exists
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+    }
+  };
+
+  if (!isHydrated) return <div>Initializing session...</div>;
+  if (loading) return <div>Loading users...</div>;
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">User Directory</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage system users and roles
+          </p>
+        </div>
+
+        <Button
+          onClick={() => setOpenAddModal(true)}
+          className="rounded-xl px-5"
+        >
+          + Add User
         <div>
           <h1 className="text-2xl font-semibold">User Directory</h1>
           <p className="text-sm text-muted-foreground">
@@ -89,7 +156,19 @@ export default function UserDirectory() {
 
       {/* Table */}
       <Card className="p-0 overflow-hidden rounded-2xl shadow-sm border">
+
+      {/* Table */}
+      <Card className="p-0 overflow-hidden rounded-2xl shadow-sm border">
         <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left p-4">Name</th>
+                <th className="text-left p-4">Email</th>
+                <th className="text-left p-4">Role</th>
+                <th className="text-left p-4">Department</th>
+                <th className="text-left p-4">Status</th>
+                <th className="text-left p-4">Actions</th>
           <table className="w-full min-w-[800px] text-sm">
             <thead className="bg-muted/50">
               <tr>
@@ -102,7 +181,13 @@ export default function UserDirectory() {
               </tr>
             </thead>
 
+
             <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center">
+                    No users found
+                  </td>
               {users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-6 text-center">
@@ -173,5 +258,23 @@ export default function UserDirectory() {
         user={selectedUser}
       />
     </div>
+      </Card>
+
+      {/* ADD USER MODAL */}
+      <AddUserModal
+        open={openAddModal}
+        onClose={() => setOpenAddModal(false)}
+        onSuccess={fetchUsers}
+      />
+
+      {/* UPDATE USER MODAL */}
+      <UpdateUserModal
+        open={openUpdateModal}
+        onClose={() => setOpenUpdateModal(false)}
+        onSuccess={fetchUsers}
+        user={selectedUser}
+      />
+    </div>
   );
 }
+

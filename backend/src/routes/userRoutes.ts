@@ -1,4 +1,5 @@
 // backend/src/routes/userRoutes.ts
+// backend/src/routes/userRoutes.ts
 import express from "express";
 import {
   getUsers,
@@ -7,8 +8,12 @@ import {
   getWhitelistedUsers,
   createUser,
   deleteUser,
+  getWhitelistedUsers,
+  createUser,
+  deleteUser,
 } from "../controllers/userController";
 import { authMiddleware } from "../middlewares/authMiddleware";
+import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
 import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
 
 const router = express.Router();
@@ -31,6 +36,20 @@ router.get(
 
 router.get("/:userId", authMiddleware, getUserById);
 router.put("/:userId", authMiddleware, updateUser);
+
+router.post(
+  "/",
+  authMiddleware,
+  requireAnyRole(["Superadmin", "Admin"]),
+  createUser,
+);
+
+router.delete(
+  "/:userId",
+  authMiddleware,
+  requireAnyRole(["Superadmin", "Admin"]),
+  deleteUser,
+);
 
 router.post(
   "/",

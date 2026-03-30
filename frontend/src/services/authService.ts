@@ -43,6 +43,11 @@ export const authService = {
       email,
       password,
     });
+  login: async ({ email, password }: LoginPayload): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>("/auth/login", {
+      email,
+      password,
+    });
     return response.data;
   },
 
@@ -58,3 +63,4 @@ export const authService = {
     return response.data;
   },
 };
+

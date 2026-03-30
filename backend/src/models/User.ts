@@ -14,10 +14,27 @@ export interface IUser extends Document {
   password_hash: string;
   global_role: "Superadmin" | "Admin" | "Standard_User";
   departments: IUserDepartment[];
+  departments: IUserDepartment[];
   is_active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const userDepartmentSchema = new Schema<IUserDepartment>(
+  {
+    department_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+    },
+    department_role: {
+      type: String,
+      enum: ["Head", "Supervisor", "Intern"],
+      required: true,
+    },
+  },
+  { _id: false }, // prevent Mongoose from creating _id for each subdocument
+);
 
 const userDepartmentSchema = new Schema<IUserDepartment>(
   {
@@ -46,6 +63,7 @@ const userSchema = new Schema<IUser>(
       enum: ["Superadmin", "Admin", "Standard_User"],
       default: "Standard_User",
     },
+    departments: { type: [userDepartmentSchema], default: [] }, // array of departments
     departments: { type: [userDepartmentSchema], default: [] }, // array of departments
     is_active: { type: Boolean, default: true },
   },

@@ -56,3 +56,4 @@ export const userService = {
     await api.post("/users/whitelisted", { email });
   },
 };
+
