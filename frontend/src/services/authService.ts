@@ -1,5 +1,6 @@
 // frontend/src/services/authService.ts
 import api from "./api";
+import type { DepartmentAssignment, GlobalRole } from "../types/user";
 
 interface LoginPayload {
   email: string;
@@ -13,13 +14,22 @@ export interface LoginResponse {
     first_name: string;
     last_name: string;
     email: string;
-    global_role: string;
-    department_role?: string;
+    global_role: GlobalRole;
     is_active: boolean;
-    departments?: string[];
+    departments?: DepartmentAssignment[];
     createdAt: string;
     updatedAt: string;
   };
+}
+
+export interface CompleteSetupPayload {
+  email: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+  department_id?: string;
+  school_university?: string;
+  required_hours?: number;
 }
 
 export interface CheckEmailResponse {
@@ -40,6 +50,11 @@ export const authService = {
     const response = await api.post<CheckEmailResponse>("/auth/check-email", {
       email,
     });
+    return response.data;
+  },
+
+  completeSetup: async (payload: CompleteSetupPayload): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>("/auth/complete-setup", payload);
     return response.data;
   },
 };

@@ -8,6 +8,11 @@ import {
   deleteWhitelistedUser as deleteUserService,
 } from "../services/userService";
 
+const getUserIdParam = (req: Request): string => {
+  const raw = req.params.userId;
+  return Array.isArray(raw) ? raw[0] : raw;
+};
+
 /**
  * Get all users
  */
@@ -27,7 +32,7 @@ export const getUsers = async (_req: Request, res: Response) => {
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.params.userId, "-password_hash");
+    const user = await User.findById(getUserIdParam(req), "-password_hash");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (err) {
@@ -52,6 +57,11 @@ export const createUser = async (req: Request, res: Response) => {
       is_active,
     } = req.body;
 
+    const departments =
+      department_id && department_role
+        ? [{ department_id, department_role }]
+        : undefined;
+
     if (!first_name || !last_name || !email || !password_hash || !global_role) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -62,14 +72,15 @@ export const createUser = async (req: Request, res: Response) => {
       email,
       password_hash,
       global_role,
-      department_id,
-      department_role,
+      departments,
       is_active,
     });
 
-    console.log(
-      `[createUser] User created: ${newUser.first_name} ${newUser.last_name} (${newUser.email})`,
-    );
+    if (newUser) {
+      console.log(
+        `[createUser] User created: ${newUser.first_name} ${newUser.last_name} (${newUser.email})`,
+      );
+    }
 
     res.status(201).json(newUser);
   } catch (err: any) {
@@ -83,7 +94,7 @@ export const createUser = async (req: Request, res: Response) => {
  */
 export const updateUser = async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId;
+    const userId = getUserIdParam(req);
     const payload = req.body;
 
     const updatedUser = await updateUserService(userId, payload);
@@ -131,7 +142,7 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
  */
 export const deleteUser = async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId;
+    const userId = getUserIdParam(req);
 
     const result = await deleteUserService(userId);
 

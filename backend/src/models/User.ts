@@ -1,9 +1,9 @@
 // backend/src/models/User.ts
 
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IUserDepartment {
-  department_id: Schema.Types.ObjectId;
+  department_id: Types.ObjectId;
   department_role: "Head" | "Supervisor" | "Intern";
 }
 

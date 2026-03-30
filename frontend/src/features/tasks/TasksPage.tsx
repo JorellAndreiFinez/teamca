@@ -10,6 +10,7 @@ import type {
   PaginatedTaskListResponse,
   TaskComment,
   TaskDetail,
+  TaskFeedback,
   TaskPriority,
   TaskStatus,
   TaskWorkLink,
@@ -81,6 +82,9 @@ export default function TasksPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [commentDraft, setCommentDraft] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [feedbackDraft, setFeedbackDraft] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [taskFeedbacks, setTaskFeedbacks] = useState<TaskFeedback[]>([]);
 
   const [linkDraft, setLinkDraft] = useState({ url: '', label: '' });
   const [linkSubmitting, setLinkSubmitting] = useState(false);
@@ -108,8 +112,10 @@ export default function TasksPage() {
   const isSuperadmin = currentUser?.global_role === 'Superadmin';
   const isAdmin = currentUser?.global_role === 'Admin';
   const isStandardUser = currentUser?.global_role === 'Standard_User';
-  const isHeadOrSupervisor = currentUser?.department_role === 'Head' || currentUser?.department_role === 'Supervisor';
-  const isIntern = currentUser?.department_role === 'Intern';
+  const currentDepartmentRole = currentUser?.departments?.[0]?.department_role;
+  const isHeadOrSupervisor = currentDepartmentRole === 'Head' || currentDepartmentRole === 'Supervisor';
+  const isIntern = currentDepartmentRole === 'Intern';
+  const canSubmitFeedback = isSuperadmin || isAdmin || isHeadOrSupervisor;
   const isSelfOnlyAssignee = isStandardUser;
 
   const assignableUsers = useMemo(() => {
@@ -125,14 +131,12 @@ export default function TasksPage() {
     } else if (isSuperadmin || isAdmin) {
       scopedUsers = activeUsers;
     } else if (isHeadOrSupervisor || isIntern) {
-      const departmentId = currentUser.department_id;
+      const departmentId = currentUser.departments?.[0]?.department_id;
       scopedUsers = activeUsers.filter(
         (user) =>
-          typeof user.department_id !== 'undefined' &&
-          user.department_id !== null &&
           typeof departmentId !== 'undefined' &&
           departmentId !== null &&
-          String(user.department_id) === String(departmentId)
+          (user.departments ?? []).some((department) => String(department.department_id) === String(departmentId))
       );
     } else {
       scopedUsers = activeUsers.filter((user) => getUserIdentifier(user) === currentUserId);
@@ -213,11 +217,16 @@ export default function TasksPage() {
     setServerError('');
 
     try {
-      const detail = await taskService.getTaskDetail(taskId);
+      const [detail, feedbackItems] = await Promise.all([
+        taskService.getTaskDetail(taskId),
+        taskService.getTaskFeedback(taskId),
+      ]);
       setTaskDetail(detail);
+      setTaskFeedbacks(feedbackItems);
     } catch (error: any) {
       setServerError(error?.response?.data?.message || 'Failed to load task details.');
       setTaskDetail(null);
+      setTaskFeedbacks([]);
     } finally {
       setDetailLoading(false);
     }
@@ -238,6 +247,7 @@ export default function TasksPage() {
   useEffect(() => {
     if (!selectedTaskId) {
       setTaskDetail(null);
+      setTaskFeedbacks([]);
       return;
     }
 
@@ -434,6 +444,37 @@ export default function TasksPage() {
       setServerError(error?.response?.data?.message || 'Failed to add comment.');
     } finally {
       setCommentSubmitting(false);
+    }
+  };
+
+  const handleAddFeedback = async () => {
+    if (!taskDetail) {
+      return;
+    }
+
+    if (!canSubmitFeedback) {
+      setServerError('You do not have permission to submit feedback.');
+      return;
+    }
+
+    const comments = feedbackDraft.trim();
+    if (!comments) {
+      setServerError('Feedback message is required.');
+      return;
+    }
+
+    setFeedbackSubmitting(true);
+    setServerError('');
+
+    try {
+      const created = await taskService.addTaskFeedback(String(taskDetail.task_id), { comments });
+      setFeedbackDraft('');
+      pushModalToast('Feedback submitted');
+      setTaskFeedbacks((prev) => [created, ...prev]);
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to submit feedback.');
+    } finally {
+      setFeedbackSubmitting(false);
     }
   };
 
@@ -664,27 +705,34 @@ export default function TasksPage() {
         isLoading={detailLoading}
         statusUpdating={statusUpdating}
         commentsSubmitting={commentSubmitting}
+        feedbackSubmitting={feedbackSubmitting}
         linksSubmitting={linkSubmitting}
         linkDeletingId={linkDeletingId}
         copiedLinkId={copiedLinkId}
         commentDraft={commentDraft}
+        feedbackDraft={feedbackDraft}
         linkDraft={linkDraft}
         onClose={() => {
           setSelectedTaskId(null);
           setCommentDraft('');
+          setFeedbackDraft('');
           setLinkDraft({ url: '', label: '' });
           setModalToasts([]);
         }}
         onCommentDraftChange={setCommentDraft}
+        onFeedbackDraftChange={setFeedbackDraft}
         onLinkDraftChange={setLinkDraft}
         onUpdateStatus={(nextStatus) => void handleUpdateStatus(nextStatus)}
         onAddComment={() => void handleAddComment()}
+        onAddFeedback={() => void handleAddFeedback()}
         onAddLink={() => void handleAddLink()}
         onDeleteLink={(workLinkId) => void handleDeleteLink(workLinkId)}
         onCopyLink={(workLinkId, url) => void handleCopyLink(workLinkId, url)}
         comments={modalComments}
+        feedbackItems={taskFeedbacks}
         links={modalLinks}
         currentUserId={currentUserId}
+        canSubmitFeedback={canSubmitFeedback}
         canAddLinks={canAddLinks}
         canDeleteAnyLink={canDeleteAnyLink}
         canDeleteOwnLink={canDeleteOwnLink}

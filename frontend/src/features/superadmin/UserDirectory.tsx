@@ -116,8 +116,8 @@ export default function UserDirectory() {
                     <td className="p-4">{u.email}</td>
                     <td className="p-4">{u.global_role || "N/A"}</td>
                     <td className="p-4">
-                      {(u.departments || []).length > 0
-                        ? u.departments.map((d) => d.department_role).join(", ")
+                      {(u.departments ?? []).length > 0
+                        ? (u.departments ?? []).map((d) => d.department_role).join(", ")
                         : "None"}
                     </td>
                     <td className="p-4">

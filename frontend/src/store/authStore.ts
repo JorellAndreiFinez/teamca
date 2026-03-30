@@ -16,6 +16,9 @@ interface AuthState {
 
   canManageUsers: () => boolean;
   canWhitelistEmails: () => boolean;
+  canManageOwnDepartment: () => boolean;
+  canViewAllDepartments: () => boolean;
+  isIntern: () => boolean;
   getUserFullName: () => string;
   isSuperadmin: () => boolean;
   isAdmin: () => boolean;
@@ -55,6 +58,22 @@ export const useAuthStore = create(
       canWhitelistEmails: () => {
         const user = get().user;
         return user?.global_role === "Superadmin";
+      },
+
+      canManageOwnDepartment: () => {
+        const user = get().user;
+        const departmentRole = user?.departments?.[0]?.department_role;
+        return departmentRole === "Head" || departmentRole === "Supervisor";
+      },
+
+      canViewAllDepartments: () => {
+        const user = get().user;
+        return user?.global_role === "Admin" || user?.global_role === "Superadmin";
+      },
+
+      isIntern: () => {
+        const user = get().user;
+        return user?.departments?.[0]?.department_role === "Intern";
       },
 
       getUserFullName: () => {

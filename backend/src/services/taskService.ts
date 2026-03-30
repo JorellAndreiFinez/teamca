@@ -9,7 +9,13 @@ import TaskWorkLink from "../models/TaskWorkLink";
 import User, { type IUser } from "../models/User";
 
 type ActorRole = IUser["global_role"];
-type ActorDepartmentRole = NonNullable<IUser["department_role"]>;
+type ActorDepartmentRole = IUser["departments"][number]["department_role"];
+type UserWithDepartments = {
+  departments?: Array<{
+    department_id?: Types.ObjectId | string;
+    department_role?: ActorDepartmentRole;
+  }>;
+};
 
 export type CreateTaskInput = {
   title: string;
@@ -224,6 +230,29 @@ const normalizeUser = (user: {
   email: user.email?.trim() || "",
 });
 
+const getUserDepartmentIds = (user: UserWithDepartments): string[] => {
+  return (user.departments ?? [])
+    .map((department) => department.department_id)
+    .filter((departmentId): departmentId is Types.ObjectId | string => !!departmentId)
+    .map((departmentId) => String(departmentId));
+};
+
+const userHasDepartment = (user: UserWithDepartments, departmentId?: string): boolean => {
+  if (!departmentId) {
+    return false;
+  }
+
+  return getUserDepartmentIds(user).includes(String(departmentId));
+};
+
+const createDepartmentMembershipFilter = (departmentId: string) => {
+  if (Types.ObjectId.isValid(departmentId)) {
+    return { "departments.department_id": new Types.ObjectId(departmentId) };
+  }
+
+  return { "departments.department_id": departmentId };
+};
+
 const uniqueAssignees = (assignees: string[]): string[] => {
   const cleaned = assignees
     .map((value) => value.trim())
@@ -246,7 +275,7 @@ const requireInternIncludesSelf = (actor: Express.AuthUser, assigneeUserIds: str
 
 const ensureAssigneeExists = async (assigneeUserId: string) => {
   const assignee = await User.findById(assigneeUserId)
-    .select("global_role department_role department_id is_active")
+    .select("global_role departments is_active")
     .lean();
 
   if (!assignee || !assignee.is_active) {
@@ -270,7 +299,7 @@ const assertCanAssign = async (
   if (canManageDepartment(actor.department_role)) {
     const assignee = await ensureAssigneeExists(assigneeUserId);
 
-    if (!actor.department_id || !assignee.department_id || String(actor.department_id) !== String(assignee.department_id)) {
+    if (!actor.department_id || !userHasDepartment(assignee, actor.department_id)) {
       throw new Error("Department managers can only assign tasks within their department.");
     }
 
@@ -281,7 +310,7 @@ const assertCanAssign = async (
 
   const actorIsIntern = actor.global_role === "Standard_User" && actor.department_role === "Intern";
   if (actorIsIntern) {
-    if (!actor.department_id || !assignee.department_id || String(actor.department_id) !== String(assignee.department_id)) {
+    if (!actor.department_id || !userHasDepartment(assignee, actor.department_id)) {
       throw new Error("Interns can only assign tasks within their department.");
     }
 
@@ -317,20 +346,20 @@ const canAccessTaskScope = async (
 
   if (canManageDepartment(actor.department_role)) {
     const [taskCreator, taskAssignees] = await Promise.all([
-      User.findById(task.created_by).select("department_id").lean(),
+      User.findById(task.created_by).select("departments").lean(),
       TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
     ]);
 
     const creatorInDepartment =
-      !!taskCreator?.department_id &&
       !!actor.department_id &&
-      String(taskCreator.department_id) === String(actor.department_id);
+      !!taskCreator &&
+      userHasDepartment(taskCreator, actor.department_id);
 
     const hasAssigneeInDepartment =
       !!actor.department_id &&
       (await User.exists({
         _id: { $in: taskAssignees.map((item) => item.assigned_to) },
-        department_id: String(actor.department_id),
+        ...createDepartmentMembershipFilter(String(actor.department_id)),
       })) !== null;
 
     return creatorInDepartment || hasAssigneeInDepartment;
@@ -359,20 +388,20 @@ const canChangeTaskStatus = async (
 
   if (canManageDepartment(actor.department_role)) {
     const [taskCreator, taskAssignees] = await Promise.all([
-      User.findById(task.created_by).select("department_id").lean(),
+      User.findById(task.created_by).select("departments").lean(),
       TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
     ]);
 
     const creatorInDepartment =
-      !!taskCreator?.department_id &&
       !!actor.department_id &&
-      String(taskCreator.department_id) === String(actor.department_id);
+      !!taskCreator &&
+      userHasDepartment(taskCreator, actor.department_id);
 
     const hasAssigneeInDepartment =
       !!actor.department_id &&
       (await User.exists({
         _id: { $in: taskAssignees.map((item) => item.assigned_to) },
-        department_id: String(actor.department_id),
+        ...createDepartmentMembershipFilter(String(actor.department_id)),
       })) !== null;
 
     return creatorInDepartment || hasAssigneeInDepartment;
@@ -458,7 +487,7 @@ const getUsersByIds = async (userIds: string[]) => {
   }
 
   const users = await User.find({ _id: { $in: userIds } })
-    .select("first_name last_name email department_id")
+    .select("first_name last_name email departments")
     .lean();
 
   const map = new Map<string, TaskUserSummary>();
@@ -470,12 +499,11 @@ const getUsersByIds = async (userIds: string[]) => {
 };
 
 const getInvolvedDepartments = async (
-  users: Array<{ department_id?: string | null }>,
+  users: UserWithDepartments[],
 ): Promise<TaskDepartmentSummary[]> => {
   const departmentIds = [...new Set(
-    users
-      .map((item) => item.department_id)
-      .filter((item): item is string => !!item && item.trim().length > 0),
+    users.flatMap((item) => getUserDepartmentIds(item))
+      .filter((item) => item.trim().length > 0),
   )];
 
   if (departmentIds.length === 0) {
@@ -597,10 +625,10 @@ export const assignTask = async (actor: Express.AuthUser, input: AssignTaskInput
 
   if (canManageDepartment(actor.department_role) && !canManageGlobally(actor.global_role)) {
     const taskCreator = await User.findById(task.created_by)
-      .select("department_id")
+      .select("departments")
       .lean();
 
-    if (!taskCreator?.department_id || !actor.department_id || String(taskCreator.department_id) !== String(actor.department_id)) {
+    if (!taskCreator || !actor.department_id || !userHasDepartment(taskCreator, actor.department_id)) {
       throw new Error("Department managers can only assign tasks within their department.");
     }
   }
@@ -653,7 +681,10 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
   }
 
   if (canManageDepartment(actor.department_role)) {
-    const teammates = await User.find({ department_id: actor.department_id, is_active: true })
+    const teammates = await User.find({
+      is_active: true,
+      ...(actor.department_id ? createDepartmentMembershipFilter(actor.department_id) : {}),
+    })
       .select("_id")
       .lean();
 
@@ -1197,7 +1228,7 @@ export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Pr
   const userMap = await getUsersByIds(allUserIds);
 
   const involvedUsers = await User.find({ _id: { $in: allUserIds } })
-    .select("department_id")
+    .select("departments")
     .lean();
 
   const involved_departments = await getInvolvedDepartments(involvedUsers);

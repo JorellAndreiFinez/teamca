@@ -1,6 +1,8 @@
 // frontend/src/services/userService.ts
 import api from "./api";
-import { User } from "../types/user";
+import { User, UserProfile } from "../types/user";
+
+export type UserProfileResponse = UserProfile;
 
 export const userService = {
   getAllUsers: async (): Promise<User[]> => {
@@ -44,5 +46,14 @@ export const userService = {
       console.error(`[deleteUser] Failed to delete user ${userId}:`, err);
       throw err;
     }
+  },
+
+  getProfile: async (userId: string): Promise<UserProfileResponse> => {
+    const { data } = await api.get<UserProfileResponse>(`/users/${userId}`);
+    return data;
+  },
+
+  whitelistEmail: async (email: string): Promise<void> => {
+    await api.post("/users/whitelisted", { email });
   },
 };

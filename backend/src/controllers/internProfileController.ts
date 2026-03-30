@@ -16,6 +16,11 @@ const getUserIdParam = (req: Request): string => {
   return Array.isArray(raw) ? raw[0] : raw;
 };
 
+const getPrimaryDepartmentId = (user: { departments?: Array<{ department_id?: unknown }> }): string | undefined => {
+  const departmentId = user.departments?.[0]?.department_id;
+  return departmentId ? String(departmentId) : undefined;
+};
+
 export const getInternProfileByUser = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
@@ -34,7 +39,7 @@ export const getInternProfileByUser = async (req: Request, res: Response) => {
     const canManageTeam = hasDepartmentRoleIn(req.user, ["Head", "Supervisor"]);
     const sharesDepartment = hasSharedDepartment(
       req.user,
-      targetUser.department_id,
+      getPrimaryDepartmentId(targetUser),
     );
 
     if (
@@ -110,7 +115,7 @@ export const createInternProfileHandler = async (
     const canManageTeam = hasDepartmentRoleIn(req.user, ["Head", "Supervisor"]);
     const sharesDepartment = hasSharedDepartment(
       req.user,
-      targetUser.department_id,
+      getPrimaryDepartmentId(targetUser),
     );
 
     if (
@@ -172,7 +177,7 @@ export const updateInternProfileByUser = async (
     const canManageTeam = hasDepartmentRoleIn(req.user, ["Head", "Supervisor"]);
     const sharesDepartment = hasSharedDepartment(
       req.user,
-      targetUser.department_id,
+      getPrimaryDepartmentId(targetUser),
     );
 
     if (

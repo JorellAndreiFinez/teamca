@@ -1,6 +1,7 @@
 // backend\src\services\authService.ts
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User";
 import InternProfile from "../models/InternProfile";
 
@@ -103,8 +104,10 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   user.is_active = true;
 
   if (payload.department_id) {
-    user.department_id = payload.department_id;
-    user.department_role = "Intern";
+    user.departments = [{
+      department_id: new mongoose.Types.ObjectId(payload.department_id),
+      department_role: "Intern",
+    }];
   }
 
   await user.save();

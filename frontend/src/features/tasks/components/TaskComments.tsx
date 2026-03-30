@@ -32,7 +32,7 @@ const formatCommentDate = (value: string | Date) => {
 export default function TaskComments({ comments, draft, submitting, onDraftChange, onSubmit }: TaskCommentsProps) {
   return (
     <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-      <h4 className="text-sm font-semibold text-slate-900">Comments & Feedback</h4>
+      <h4 className="text-sm font-semibold text-slate-900">Comments</h4>
 
       <div className="space-y-2 rounded-md border border-slate-200 p-2">
         {!comments.length ? (
