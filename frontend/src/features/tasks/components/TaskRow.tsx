@@ -1,4 +1,5 @@
 import type { TaskListItem, TaskPriority, TaskStatus } from '../../../types/task';
+import { formatTaskDeadlineLabel } from '../../../utils/dateUtils';
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
   'Not Started': 'bg-slate-100 text-slate-700',
@@ -18,8 +19,28 @@ type TaskRowProps = {
   onClick: () => void;
 };
 
-const formatDate = (value: string | Date) => {
+const formatDate = (value?: string | Date) => {
+  if (!value) {
+    return 'No due';
+  }
+
   return new Date(value).toLocaleDateString();
+};
+
+const isOverdueDeadline = (value?: string | Date): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const deadline = new Date(value);
+  if (Number.isNaN(deadline.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  const deadlineDay = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate()).getTime();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return deadlineDay < today;
 };
 
 const formatAssignees = (task: TaskListItem) => {
@@ -35,6 +56,7 @@ const formatAssignees = (task: TaskListItem) => {
 
 export default function TaskRow({ task, onClick }: TaskRowProps) {
   const isCompleted = task.status === 'Completed';
+  const isOverdue = isOverdueDeadline(task.deadline);
 
   return (
     <tr
@@ -53,7 +75,12 @@ export default function TaskRow({ task, onClick }: TaskRowProps) {
           {task.priority}
         </span>
       </td>
-      <td className="whitespace-nowrap px-3 py-3 text-sm text-slate-600">{formatDate(task.deadline)}</td>
+      <td
+        className={`whitespace-nowrap px-3 py-3 text-sm ${isOverdue ? 'text-rose-600' : 'text-slate-600'}`}
+        title={formatDate(task.deadline)}
+      >
+        {formatTaskDeadlineLabel(task.deadline)}
+      </td>
       <td className="w-20 whitespace-nowrap py-3 pl-3 pr-6 text-center text-sm text-slate-600">{task.comments_count}</td>
     </tr>
   );

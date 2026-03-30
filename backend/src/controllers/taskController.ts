@@ -32,7 +32,16 @@ const createTaskSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters.").max(120, "Title must be 120 characters or fewer."),
   description: z.string().trim().max(1000, "Description must be 1000 characters or fewer.").optional(),
   priority: z.enum(["Low", "Medium", "High"]).optional(),
-  deadline: z.coerce.date(),
+  deadline: z.coerce.date().optional().refine((value) => {
+    if (!value) {
+      return true;
+    }
+
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const startOfDeadline = new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+    return startOfDeadline >= startOfToday;
+  }, "deadline cannot be in the past."),
   assigned_to: z.union([
     z.string().trim().min(1),
     z.array(z.string().trim().min(1)).min(1),
@@ -106,6 +115,12 @@ const getTaskParticipantIds = async (taskId: string): Promise<string[]> => {
 const getTaskAssigneeIds = async (taskId: string): Promise<string[]> => {
   const assignments = await TaskAssignment.find({ task_id: taskId }).select("assigned_to").lean();
   return [...new Set(assignments.map((item) => String(item.assigned_to)))];
+};
+
+const getUserFirstNameById = async (userId: string): Promise<string> => {
+  const user = await User.findById(userId).select("first_name").lean();
+  const firstName = user?.first_name?.trim();
+  return firstName && firstName.length > 0 ? firstName : "Someone";
 };
 
 const getDepartmentReviewerIdsForTask = async (taskId: string): Promise<string[]> => {
@@ -212,7 +227,7 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
       : [payload.assigned_to];
 
     const [task, previousAssignments] = await Promise.all([
-      Task.findById(taskId).select("title").lean(),
+      Task.findById(taskId).select("title status").lean(),
       TaskAssignment.find({ task_id: taskId }).select("assigned_to").lean(),
     ]);
 
@@ -237,12 +252,14 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
         actorId,
         eventType: "task_assignment_added",
         title: "You were assigned a task",
-        message: `You were added to ${task.title}.`,
+        message: `You were added to "${task.title}".`,
         entityType: "task",
         entityId: taskId,
         metadata: {
           task_id: taskId,
           assignment_change: "added",
+          task_title: task.title,
+          task_status: task.status,
         },
       });
 
@@ -256,12 +273,14 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
         actorId,
         eventType: "task_assignment_removed",
         title: "You were unassigned from a task",
-        message: `You were removed from ${task.title}.`,
+        message: `You were removed from "${task.title}".`,
         entityType: "task",
         entityId: taskId,
         metadata: {
           task_id: taskId,
           assignment_change: "removed",
+          task_title: task.title,
+          task_status: task.status,
         },
       });
 
@@ -273,13 +292,15 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
         actorId,
         eventType: "task_reassigned",
         title: "Task assignees were updated",
-        message: `${task.title} assignees were changed.`,
+        message: `Assignees were updated for "${task.title}".`,
         entityType: "task",
         entityId: taskId,
         metadata: {
           task_id: taskId,
           assignment_change: "reassigned",
           removed_count: removedAssigneeIds.length,
+          task_title: task.title,
+          task_status: task.status,
         },
       });
 
@@ -410,18 +431,22 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
     });
 
     const actorId = String(req.user.user_id);
+    const actorFirstName = await getUserFirstNameById(actorId);
     const assigneeIds = await getTaskAssigneeIds(taskId);
     const statusNotifications = await createNotificationsForRecipients(assigneeIds, {
       actorId,
       eventType: "task_status_changed",
       title: "Task status updated",
-      message: `${updated.task.title} status changed to ${payload.status}.`,
+      message: `${actorFirstName} changed status of "${updated.task.title}" to ${payload.status}.`,
       entityType: "task",
       entityId: taskId,
       metadata: {
         task_id: taskId,
         previous_status: updated.history.previous_status,
         new_status: payload.status,
+        actor_first_name: actorFirstName,
+        task_title: updated.task.title,
+        task_status: payload.status,
       },
     });
 
@@ -439,14 +464,17 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
       const movedBackNotifications = await createNotificationsForRecipients(movedBackRecipients, {
         actorId,
         eventType: "task_moved_back",
-        title: "Task moved back to In Progress",
-        message: `${updated.task.title} was moved back from Under Review to In Progress.`,
+        title: "Task was sent back",
+        message: `${actorFirstName} moved "${updated.task.title}" back from Under Review to In Progress.`,
         entityType: "task",
         entityId: taskId,
         metadata: {
           task_id: taskId,
           previous_status: updated.history.previous_status,
           new_status: payload.status,
+          actor_first_name: actorFirstName,
+          task_title: updated.task.title,
+          task_status: payload.status,
         },
       });
 
@@ -468,12 +496,15 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
         actorId,
         eventType,
         title: payload.status === "Under Review" ? "Task sent for review" : "Task completed",
-        message: `${updated.task.title} is now ${payload.status}.`,
+        message: `${actorFirstName} changed status of "${updated.task.title}" to ${payload.status}.`,
         entityType: "task",
         entityId: taskId,
         metadata: {
           task_id: taskId,
           new_status: payload.status,
+          actor_first_name: actorFirstName,
+          task_title: updated.task.title,
+          task_status: payload.status,
         },
       });
 
@@ -544,7 +575,7 @@ export const addTaskFeedbackHandler = async (req: Request, res: Response) => {
         actorId: String(req.user.user_id),
         eventType: "task_feedback_added",
         title: "New task feedback",
-        message: `Feedback was added to ${task.title}.`,
+        message: `Kindly check the feedback sent to ${task.title}.`,
         entityType: "task",
         entityId: taskId,
         metadata: {

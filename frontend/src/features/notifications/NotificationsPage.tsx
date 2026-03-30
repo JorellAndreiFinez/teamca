@@ -1,22 +1,6 @@
 import { useEffect } from 'react';
 import { useNotificationStore } from '../../store/notificationStore';
-
-const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
-const formatDate = (value: string | Date) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-
-  return DATE_FORMATTER.format(date);
-};
+import { formatNotificationTimestamp } from '../../utils/dateUtils';
 
 const resolveNotificationLink = (entityType?: string): string => {
   if (entityType === 'task') {
@@ -28,6 +12,104 @@ const resolveNotificationLink = (entityType?: string): string => {
   }
 
   return '/dashboard';
+};
+
+const getNotificationHref = (item: { entity_type?: string; metadata?: Record<string, unknown> }): string => {
+  const taskId = typeof item.metadata?.task_id === 'string' ? item.metadata.task_id : undefined;
+  if (item.entity_type === 'task') {
+    return taskId ? `/tasks?taskId=${encodeURIComponent(taskId)}` : '/tasks';
+  }
+
+  return resolveNotificationLink(item.entity_type);
+};
+
+const getTaskTitle = (item: { metadata?: Record<string, unknown> }): string | null => {
+  const title = item.metadata?.task_title;
+  return typeof title === 'string' && title.trim().length > 0 ? title.trim() : null;
+};
+
+const getTaskStatus = (item: { metadata?: Record<string, unknown> }): string | null => {
+  const status = item.metadata?.task_status;
+  return typeof status === 'string' && status.trim().length > 0 ? status.trim() : null;
+};
+
+const getMetadataString = (item: { metadata?: Record<string, unknown> }, key: string): string | null => {
+  const value = item.metadata?.[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+};
+
+const getStatusBadgeClass = (status: string) => {
+  if (status === 'Completed') {
+    return 'border-green-200 bg-green-50 text-green-700';
+  }
+
+  if (status === 'Under Review') {
+    return 'border-amber-200 bg-amber-50 text-amber-700';
+  }
+
+  if (status === 'In Progress') {
+    return 'border-blue-200 bg-blue-50 text-blue-700';
+  }
+
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+};
+
+const renderNotificationDetail = (item: {
+  message: string;
+  event_type: string;
+  metadata?: Record<string, unknown>;
+}) => {
+  const taskTitle = getTaskTitle(item);
+  const taskStatus = getTaskStatus(item);
+  const actorFirstName = getMetadataString(item, 'actor_first_name') || 'Someone';
+  const previousStatus = getMetadataString(item, 'previous_status');
+  const newStatus = getMetadataString(item, 'new_status') || taskStatus;
+
+  const isStatusEvent = item.event_type === 'task_moved_back'
+    || item.event_type === 'task_status_changed'
+    || item.event_type === 'task_status_under_review'
+    || item.event_type === 'task_status_completed';
+
+  if (isStatusEvent && taskTitle && newStatus) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-slate-600">
+        <span>{actorFirstName}</span>
+        {item.event_type === 'task_moved_back' && previousStatus ? <span>moved</span> : <span>changed status of</span>}
+        <span className="font-semibold text-slate-800">"{taskTitle}"</span>
+        {item.event_type === 'task_moved_back' && previousStatus ? (
+          <>
+            <span>back from</span>
+            <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(previousStatus)}`}>
+              {previousStatus}
+            </span>
+            <span>to</span>
+          </>
+        ) : (
+          <span>to</span>
+        )}
+        <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(newStatus)}`}>
+          {newStatus}
+        </span>
+        <span>.</span>
+      </p>
+    );
+  }
+
+  if (!taskTitle && !taskStatus) {
+    return <p className="mt-1 text-sm text-slate-600">{item.message}</p>;
+  }
+
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-slate-600">
+      {taskTitle ? <span className="font-semibold text-slate-800">"{taskTitle}"</span> : null}
+      {taskStatus ? (
+        <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(taskStatus)}`}>
+          {taskStatus}
+        </span>
+      ) : null}
+      <span>{item.message}</span>
+    </p>
+  );
 };
 
 export default function NotificationsPage() {
@@ -42,6 +124,26 @@ export default function NotificationsPage() {
   useEffect(() => {
     void fetchPage(1, 30);
   }, [fetchPage]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (items.some((item) => !item.is_read)) {
+      void markAllAsRead();
+    }
+  }, [items, loading, markAllAsRead]);
+
+  const handleNotificationClick = async (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    notificationId: string,
+    href: string,
+  ) => {
+    event.preventDefault();
+    await markAsRead(notificationId);
+    window.location.assign(href);
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -70,8 +172,8 @@ export default function NotificationsPage() {
             {items.map((item) => (
               <a
                 key={item.notification_id}
-                href={resolveNotificationLink(item.entity_type)}
-                onClick={() => void markAsRead(item.notification_id)}
+                href={getNotificationHref(item)}
+                onClick={(event) => void handleNotificationClick(event, item.notification_id, getNotificationHref(item))}
                 className={`block rounded-lg border px-3 py-3 transition-colors ${
                   item.is_read ? 'border-slate-200 bg-white hover:bg-slate-50' : 'border-blue-100 bg-blue-50/70 hover:bg-blue-50'
                 }`}
@@ -82,8 +184,8 @@ export default function NotificationsPage() {
                   </p>
                   {!item.is_read ? <span className="h-2 w-2 rounded-full bg-blue-500" /> : null}
                 </div>
-                <p className="mt-1 text-sm text-slate-600">{item.message}</p>
-                <p className="mt-1 text-xs text-slate-400">{formatDate(item.created_at)}</p>
+                {renderNotificationDetail(item)}
+                <p className="mt-1 text-xs text-slate-400">{formatNotificationTimestamp(item.created_at)}</p>
               </a>
             ))}
           </div>

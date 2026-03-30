@@ -3,17 +3,11 @@ import { io, type Socket } from 'socket.io-client';
 import { config } from '../../config/env';
 import { useNotificationStore } from '../../store/notificationStore';
 import type { NotificationItem } from '../../types/notification';
+import { formatNotificationTimestamp } from '../../utils/dateUtils';
 
 type NotificationBellProps = {
   compact?: boolean;
 };
-
-const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-});
 
 const getToken = (): string | null => {
   try {
@@ -29,18 +23,11 @@ const getToken = (): string | null => {
   }
 };
 
-const formatDate = (value: string | Date) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-
-  return DATE_FORMATTER.format(date);
-};
-
 const getNotificationHref = (item: NotificationItem): string => {
+  const taskId = typeof item.metadata?.task_id === 'string' ? item.metadata.task_id : undefined;
+
   if (item.entity_type === 'task') {
-    return '/tasks';
+    return taskId ? `/tasks?taskId=${encodeURIComponent(taskId)}` : '/tasks';
   }
 
   if (item.entity_type === 'user') {
@@ -48,6 +35,91 @@ const getNotificationHref = (item: NotificationItem): string => {
   }
 
   return '/notifications';
+};
+
+const getTaskTitle = (item: NotificationItem): string | null => {
+  const title = item.metadata?.task_title;
+  return typeof title === 'string' && title.trim().length > 0 ? title.trim() : null;
+};
+
+const getTaskStatus = (item: NotificationItem): string | null => {
+  const status = item.metadata?.task_status;
+  return typeof status === 'string' && status.trim().length > 0 ? status.trim() : null;
+};
+
+const getMetadataString = (item: NotificationItem, key: string): string | null => {
+  const value = item.metadata?.[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+};
+
+const getStatusBadgeClass = (status: string) => {
+  if (status === 'Completed') {
+    return 'border-green-200 bg-green-50 text-green-700';
+  }
+
+  if (status === 'Under Review') {
+    return 'border-amber-200 bg-amber-50 text-amber-700';
+  }
+
+  if (status === 'In Progress') {
+    return 'border-blue-200 bg-blue-50 text-blue-700';
+  }
+
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+};
+
+const renderNotificationDetail = (item: NotificationItem) => {
+  const taskTitle = getTaskTitle(item);
+  const taskStatus = getTaskStatus(item);
+  const actorFirstName = getMetadataString(item, 'actor_first_name') || 'Someone';
+  const previousStatus = getMetadataString(item, 'previous_status');
+  const newStatus = getMetadataString(item, 'new_status') || taskStatus;
+
+  const isStatusEvent = item.event_type === 'task_moved_back'
+    || item.event_type === 'task_status_changed'
+    || item.event_type === 'task_status_under_review'
+    || item.event_type === 'task_status_completed';
+
+  if (isStatusEvent && taskTitle && newStatus) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-600">
+        <span>{actorFirstName}</span>
+        {item.event_type === 'task_moved_back' && previousStatus ? <span>moved</span> : <span>changed status of</span>}
+        <span className="font-semibold text-slate-800">"{taskTitle}"</span>
+        {item.event_type === 'task_moved_back' && previousStatus ? (
+          <>
+            <span>back from</span>
+            <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(previousStatus)}`}>
+              {previousStatus}
+            </span>
+            <span>to</span>
+          </>
+        ) : (
+          <span>to</span>
+        )}
+        <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(newStatus)}`}>
+          {newStatus}
+        </span>
+        <span>.</span>
+      </p>
+    );
+  }
+
+  if (!taskTitle && !taskStatus) {
+    return <p className="mt-1 text-xs text-slate-600">{item.message}</p>;
+  }
+
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-600">
+      {taskTitle ? <span className="font-semibold text-slate-800">"{taskTitle}"</span> : null}
+      {taskStatus ? (
+        <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(taskStatus)}`}>
+          {taskStatus}
+        </span>
+      ) : null}
+      <span>{item.message}</span>
+    </p>
+  );
 };
 
 export default function NotificationBell({ compact = false }: NotificationBellProps) {
@@ -121,6 +193,17 @@ export default function NotificationBell({ compact = false }: NotificationBellPr
     return [...unread, ...latestRead];
   }, [items]);
 
+  const handleNotificationClick = async (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    item: NotificationItem,
+  ) => {
+    const href = getNotificationHref(item);
+    event.preventDefault();
+    await markAsRead(item.notification_id);
+    setOpen(false);
+    window.location.assign(href);
+  };
+
   return (
     <div ref={rootRef} className={compact ? 'relative' : 'relative'}>
       <button
@@ -159,7 +242,7 @@ export default function NotificationBell({ compact = false }: NotificationBellPr
                   <a
                     key={item.notification_id}
                     href={getNotificationHref(item)}
-                    onClick={() => void markAsRead(item.notification_id)}
+                    onClick={(event) => void handleNotificationClick(event, item)}
                     className={`mb-1 block rounded-lg border px-3 py-2 transition-colors ${
                       item.is_read
                         ? 'border-transparent bg-white hover:bg-slate-50'
@@ -172,8 +255,8 @@ export default function NotificationBell({ compact = false }: NotificationBellPr
                       </p>
                       {!item.is_read ? <span className="mt-1 h-2 w-2 rounded-full bg-blue-500" /> : null}
                     </div>
-                    <p className="mt-1 text-xs text-slate-600">{item.message}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{formatDate(item.created_at)}</p>
+                    {renderNotificationDetail(item)}
+                    <p className="mt-1 text-[11px] text-slate-400">{formatNotificationTimestamp(item.created_at)}</p>
                   </a>
                 ))
               : null}

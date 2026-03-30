@@ -9,7 +9,7 @@ export interface ITask extends Document {
   created_by: Types.ObjectId;
   status: TaskStatus;
   priority: TaskPriority;
-  deadline: Date;
+  deadline?: Date;
   created_at: Date;
 }
 
@@ -27,7 +27,7 @@ const taskSchema = new Schema<ITask>({
     enum: ["Low", "Medium", "High"],
     default: "Medium",
   },
-  deadline: { type: Date, required: true },
+  deadline: { type: Date, required: false },
   created_at: { type: Date, default: Date.now },
 });
 

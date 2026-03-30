@@ -35,6 +35,14 @@ const DEFAULT_LIST: PaginatedTaskListResponse = {
 
 const getUserIdentifier = (user: User): string => String(user.user_id || (user as any)._id || '').trim();
 
+const getTodayInputDate = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function TasksPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const currentUser = useAuthStore((state) => state.user);
@@ -61,6 +69,7 @@ export default function TasksPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [noDueDateTime, setNoDueDateTime] = useState(false);
   const [createForm, setCreateForm] = useState<{
     title: string;
     description: string;
@@ -239,6 +248,18 @@ export default function TasksPage() {
 
     void loadTasks();
   }, [isAuthenticated, loadTasks, mounted]);
+
+  useEffect(() => {
+    if (!mounted || !isAuthenticated) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('taskId');
+    if (taskId && taskId.trim().length > 0) {
+      setSelectedTaskId(taskId.trim());
+    }
+  }, [isAuthenticated, mounted]);
 
   useEffect(() => {
     setPage(1);
@@ -592,15 +613,26 @@ export default function TasksPage() {
       return;
     }
 
-    if (!createForm.dueDate || !createForm.dueTime) {
-      setCreateError('Deadline date and time are required.');
-      return;
-    }
+    let deadlineIso: string | undefined;
+    if (!noDueDateTime) {
+      if (!createForm.dueDate || !createForm.dueTime) {
+        setCreateError('Set both due date and due time, or check No due date and time.');
+        return;
+      }
 
-    const deadline = new Date(`${createForm.dueDate}T${createForm.dueTime}`);
-    if (Number.isNaN(deadline.getTime())) {
-      setCreateError('Invalid deadline value.');
-      return;
+      const todayDate = getTodayInputDate();
+      if (createForm.dueDate < todayDate) {
+        setCreateError('Deadline cannot be in the past.');
+        return;
+      }
+
+      const deadline = new Date(`${createForm.dueDate}T${createForm.dueTime}`);
+      if (Number.isNaN(deadline.getTime())) {
+        setCreateError('Invalid deadline value.');
+        return;
+      }
+
+      deadlineIso = deadline.toISOString();
     }
 
     const selectedAssignees = [...new Set(assigneeIds)];
@@ -625,7 +657,7 @@ export default function TasksPage() {
         title: createForm.title.trim(),
         description: createForm.description.trim() || undefined,
         priority: createForm.priority,
-        deadline: deadline.toISOString(),
+        deadline: deadlineIso,
         assigned_to: selectedAssignees,
       };
 
@@ -638,6 +670,7 @@ export default function TasksPage() {
         dueDate: '',
         dueTime: '',
       });
+      setNoDueDateTime(false);
       setAssigneeIds(resolvedCurrentUserId ? [resolvedCurrentUserId] : []);
       setIsCreateModalOpen(false);
       pushModalToast('Task created');
@@ -658,13 +691,27 @@ export default function TasksPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Tasks</h1>
-          <p className="mt-1 text-sm text-slate-500">Table view for quick scanning, modal view for full task details.</p>
+          <p className="mt-1 text-sm text-slate-500">Create and view all your tasks in one place. Select a task for a detailed view.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" loading={isRefreshing} onClick={() => void loadTasks({ refresh: true })}>
-            Refresh
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={isRefreshing}
+            onClick={() => void loadTasks({ refresh: true })}
+            aria-label="Refresh tasks"
+            title="Refresh tasks"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 11a8 8 0 0 0-13.66-5.66M4 5v5h5" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 13a8 8 0 0 0 13.66 5.66M20 19v-5h-5" />
+            </svg>
           </Button>
           <Button type="button" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+            </svg>
             Add Task
           </Button>
         </div>
@@ -714,6 +761,11 @@ export default function TasksPage() {
         linkDraft={linkDraft}
         onClose={() => {
           setSelectedTaskId(null);
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('taskId')) {
+            url.searchParams.delete('taskId');
+            window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+          }
           setCommentDraft('');
           setFeedbackDraft('');
           setLinkDraft({ url: '', label: '' });
@@ -776,6 +828,8 @@ export default function TasksPage() {
               label="Due Date"
               type="date"
               value={createForm.dueDate}
+              min={getTodayInputDate()}
+              disabled={noDueDateTime}
               onChange={(event) => setCreateForm((prev) => ({ ...prev, dueDate: event.target.value }))}
             />
 
@@ -783,9 +837,27 @@ export default function TasksPage() {
               label="Due Time"
               type="time"
               value={createForm.dueTime}
+              disabled={noDueDateTime}
               onChange={(event) => setCreateForm((prev) => ({ ...prev, dueTime: event.target.value }))}
             />
           </div>
+
+          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={noDueDateTime}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setNoDueDateTime(checked);
+                setCreateError('');
+                if (checked) {
+                  setCreateForm((prev) => ({ ...prev, dueDate: '', dueTime: '' }));
+                }
+              }}
+            />
+            <span>No deadline?</span>
+          </label>
 
           <div className="space-y-1">
             <p className="text-sm font-medium text-slate-700">Assign To</p>

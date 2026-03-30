@@ -8,7 +8,7 @@ export interface Task {
   created_by: string;
   status: TaskStatus;
   priority: TaskPriority;
-  deadline: string | Date;
+  deadline?: string | Date;
   created_at: string | Date;
   assignees?: string[];
 }
@@ -102,7 +102,7 @@ export interface CreateTaskPayload {
   title: string;
   description?: string;
   priority: TaskPriority;
-  deadline: string;
+  deadline?: string;
   assigned_to?: string[];
 }
 

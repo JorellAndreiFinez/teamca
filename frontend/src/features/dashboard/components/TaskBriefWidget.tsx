@@ -61,8 +61,12 @@ const PRIORITY_STYLES: Record<string, string> = {
   High: 'bg-red-100 text-red-700',
 };
 
-function formatDeadline(date: Date | string): string {
+function formatDeadline(date?: Date | string): string {
+  if (!date) return 'No due';
+
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return 'No due';
+
   const now = new Date();
   const diffMs = d.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));

@@ -28,10 +28,14 @@ const TIME_ONLY_FORMATTER = new Intl.DateTimeFormat(undefined, {
   minute: '2-digit',
 });
 
-const formatDateTime = (value: string | Date) => {
+const formatDateTime = (value?: string | Date) => {
+  if (!value) {
+    return 'No due';
+  }
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return '-';
+    return 'No due';
   }
 
   return `${DATE_TIME_FORMATTER.format(date)} (${TIME_ONLY_FORMATTER.format(date)})`;

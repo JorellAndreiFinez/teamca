@@ -21,7 +21,7 @@ export type CreateTaskInput = {
   title: string;
   description?: string;
   priority?: TaskPriority;
-  deadline: Date;
+  deadline?: Date;
   assigned_to?: string[];
 };
 
@@ -163,7 +163,7 @@ const normalizeTask = (task: ITask | {
   created_by: Types.ObjectId | string;
   status: TaskStatus;
   priority: TaskPriority;
-  deadline: Date;
+  deadline?: Date;
   created_at: Date;
 }) => ({
   task_id: String(task._id),
@@ -175,6 +175,15 @@ const normalizeTask = (task: ITask | {
   deadline: task.deadline,
   created_at: task.created_at,
 });
+
+const getDeadlineSortValue = (value?: string | Date): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? null : time;
+};
 
 const normalizeFeedback = (feedback: {
   _id: Types.ObjectId;
@@ -834,11 +843,41 @@ export const listAccessibleTasksPaginated = async (
     }
 
     if (sortBy === "deadline_asc") {
-      return new Date(left.deadline).getTime() - new Date(right.deadline).getTime();
+      const leftDeadline = getDeadlineSortValue(left.deadline);
+      const rightDeadline = getDeadlineSortValue(right.deadline);
+
+      if (leftDeadline === null && rightDeadline === null) {
+        return 0;
+      }
+
+      if (leftDeadline === null) {
+        return 1;
+      }
+
+      if (rightDeadline === null) {
+        return -1;
+      }
+
+      return leftDeadline - rightDeadline;
     }
 
     if (sortBy === "deadline_desc") {
-      return new Date(right.deadline).getTime() - new Date(left.deadline).getTime();
+      const leftDeadline = getDeadlineSortValue(left.deadline);
+      const rightDeadline = getDeadlineSortValue(right.deadline);
+
+      if (leftDeadline === null && rightDeadline === null) {
+        return 0;
+      }
+
+      if (leftDeadline === null) {
+        return 1;
+      }
+
+      if (rightDeadline === null) {
+        return -1;
+      }
+
+      return rightDeadline - leftDeadline;
     }
 
     return left.title.localeCompare(right.title);
