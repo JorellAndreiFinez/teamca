@@ -1,11 +1,12 @@
 import { Router } from "express";
-import authenticateJWT from "../middleware/auth";
+import authenticateJWT from "../middlewares/auth";
 import {
   addTaskCommentHandler,
   addTaskWorkLinkHandler,
   addTaskFeedbackHandler,
   assignTaskHandler,
   createTaskHandler,
+  deleteTasksHandler,
   deleteTaskWorkLinkHandler,
   getTaskDetailHandler,
   listTaskCommentsHandler,
@@ -13,6 +14,7 @@ import {
   listTaskWorkLinksHandler,
   listTaskStatusHistoryHandler,
   listTasksHandler,
+  updateTaskDetailsHandler,
   updateTaskStatusHandler,
 } from "../controllers/taskController";
 
@@ -21,8 +23,10 @@ const router = Router();
 router.use(authenticateJWT);
 router.get("/", listTasksHandler);
 router.post("/", createTaskHandler);
+router.delete("/", deleteTasksHandler);
 router.get("/:taskId", getTaskDetailHandler);
 router.post("/:taskId/assign", assignTaskHandler);
+router.patch("/:taskId", updateTaskDetailsHandler);
 router.patch("/:taskId/status", updateTaskStatusHandler);
 router.get("/:taskId/status-history", listTaskStatusHistoryHandler);
 router.get("/:taskId/work-links", listTaskWorkLinksHandler);

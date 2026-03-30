@@ -45,7 +45,7 @@ export default function ProfilePageContent() {
         const data = await userService.getProfile(user.user_id);
         setProfile(data);
 
-        const departmentId = data.department_id ?? user.department_id;
+        const departmentId = data.departments?.[0]?.department_id ?? user.departments?.[0]?.department_id;
         if (departmentId !== undefined && departmentId !== null) {
           try {
             const department = await departmentService.getDepartmentById(departmentId);
@@ -100,7 +100,7 @@ export default function ProfilePageContent() {
               <div>
                 <p className="text-xs text-slate-500">Position</p>
                 <p className="text-sm font-medium text-slate-900">
-                  {buildPositionLabel(departmentName, profile.department_role)}
+                  {buildPositionLabel(departmentName, profile.departments?.[0]?.department_role)}
                 </p>
               </div>
             </div>

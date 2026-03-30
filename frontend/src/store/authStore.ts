@@ -1,5 +1,3 @@
-// frontend\src\store\authStore.ts
-
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -16,6 +14,9 @@ interface AuthState {
 
   canManageUsers: () => boolean;
   canWhitelistEmails: () => boolean;
+  canManageOwnDepartment: () => boolean;
+  canViewAllDepartments: () => boolean;
+  isIntern: () => boolean;
   getUserFullName: () => string;
   isSuperadmin: () => boolean;
   isAdmin: () => boolean;
@@ -47,9 +48,7 @@ export const useAuthStore = create(
 
       canManageUsers: () => {
         const user = get().user;
-        return (
-          user?.global_role === "Admin" || user?.global_role === "Superadmin"
-        );
+        return user?.global_role === "Admin" || user?.global_role === "Superadmin";
       },
 
       canWhitelistEmails: () => {
@@ -57,23 +56,37 @@ export const useAuthStore = create(
         return user?.global_role === "Superadmin";
       },
 
+      canManageOwnDepartment: () => {
+        const user = get().user;
+        const departmentRole = user?.departments?.[0]?.department_role;
+        return departmentRole === "Head" || departmentRole === "Supervisor";
+      },
+
+      canViewAllDepartments: () => {
+        const user = get().user;
+        return user?.global_role === "Admin" || user?.global_role === "Superadmin";
+      },
+
+      isIntern: () => {
+        const user = get().user;
+        return user?.departments?.[0]?.department_role === "Intern";
+      },
+
       getUserFullName: () => {
         const user = get().user;
-        return user
-          ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
-          : "";
+        return user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() : "";
       },
 
       isSuperadmin: () => {
         const user = get().user;
         return user?.global_role === "Superadmin";
       },
+
       isAdmin: () => {
         const user = get().user;
         return user?.global_role === "Admin";
       },
     }),
-
     {
       name: "auth-storage",
       storage: {
@@ -88,7 +101,6 @@ export const useAuthStore = create(
           localStorage.removeItem(key);
         },
       },
-
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
       },

@@ -10,8 +10,11 @@ import type {
   PaginatedTaskListResponse,
   TaskComment,
   TaskDetail,
+  TaskFeedback,
+  TaskListItem,
   TaskPriority,
   TaskStatus,
+  TaskStatusHistory,
   TaskWorkLink,
 } from '../../types/task';
 import type { User } from '../../types/user';
@@ -32,7 +35,49 @@ const DEFAULT_LIST: PaginatedTaskListResponse = {
   total_pages: 1,
 };
 
+const TASK_DESCRIPTION_MAX_LENGTH = 1000;
+
 const getUserIdentifier = (user: User): string => String(user.user_id || (user as any)._id || '').trim();
+
+const getTodayInputDate = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const toLocalInputDateTime = (value?: string | Date) => {
+  if (!value) {
+    return { date: '', time: '' };
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { date: '', time: '' };
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const hours = String(parsed.getHours()).padStart(2, '0');
+  const minutes = String(parsed.getMinutes()).padStart(2, '0');
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  };
+};
+
+const prependUniqueHistoryItem = (
+  history: TaskStatusHistory[],
+  nextItem: TaskStatusHistory,
+): TaskStatusHistory[] => {
+  if (history.some((item) => item.history_id === nextItem.history_id)) {
+    return history;
+  }
+
+  return [nextItem, ...history];
+};
 
 export default function TasksPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -44,6 +89,10 @@ export default function TasksPage() {
   const [serverError, setServerError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeletingTasks, setIsDeletingTasks] = useState(false);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
@@ -60,6 +109,7 @@ export default function TasksPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [noDueDateTime, setNoDueDateTime] = useState(false);
   const [createForm, setCreateForm] = useState<{
     title: string;
     description: string;
@@ -77,10 +127,28 @@ export default function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskDetail, setTaskDetail] = useState<TaskDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [isEditDetailsModalOpen, setIsEditDetailsModalOpen] = useState(false);
+  const [isSavingTaskDetails, setIsSavingTaskDetails] = useState(false);
+  const [editDetailsError, setEditDetailsError] = useState('');
+  const [editNoDueDateTime, setEditNoDueDateTime] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    description: string;
+    dueDate: string;
+    dueTime: string;
+  }>({
+    title: '',
+    description: '',
+    dueDate: '',
+    dueTime: '',
+  });
 
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [commentDraft, setCommentDraft] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [feedbackDraft, setFeedbackDraft] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [taskFeedbacks, setTaskFeedbacks] = useState<TaskFeedback[]>([]);
 
   const [linkDraft, setLinkDraft] = useState({ url: '', label: '' });
   const [linkSubmitting, setLinkSubmitting] = useState(false);
@@ -108,9 +176,35 @@ export default function TasksPage() {
   const isSuperadmin = currentUser?.global_role === 'Superadmin';
   const isAdmin = currentUser?.global_role === 'Admin';
   const isStandardUser = currentUser?.global_role === 'Standard_User';
-  const isHeadOrSupervisor = currentUser?.department_role === 'Head' || currentUser?.department_role === 'Supervisor';
-  const isIntern = currentUser?.department_role === 'Intern';
+  const currentDepartmentRole = currentUser?.departments?.[0]?.department_role;
+  const isHeadOrSupervisor = currentDepartmentRole === 'Head' || currentDepartmentRole === 'Supervisor';
+  const isIntern = currentDepartmentRole === 'Intern';
+  const canSubmitFeedback = isSuperadmin || isAdmin || isHeadOrSupervisor;
   const isSelfOnlyAssignee = isStandardUser;
+
+  const canDeleteTask = useCallback((task: TaskListItem) => {
+    if (task.status === 'Completed') {
+      return isSuperadmin;
+    }
+
+    if (isSuperadmin || isAdmin) {
+      return true;
+    }
+
+    return String(task.created_by) === resolvedCurrentUserId;
+  }, [isAdmin, isSuperadmin, resolvedCurrentUserId]);
+
+  const canEditTaskDetails = useMemo(() => {
+    if (!taskDetail) {
+      return false;
+    }
+
+    if (isSuperadmin || isAdmin) {
+      return true;
+    }
+
+    return String(taskDetail.created_by) === resolvedCurrentUserId;
+  }, [isAdmin, isSuperadmin, resolvedCurrentUserId, taskDetail]);
 
   const assignableUsers = useMemo(() => {
     if (!currentUser) {
@@ -125,14 +219,12 @@ export default function TasksPage() {
     } else if (isSuperadmin || isAdmin) {
       scopedUsers = activeUsers;
     } else if (isHeadOrSupervisor || isIntern) {
-      const departmentId = currentUser.department_id;
+      const departmentId = currentUser.departments?.[0]?.department_id;
       scopedUsers = activeUsers.filter(
         (user) =>
-          typeof user.department_id !== 'undefined' &&
-          user.department_id !== null &&
           typeof departmentId !== 'undefined' &&
           departmentId !== null &&
-          String(user.department_id) === String(departmentId)
+          (user.departments ?? []).some((department) => String(department.department_id) === String(departmentId))
       );
     } else {
       scopedUsers = activeUsers.filter((user) => getUserIdentifier(user) === currentUserId);
@@ -175,6 +267,13 @@ export default function TasksPage() {
     return [...unfinished, ...completed];
   }, [taskList.items]);
 
+  useEffect(() => {
+    setSelectedTaskIds((prev) => prev.filter((taskId) => {
+      const task = orderedTasks.find((item) => String(item.task_id) === taskId);
+      return !!task && canDeleteTask(task);
+    }));
+  }, [canDeleteTask, orderedTasks]);
+
   const loadTasks = useCallback(async (options?: { refresh?: boolean }) => {
     if (!options?.refresh) {
       setIsLoading(true);
@@ -213,11 +312,16 @@ export default function TasksPage() {
     setServerError('');
 
     try {
-      const detail = await taskService.getTaskDetail(taskId);
+      const [detail, feedbackItems] = await Promise.all([
+        taskService.getTaskDetail(taskId),
+        taskService.getTaskFeedback(taskId),
+      ]);
       setTaskDetail(detail);
+      setTaskFeedbacks(feedbackItems);
     } catch (error: any) {
       setServerError(error?.response?.data?.message || 'Failed to load task details.');
       setTaskDetail(null);
+      setTaskFeedbacks([]);
     } finally {
       setDetailLoading(false);
     }
@@ -232,12 +336,25 @@ export default function TasksPage() {
   }, [isAuthenticated, loadTasks, mounted]);
 
   useEffect(() => {
+    if (!mounted || !isAuthenticated) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('taskId');
+    if (taskId && taskId.trim().length > 0) {
+      setSelectedTaskId(taskId.trim());
+    }
+  }, [isAuthenticated, mounted]);
+
+  useEffect(() => {
     setPage(1);
   }, [search, statusFilter, priorityFilter, createdDateFilter, sortBy, limit]);
 
   useEffect(() => {
     if (!selectedTaskId) {
       setTaskDetail(null);
+      setTaskFeedbacks([]);
       return;
     }
 
@@ -249,13 +366,25 @@ export default function TasksPage() {
       return;
     }
 
+    const canFetchAllUsers = isSuperadmin
+      || isAdmin
+      || currentDepartmentRole === 'Head'
+      || currentDepartmentRole === 'Supervisor'
+      || currentDepartmentRole === 'Intern';
+    if (!canFetchAllUsers) {
+      setAllUsers(currentUser ? [currentUser] : []);
+      setCreateError('');
+      setUsersLoading(false);
+      return;
+    }
+
     setUsersLoading(true);
     void userService
       .getAllUsers()
       .then((users) => setAllUsers(users))
       .catch(() => setCreateError('Failed to load assignable users.'))
       .finally(() => setUsersLoading(false));
-  }, [isAuthenticated, isCreateModalOpen]);
+  }, [currentDepartmentRole, currentUser, isAdmin, isAuthenticated, isCreateModalOpen, isSuperadmin]);
 
   useEffect(() => {
     if (!isCreateModalOpen || !resolvedCurrentUserId) {
@@ -336,7 +465,7 @@ export default function TasksPage() {
       return {
         ...prev,
         status: nextTask.status,
-        history: [history, ...prev.history],
+        history: prependUniqueHistoryItem(prev.history, history),
       };
     });
 
@@ -385,7 +514,7 @@ export default function TasksPage() {
         return {
           ...prev,
           status: response.task.status,
-          history: [response.history, ...prev.history],
+          history: prependUniqueHistoryItem(prev.history, response.history),
         };
       });
 
@@ -434,6 +563,37 @@ export default function TasksPage() {
       setServerError(error?.response?.data?.message || 'Failed to add comment.');
     } finally {
       setCommentSubmitting(false);
+    }
+  };
+
+  const handleAddFeedback = async () => {
+    if (!taskDetail) {
+      return;
+    }
+
+    if (!canSubmitFeedback) {
+      setServerError('You do not have permission to submit feedback.');
+      return;
+    }
+
+    const comments = feedbackDraft.trim();
+    if (!comments) {
+      setServerError('Feedback message is required.');
+      return;
+    }
+
+    setFeedbackSubmitting(true);
+    setServerError('');
+
+    try {
+      const created = await taskService.addTaskFeedback(String(taskDetail.task_id), { comments });
+      setFeedbackDraft('');
+      pushModalToast('Feedback submitted');
+      setTaskFeedbacks((prev) => [created, ...prev]);
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to submit feedback.');
+    } finally {
+      setFeedbackSubmitting(false);
     }
   };
 
@@ -551,15 +711,26 @@ export default function TasksPage() {
       return;
     }
 
-    if (!createForm.dueDate || !createForm.dueTime) {
-      setCreateError('Deadline date and time are required.');
-      return;
-    }
+    let deadlineIso: string | undefined;
+    if (!noDueDateTime) {
+      if (!createForm.dueDate || !createForm.dueTime) {
+        setCreateError('Set both due date and due time, or check No due date and time.');
+        return;
+      }
 
-    const deadline = new Date(`${createForm.dueDate}T${createForm.dueTime}`);
-    if (Number.isNaN(deadline.getTime())) {
-      setCreateError('Invalid deadline value.');
-      return;
+      const todayDate = getTodayInputDate();
+      if (createForm.dueDate < todayDate) {
+        setCreateError('Deadline cannot be in the past.');
+        return;
+      }
+
+      const deadline = new Date(`${createForm.dueDate}T${createForm.dueTime}`);
+      if (Number.isNaN(deadline.getTime())) {
+        setCreateError('Invalid deadline value.');
+        return;
+      }
+
+      deadlineIso = deadline.toISOString();
     }
 
     const selectedAssignees = [...new Set(assigneeIds)];
@@ -584,7 +755,7 @@ export default function TasksPage() {
         title: createForm.title.trim(),
         description: createForm.description.trim() || undefined,
         priority: createForm.priority,
-        deadline: deadline.toISOString(),
+        deadline: deadlineIso,
         assigned_to: selectedAssignees,
       };
 
@@ -597,6 +768,7 @@ export default function TasksPage() {
         dueDate: '',
         dueTime: '',
       });
+      setNoDueDateTime(false);
       setAssigneeIds(resolvedCurrentUserId ? [resolvedCurrentUserId] : []);
       setIsCreateModalOpen(false);
       pushModalToast('Task created');
@@ -605,6 +777,131 @@ export default function TasksPage() {
       setCreateError(error?.response?.data?.message || 'Failed to create task.');
     } finally {
       setIsCreatingTask(false);
+    }
+  };
+
+  const handleToggleTaskSelection = (taskId: string) => {
+    setSelectedTaskIds((prev) => (
+      prev.includes(taskId)
+        ? prev.filter((id) => id !== taskId)
+        : [...prev, taskId]
+    ));
+  };
+
+  const handleDeleteModeClick = () => {
+    if (!isDeleteMode) {
+      setIsDeleteMode(true);
+      setSelectedTaskIds([]);
+      return;
+    }
+
+    if (selectedTaskIds.length === 0) {
+      setIsDeleteMode(false);
+      return;
+    }
+
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteTasks = async () => {
+    if (selectedTaskIds.length === 0) {
+      setIsDeleteConfirmOpen(false);
+      setIsDeleteMode(false);
+      return;
+    }
+
+    setIsDeletingTasks(true);
+    setServerError('');
+
+    try {
+      await taskService.deleteTasks(selectedTaskIds);
+      setIsDeleteConfirmOpen(false);
+      setIsDeleteMode(false);
+      setSelectedTaskIds([]);
+      pushModalToast('Selected tasks deleted');
+      await loadTasks({ refresh: true });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'Failed to delete selected tasks.');
+    } finally {
+      setIsDeletingTasks(false);
+    }
+  };
+
+  const handleOpenEditTaskDetails = () => {
+    if (!taskDetail) {
+      return;
+    }
+
+    const localDateTime = toLocalInputDateTime(taskDetail.deadline);
+    setEditForm({
+      title: taskDetail.title,
+      description: taskDetail.description || '',
+      dueDate: localDateTime.date,
+      dueTime: localDateTime.time,
+    });
+    setEditNoDueDateTime(!taskDetail.deadline);
+    setEditDetailsError('');
+    setIsEditDetailsModalOpen(true);
+  };
+
+  const handleSaveTaskDetails = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!taskDetail) {
+      return;
+    }
+
+    const title = editForm.title.trim();
+    if (!title) {
+      setEditDetailsError('Task title is required.');
+      return;
+    }
+
+    let deadline: string | null | undefined;
+    if (editNoDueDateTime) {
+      deadline = null;
+    } else {
+      if (!editForm.dueDate || !editForm.dueTime) {
+        setEditDetailsError('Set both due date and due time, or check No deadline.');
+        return;
+      }
+
+      const todayDate = getTodayInputDate();
+      if (editForm.dueDate < todayDate) {
+        setEditDetailsError('Deadline cannot be in the past.');
+        return;
+      }
+
+      const parsed = new Date(`${editForm.dueDate}T${editForm.dueTime}`);
+      if (Number.isNaN(parsed.getTime())) {
+        setEditDetailsError('Invalid deadline value.');
+        return;
+      }
+
+      deadline = parsed.toISOString();
+    }
+
+    setIsSavingTaskDetails(true);
+    setEditDetailsError('');
+
+    try {
+      await taskService.updateTaskDetails(String(taskDetail.task_id), {
+        title,
+        description: editForm.description.trim() || '',
+        deadline,
+      });
+
+      await Promise.all([
+        loadTaskDetail(String(taskDetail.task_id)),
+        loadTasks({ refresh: true }),
+      ]);
+
+      setIsEditDetailsModalOpen(false);
+      pushModalToast('Task details updated');
+    } catch (error: any) {
+      setEditDetailsError(error?.response?.data?.message || 'Failed to update task details.');
+    } finally {
+      setIsSavingTaskDetails(false);
     }
   };
 
@@ -617,13 +914,27 @@ export default function TasksPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Tasks</h1>
-          <p className="mt-1 text-sm text-slate-500">Table view for quick scanning, modal view for full task details.</p>
+          <p className="mt-1 text-sm text-slate-500">Create and view all your tasks in one place. Select a task for a detailed view.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" loading={isRefreshing} onClick={() => void loadTasks({ refresh: true })}>
-            Refresh
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={isRefreshing}
+            onClick={() => void loadTasks({ refresh: true })}
+            aria-label="Refresh tasks"
+            title="Refresh tasks"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 11a8 8 0 0 0-13.66-5.66M4 5v5h5" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 13a8 8 0 0 0 13.66 5.66M20 19v-5h-5" />
+            </svg>
           </Button>
           <Button type="button" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+            </svg>
             Add Task
           </Button>
         </div>
@@ -646,9 +957,28 @@ export default function TasksPage() {
         onCreatedDateChange={setCreatedDateFilter}
         onSortByChange={setSortBy}
         onLimitChange={setLimit}
+        deleteMode={isDeleteMode}
+        selectedDeleteCount={selectedTaskIds.length}
+        onDeleteModeClick={handleDeleteModeClick}
       />
 
-      <TaskTable tasks={orderedTasks} isLoading={isLoading} onRowClick={setSelectedTaskId} />
+      {isDeleteMode ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+          Reminder: Completed tasks can only be deleted by superadmins. For non-completed tasks,
+          admins can delete any task while others can only delete tasks they created.
+          Tasks you cannot delete are marked with a "Not deletable" label.
+        </div>
+      ) : null}
+
+      <TaskTable
+        tasks={orderedTasks}
+        isLoading={isLoading}
+        onRowClick={setSelectedTaskId}
+        selectionMode={isDeleteMode}
+        selectedTaskIds={selectedTaskIds}
+        canSelectTask={canDeleteTask}
+        onToggleTaskSelection={handleToggleTaskSelection}
+      />
 
       <TaskPagination
         page={page}
@@ -664,30 +994,44 @@ export default function TasksPage() {
         isLoading={detailLoading}
         statusUpdating={statusUpdating}
         commentsSubmitting={commentSubmitting}
+        feedbackSubmitting={feedbackSubmitting}
         linksSubmitting={linkSubmitting}
         linkDeletingId={linkDeletingId}
         copiedLinkId={copiedLinkId}
         commentDraft={commentDraft}
+        feedbackDraft={feedbackDraft}
         linkDraft={linkDraft}
         onClose={() => {
           setSelectedTaskId(null);
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('taskId')) {
+            url.searchParams.delete('taskId');
+            window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+          }
           setCommentDraft('');
+          setFeedbackDraft('');
           setLinkDraft({ url: '', label: '' });
           setModalToasts([]);
         }}
         onCommentDraftChange={setCommentDraft}
+        onFeedbackDraftChange={setFeedbackDraft}
         onLinkDraftChange={setLinkDraft}
         onUpdateStatus={(nextStatus) => void handleUpdateStatus(nextStatus)}
         onAddComment={() => void handleAddComment()}
+        onAddFeedback={() => void handleAddFeedback()}
         onAddLink={() => void handleAddLink()}
         onDeleteLink={(workLinkId) => void handleDeleteLink(workLinkId)}
         onCopyLink={(workLinkId, url) => void handleCopyLink(workLinkId, url)}
         comments={modalComments}
+        feedbackItems={taskFeedbacks}
         links={modalLinks}
         currentUserId={currentUserId}
+        canSubmitFeedback={canSubmitFeedback}
         canAddLinks={canAddLinks}
         canDeleteAnyLink={canDeleteAnyLink}
         canDeleteOwnLink={canDeleteOwnLink}
+        canEditTaskDetails={canEditTaskDetails}
+        onEditTaskDetails={handleOpenEditTaskDetails}
       />
 
       <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create Task" className="max-w-xl">
@@ -704,10 +1048,17 @@ export default function TasksPage() {
             <textarea
               rows={3}
               value={createForm.description}
-              onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              maxLength={TASK_DESCRIPTION_MAX_LENGTH}
+              onChange={(event) => setCreateForm((prev) => ({
+                ...prev,
+                description: event.target.value.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
+              }))}
+              className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
               placeholder="Optional details"
             />
+            <span className="text-[11px] text-slate-500">
+              {createForm.description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
+            </span>
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -728,6 +1079,8 @@ export default function TasksPage() {
               label="Due Date"
               type="date"
               value={createForm.dueDate}
+              min={getTodayInputDate()}
+              disabled={noDueDateTime}
               onChange={(event) => setCreateForm((prev) => ({ ...prev, dueDate: event.target.value }))}
             />
 
@@ -735,9 +1088,27 @@ export default function TasksPage() {
               label="Due Time"
               type="time"
               value={createForm.dueTime}
+              disabled={noDueDateTime}
               onChange={(event) => setCreateForm((prev) => ({ ...prev, dueTime: event.target.value }))}
             />
           </div>
+
+          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={noDueDateTime}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setNoDueDateTime(checked);
+                setCreateError('');
+                if (checked) {
+                  setCreateForm((prev) => ({ ...prev, dueDate: '', dueTime: '' }));
+                }
+              }}
+            />
+            <span>No deadline?</span>
+          </label>
 
           <div className="space-y-1">
             <p className="text-sm font-medium text-slate-700">Assign To</p>
@@ -799,6 +1170,110 @@ export default function TasksPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={isEditDetailsModalOpen}
+        onClose={() => setIsEditDetailsModalOpen(false)}
+        title="Edit Task Details"
+        className="max-w-xl"
+      >
+        <form className="space-y-3" onSubmit={handleSaveTaskDetails}>
+          <Input
+            label="Title"
+            value={editForm.title}
+            onChange={(event) => setEditForm((prev) => ({ ...prev, title: event.target.value }))}
+            placeholder="Enter task title"
+          />
+
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-700">Description</span>
+            <textarea
+              rows={3}
+              value={editForm.description}
+              maxLength={TASK_DESCRIPTION_MAX_LENGTH}
+              onChange={(event) => setEditForm((prev) => ({
+                ...prev,
+                description: event.target.value.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
+              }))}
+              className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Optional details"
+            />
+            <span className="text-[11px] text-slate-500">
+              {editForm.description.length}/{TASK_DESCRIPTION_MAX_LENGTH}
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Due Date"
+              type="date"
+              value={editForm.dueDate}
+              min={getTodayInputDate()}
+              disabled={editNoDueDateTime}
+              onChange={(event) => setEditForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+            />
+
+            <Input
+              label="Due Time"
+              type="time"
+              value={editForm.dueTime}
+              disabled={editNoDueDateTime}
+              onChange={(event) => setEditForm((prev) => ({ ...prev, dueTime: event.target.value }))}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={editNoDueDateTime}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setEditNoDueDateTime(checked);
+                setEditDetailsError('');
+                if (checked) {
+                  setEditForm((prev) => ({ ...prev, dueDate: '', dueTime: '' }));
+                }
+              }}
+            />
+            <span>No deadline?</span>
+          </label>
+
+          {editDetailsError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{editDetailsError}</div>
+          ) : null}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsEditDetailsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" loading={isSavingTaskDetails}>
+              Save
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        title="Delete Selected Tasks"
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-700">
+            You are about to delete {selectedTaskIds.length} selected task{selectedTaskIds.length === 1 ? '' : 's'}. This action cannot be undone.
+          </p>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" loading={isDeletingTasks} onClick={() => void handleConfirmDeleteTasks()}>
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {modalToasts.length > 0 ? (

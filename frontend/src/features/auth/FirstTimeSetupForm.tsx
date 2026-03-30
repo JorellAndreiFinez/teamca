@@ -86,7 +86,7 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
         first_name: formData.first_name,
         last_name: formData.last_name,
         password: formData.password,
-        department_id: Number(formData.department_id),
+        department_id: formData.department_id,
         school_university: formData.school_university,
         required_hours: Number(formData.required_hours),
       });

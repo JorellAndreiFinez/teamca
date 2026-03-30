@@ -28,7 +28,7 @@ export default function MembersBriefWidget({ title, members, isLoading = false }
                   {member.first_name} {member.last_name}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {member.department_role} • {member.global_role}
+                  {member.departments?.[0]?.department_role ?? 'Unassigned'} • {member.global_role}
                 </p>
               </li>
             ))}

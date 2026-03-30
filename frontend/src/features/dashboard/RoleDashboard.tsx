@@ -70,7 +70,14 @@ export default function RoleDashboard() {
     }
 
     if (canManageOwnDepartment()) {
-      return users.filter((member) => member.department_id === user.department_id);
+      const currentDepartmentId = user.departments?.[0]?.department_id;
+      if (!currentDepartmentId) {
+        return [];
+      }
+
+      return users.filter((member) =>
+        (member.departments ?? []).some((department) => String(department.department_id) === String(currentDepartmentId)),
+      );
     }
 
     return [];

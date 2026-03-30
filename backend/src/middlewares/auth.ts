@@ -48,7 +48,7 @@ export const authenticateJWT = async (
     }
 
     const user = await User.findById(userId)
-      .select("email global_role department_role department_id is_active")
+      .select("email global_role departments is_active")
       .lean();
 
     if (!user || !user.is_active) {
@@ -63,12 +63,14 @@ export const authenticateJWT = async (
         .json({ message: "Account role is not configured." });
     }
 
+    const primaryDepartment = user.departments?.[0];
+
     req.user = {
       user_id: user._id,
       email: user.email,
       global_role: user.global_role,
-      department_role: user.department_role,
-      department_id: user.department_id,
+      department_role: primaryDepartment?.department_role,
+      department_id: primaryDepartment ? String(primaryDepartment.department_id) : undefined,
       is_active: user.is_active,
     };
 

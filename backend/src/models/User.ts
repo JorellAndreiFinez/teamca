@@ -1,9 +1,7 @@
-// backend/src/models/User.ts
-
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IUserDepartment {
-  department_id: Schema.Types.ObjectId;
+  department_id: Types.ObjectId;
   department_role: "Head" | "Supervisor" | "Intern";
 }
 
@@ -32,7 +30,7 @@ const userDepartmentSchema = new Schema<IUserDepartment>(
       required: true,
     },
   },
-  { _id: false }, // prevent Mongoose from creating _id for each subdocument
+  { _id: false },
 );
 
 const userSchema = new Schema<IUser>(
@@ -46,7 +44,7 @@ const userSchema = new Schema<IUser>(
       enum: ["Superadmin", "Admin", "Standard_User"],
       default: "Standard_User",
     },
-    departments: { type: [userDepartmentSchema], default: [] }, // array of departments
+    departments: { type: [userDepartmentSchema], default: [] },
     is_active: { type: Boolean, default: true },
   },
   { timestamps: true },
