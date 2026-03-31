@@ -10,7 +10,50 @@ import {
   deleteWhitelistedUser as deleteUserService,
 } from "../services/userService";
 import { createNotificationsForRecipients } from "../services/notificationService";
-import { emitUsersNotification } from "../socket/io";
+import { emitUsersDirectoryUpdated, emitUsersNotification } from "../socket/io";
+
+type AuthUser = NonNullable<Request["user"]>;
+
+const isSuperadmin = (user: AuthUser): boolean => user.global_role === "Superadmin";
+
+const isSupervisorAdmin = (user: AuthUser): boolean => (
+  user.global_role === "Admin" && user.department_role === "Supervisor"
+);
+
+const isHeadAdmin = (user: AuthUser): boolean => (
+  user.global_role === "Admin" && user.department_role === "Head"
+);
+
+const canViewAllUsers = (user: AuthUser): boolean => isSuperadmin(user) || isSupervisorAdmin(user);
+
+const getDepartmentIds = (userLike: {
+  departments?: Array<{ department_id?: unknown }>;
+}): string[] => {
+  return [...new Set(
+    (userLike.departments ?? [])
+      .map((department) => department.department_id)
+      .filter((departmentId): departmentId is unknown => !!departmentId)
+      .map((departmentId) => String(departmentId)),
+  )];
+};
+
+const sharesAtLeastOneDepartment = (
+  actor: AuthUser,
+  targetUser: { departments?: Array<{ department_id?: unknown }> },
+): boolean => {
+  const actorDepartmentIds = getDepartmentIds({
+    departments: actor.department_id
+      ? [{ department_id: actor.department_id }]
+      : [],
+  });
+  const targetDepartmentIds = getDepartmentIds(targetUser);
+
+  if (actorDepartmentIds.length === 0 || targetDepartmentIds.length === 0) {
+    return false;
+  }
+
+  return targetDepartmentIds.some((departmentId) => actorDepartmentIds.includes(departmentId));
+};
 
 const getUserIdParam = (req: Request): string => {
   const raw = req.params.userId;
@@ -28,6 +71,20 @@ const getActiveSuperadminIds = async (): Promise<string[]> => {
   return [...new Set(superadmins.map((item) => String(item._id)))];
 };
 
+const getActiveUserDirectorySubscriberIds = async (): Promise<string[]> => {
+  const managers = await User.find({
+    is_active: true,
+    $or: [
+      { global_role: "Superadmin" },
+      { global_role: "Admin", "departments.department_role": { $in: ["Head", "Supervisor"] } },
+    ],
+  })
+    .select("_id")
+    .lean();
+
+  return [...new Set(managers.map((item) => String(item._id)))];
+};
+
 /**
  * Get all users
  */
@@ -37,10 +94,12 @@ export const getUsers = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required." });
     }
 
-    const isGlobalManager = req.user.global_role === "Superadmin" || req.user.global_role === "Admin";
-    const isDepartmentScoped = req.user.department_role === "Head"
-      || req.user.department_role === "Supervisor"
-      || req.user.department_role === "Intern";
+    const isGlobalManager = canViewAllUsers(req.user);
+    const isDepartmentScoped = isHeadAdmin(req.user);
+
+    if (!isGlobalManager && !isDepartmentScoped) {
+      return res.status(403).json({ message: "Insufficient role permissions." });
+    }
 
     let users;
     if (isGlobalManager) {
@@ -55,7 +114,7 @@ export const getUsers = async (req: Request, res: Response) => {
         },
       }, "-password_hash");
     } else {
-      users = await User.find({ _id: req.user.user_id }, "-password_hash");
+      return res.status(403).json({ message: "Insufficient role permissions." });
     }
 
     console.log("[getUsers] users fetched:", users);
@@ -71,8 +130,27 @@ export const getUsers = async (req: Request, res: Response) => {
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
     const user = await User.findById(getUserIdParam(req), "-password_hash");
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (String(req.user.user_id) === String(user._id)) {
+      return res.json(user);
+    }
+
+    if (!canViewAllUsers(req.user)) {
+      if (!isHeadAdmin(req.user)) {
+        return res.status(403).json({ message: "Insufficient role permissions." });
+      }
+
+      if (!sharesAtLeastOneDepartment(req.user, user)) {
+        return res.status(403).json({ message: "Heads can only view users within their department." });
+      }
+    }
+
     res.json(user);
   } catch (err) {
     console.error(err);
@@ -133,8 +211,12 @@ export const createUser = async (req: Request, res: Response) => {
  */
 export const updateUser = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
     const userId = getUserIdParam(req);
-    const payload = req.body;
+    const payload = req.body || {};
     const previousUser = await User.findById(userId)
       .select("global_role is_active departments")
       .lean();
@@ -143,7 +225,49 @@ export const updateUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const updatedUser = await updateUserService(userId, payload);
+    const actor = req.user;
+    const actorCanManageFully = canViewAllUsers(actor);
+    const actorIsHead = isHeadAdmin(actor);
+
+    if (!actorCanManageFully && !actorIsHead) {
+      return res.status(403).json({ message: "Insufficient role permissions." });
+    }
+
+    if (actorIsHead) {
+      if (!sharesAtLeastOneDepartment(actor, previousUser)) {
+        return res.status(403).json({ message: "Heads can only edit users within their department." });
+      }
+
+      const disallowedHeadFields = ["global_role", "departments", "is_active", "password_hash"];
+      const includesRestrictedField = disallowedHeadFields.some((field) => payload[field] !== undefined);
+      if (includesRestrictedField) {
+        return res.status(403).json({ message: "Heads can only edit basic profile fields." });
+      }
+    }
+
+    if (!isSuperadmin(actor)) {
+      if (previousUser.global_role === "Superadmin") {
+        return res.status(403).json({ message: "Only Superadmins can modify Superadmin accounts." });
+      }
+
+      if (payload.global_role === "Superadmin") {
+        return res.status(403).json({ message: "Only Superadmins can assign the Superadmin role." });
+      }
+    }
+
+    const sanitizedPayload = actorIsHead
+      ? {
+          first_name: payload.first_name,
+          last_name: payload.last_name,
+        }
+      : payload;
+
+    const hasAnyFieldToUpdate = Object.values(sanitizedPayload).some((value) => value !== undefined);
+    if (!hasAnyFieldToUpdate) {
+      return res.status(400).json({ message: "No editable fields provided." });
+    }
+
+    const updatedUser = await updateUserService(userId, sanitizedPayload);
 
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
@@ -153,12 +277,17 @@ export const updateUser = async (req: Request, res: Response) => {
       `[updateUser] User updated: ${updatedUser.first_name} ${updatedUser.last_name} (${updatedUser.email})`,
     );
 
-    const recipientIds = await getActiveSuperadminIds();
+    const [recipientIds, directorySubscribers] = await Promise.all([
+      getActiveSuperadminIds(),
+      getActiveUserDirectorySubscriberIds(),
+    ]);
     const actorId = req.user ? String(req.user.user_id) : undefined;
     const updatedFields = Object.keys(payload || {}).filter((key) => payload?.[key] !== undefined);
     const updatedEntityId = String(updatedUser._id || userId);
 
-    const notifications = await createNotificationsForRecipients(recipientIds, {
+    const profileNotificationRecipients = [...new Set([...recipientIds, updatedEntityId])];
+
+    const notifications = await createNotificationsForRecipients(profileNotificationRecipients, {
       actorId,
       eventType: "user_profile_updated",
       title: "User profile updated",
@@ -224,6 +353,14 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
+    emitUsersDirectoryUpdated(directorySubscribers, {
+      event_type: "user_updated",
+      user_id: updatedEntityId,
+      updated_fields: updatedFields,
+      actor_id: actorId,
+      updated_at: new Date().toISOString(),
+    });
+
     res.json(updatedUser);
   } catch (err: any) {
     console.error("[updateUser] error:", err);
@@ -259,18 +396,37 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
  */
 export const deleteUser = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
     const userId = getUserIdParam(req);
     const userToDelete = await User.findById(userId)
-      .select("first_name last_name email")
+      .select("first_name last_name email global_role")
       .lean();
 
     if (!userToDelete) {
       return res.status(404).json({ message: "User not found." });
     }
 
+    const actor = req.user;
+    const actorCanDelete = isSuperadmin(actor) || isSupervisorAdmin(actor);
+    if (!actorCanDelete) {
+      return res.status(403).json({ message: "Only Supervisor(Admin) or Superadmin can delete users." });
+    }
+
+    if (!isSuperadmin(actor)) {
+      if (userToDelete.global_role !== "Standard_User") {
+        return res.status(403).json({ message: "Supervisors can only delete Standard Users." });
+      }
+    }
+
     const result = await deleteUserService(userId);
 
-    const recipientIds = await getActiveSuperadminIds();
+    const [recipientIds, directorySubscribers] = await Promise.all([
+      getActiveSuperadminIds(),
+      getActiveUserDirectorySubscriberIds(),
+    ]);
     const actorId = req.user ? String(req.user.user_id) : undefined;
 
     const notifications = await createNotificationsForRecipients(recipientIds, {
@@ -289,6 +445,13 @@ export const deleteUser = async (req: Request, res: Response) => {
     for (const notification of notifications) {
       emitUsersNotification([notification.recipient_id], notification);
     }
+
+    emitUsersDirectoryUpdated(directorySubscribers, {
+      event_type: "user_deleted",
+      user_id: userId,
+      actor_id: actorId,
+      updated_at: new Date().toISOString(),
+    });
 
     res.json(result);
   } catch (err: any) {

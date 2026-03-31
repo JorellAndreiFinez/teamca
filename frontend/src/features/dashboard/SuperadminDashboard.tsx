@@ -1,45 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import Card from '../../components/ui/Card';
+import DashboardStatCard from './components/DashboardStatCard';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { userService } from '../../services/userService';
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: string;
-}
-
-function StatCard({ label, value, icon, color }: StatCardProps) {
-  return (
-    <div className={`rounded-xl p-5 border ${color}`}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-600">{label}</span>
-        <div className="w-9 h-9 rounded-lg bg-white/60 flex items-center justify-center">
-          {icon}
-        </div>
-      </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-    </div>
-  );
-}
+import { taskService } from '../../services/taskService';
+import type { Task } from '../../types/task';
 
 function UsersIcon() {
   return (
     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   );
 }
@@ -62,6 +35,19 @@ function DeptIcon() {
   );
 }
 
+function TaskIcon() {
+  return (
+    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+      />
+    </svg>
+  );
+}
+
 // Mock whitelist data for UI demo
 const MOCK_WHITELIST = [
   { id: 1, email: 'intern1@example.com', status: 'Setup Complete', date: '2024-01-15' },
@@ -71,11 +57,46 @@ const MOCK_WHITELIST = [
 
 export default function SuperadminDashboard() {
   const user = useAuthStore((state) => state.user);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskLoading, setTaskLoading] = useState(true);
   const [newEmail, setNewEmail] = useState('');
   const [whitelistError, setWhitelistError] = useState('');
   const [whitelistLoading, setWhitelistLoading] = useState(false);
   const [whitelist, setWhitelist] = useState(MOCK_WHITELIST);
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTasks = async () => {
+      setTaskLoading(true);
+      try {
+        const data = await taskService.getTasks();
+        if (!cancelled) {
+          setTasks(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setTasks([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setTaskLoading(false);
+        }
+      }
+    };
+
+    void loadTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeTaskCount = useMemo(
+    () => tasks.filter((task) => task.status !== 'Completed').length,
+    [tasks],
+  );
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -85,10 +106,16 @@ export default function SuperadminDashboard() {
   };
 
   const stats = [
-    { label: 'Total Users', value: 32, icon: <UsersIcon />, color: 'bg-blue-50 border-blue-100' },
-    { label: 'Whitelisted Emails', value: whitelist.length, icon: <EmailIcon />, color: 'bg-green-50 border-green-100' },
-    { label: 'Departments', value: 4, icon: <DeptIcon />, color: 'bg-purple-50 border-purple-100' },
-    { label: 'Admins', value: 3, icon: <ShieldIcon />, color: 'bg-indigo-50 border-indigo-100' },
+    { label: 'Total Users', value: 32, icon: <UsersIcon />, tone: 'blue' as const, hint: 'Directory count' },
+    { label: 'Whitelisted Emails', value: whitelist.length, icon: <EmailIcon />, tone: 'green' as const, hint: 'Access-ready emails' },
+    { label: 'Departments', value: 4, icon: <DeptIcon />, tone: 'purple' as const, hint: 'Configured teams' },
+    {
+      label: 'Active Tasks',
+      value: taskLoading ? '...' : activeTaskCount,
+      icon: <TaskIcon />,
+      tone: 'green' as const,
+      hint: taskLoading ? 'Syncing tasks' : `${tasks.length} total tasks`,
+    },
   ];
 
   const handleWhitelist = async (e: React.FormEvent) => {
@@ -157,7 +184,7 @@ export default function SuperadminDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((s) => (
-          <StatCard key={s.label} {...s} />
+          <DashboardStatCard key={s.label} {...s} />
         ))}
       </div>
 

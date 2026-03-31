@@ -1,7 +1,11 @@
 import React from 'react';
+import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import NotificationBell from './NotificationBell';
+import { userService } from '../../services/userService';
+import { config } from '../../config/env';
+import type { NotificationItem } from '../../types/notification';
 
 interface NavItem {
   label: string;
@@ -80,8 +84,17 @@ function MenuIcon() {
   );
 }
 
+const isUserNotificationEvent = (eventType?: string): boolean => {
+  return eventType === 'user_profile_updated'
+    || eventType === 'user_role_changed'
+    || eventType === 'user_activation_changed'
+    || eventType === 'user_deleted';
+};
+
 export default function Sidebar() {
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const canManageUsers = useAuthStore((state) => state.canManageUsers);
   const canWhitelistEmails = useAuthStore((state) => state.canWhitelistEmails);
@@ -91,6 +104,80 @@ export default function Sidebar() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
+
+  const currentUserId = React.useMemo(
+    () => user?.user_id || user?._id,
+    [user],
+  );
+
+  const refreshCurrentUser = React.useCallback(async () => {
+    if (!currentUserId) {
+      return;
+    }
+
+    try {
+      const profile = await userService.getProfile(String(currentUserId));
+      setUser(profile);
+    } catch {
+      // Keep existing UI state when a background sync fails.
+    }
+  }, [currentUserId, setUser]);
+
+  const socket = React.useMemo<Socket | null>(() => {
+    if (!token) {
+      return null;
+    }
+
+    return io(config.backendUrl, {
+      transports: ['websocket'],
+      auth: { token },
+      autoConnect: true,
+    });
+  }, [token]);
+
+  React.useEffect(() => {
+    if (!mounted || !token || !currentUserId) {
+      return;
+    }
+
+    void refreshCurrentUser();
+  }, [mounted, token, currentUserId, refreshCurrentUser]);
+
+  React.useEffect(() => {
+    if (!socket || !currentUserId) {
+      return;
+    }
+
+    const onNotificationReceived = (payload: NotificationItem) => {
+      if (!isUserNotificationEvent(payload?.event_type)) {
+        return;
+      }
+
+      const notificationUserId =
+        (typeof payload?.metadata?.user_id === 'string' && payload.metadata.user_id)
+        || (typeof payload?.entity_id === 'string' && payload.entity_id)
+        || null;
+
+      if (!notificationUserId || String(notificationUserId) !== String(currentUserId)) {
+        return;
+      }
+
+      if (payload.event_type === 'user_deleted') {
+        logout();
+        window.location.replace('/login');
+        return;
+      }
+
+      void refreshCurrentUser();
+    };
+
+    socket.on('notification:received', onNotificationReceived);
+
+    return () => {
+      socket.off('notification:received', onNotificationReceived);
+      socket.disconnect();
+    };
+  }, [currentUserId, logout, refreshCurrentUser, socket]);
 
   const currentPath = mounted && typeof window !== 'undefined' ? window.location.pathname : '';
 

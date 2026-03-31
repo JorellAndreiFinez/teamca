@@ -70,11 +70,12 @@ export default function TaskRow({ task, onClick, selectionMode, selected, canSel
     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
     : 'hover:bg-slate-50';
   const nonDeletableClassName = selectionMode && !canSelect ? 'bg-amber-50/60' : '';
+  const rowCursorClassName = selectionMode && !canSelect ? 'cursor-not-allowed' : 'cursor-pointer';
 
   return (
     <tr
-      className={`cursor-pointer border-b border-slate-100 ${rowClassName} ${nonDeletableClassName}`}
-      onClick={selectionMode ? onToggleSelect : onClick}
+      className={`${rowCursorClassName} border-b border-slate-100 ${rowClassName} ${nonDeletableClassName}`}
+      onClick={selectionMode ? (canSelect ? onToggleSelect : undefined) : onClick}
     >
       {selectionMode ? (
         <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>

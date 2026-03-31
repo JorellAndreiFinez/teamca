@@ -22,7 +22,7 @@ router.get(
 router.get(
   "/",
   authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"], ["Head", "Supervisor", "Intern"]),
+  requireAnyRole(["Superadmin", "Admin"], ["Head", "Supervisor"]),
   getUsers,
 );
 
@@ -32,7 +32,7 @@ router.put("/:userId", authMiddleware, updateUser);
 router.post(
   "/",
   authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"]),
+  requireGlobalRole("Superadmin"),
   createUser,
 );
 
