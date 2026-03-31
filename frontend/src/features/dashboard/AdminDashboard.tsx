@@ -1,33 +1,13 @@
 // frontend\src\features\dashboard\AdminDashboard.tsx
 
-import React from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "../../store/authStore";
 import Card from "../../components/ui/Card";
 import TaskBriefWidget from "./components/TaskBriefWidget";
+import DashboardStatCard from "./components/DashboardStatCard";
 import Button from "../../components/ui/Button";
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: string;
-  change?: string;
-}
-
-function StatCard({ label, value, icon, color, change }: StatCardProps) {
-  return (
-    <div className={`rounded-xl p-5 border ${color}`}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-600">{label}</span>
-        <div className="w-9 h-9 rounded-lg bg-white/60 flex items-center justify-center">
-          {icon}
-        </div>
-      </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      {change && <p className="text-xs text-gray-500 mt-1">{change}</p>}
-    </div>
-  );
-}
+import { taskService } from "../../services/taskService";
+import type { Task } from "../../types/task";
 
 function UsersIcon() {
   return (
@@ -103,6 +83,41 @@ function DeptIcon() {
 
 export default function AdminDashboard() {
   const user = useAuthStore((state) => state.user);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskLoading, setTaskLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTasks = async () => {
+      setTaskLoading(true);
+      try {
+        const data = await taskService.getTasks();
+        if (!cancelled) {
+          setTasks(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setTasks([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setTaskLoading(false);
+        }
+      }
+    };
+
+    void loadTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeTaskCount = useMemo(
+    () => tasks.filter((task) => task.status !== "Completed").length,
+    [tasks],
+  );
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -116,29 +131,29 @@ export default function AdminDashboard() {
       label: "Total Interns",
       value: 24,
       icon: <UsersIcon />,
-      color: "bg-blue-50 border-blue-100",
-      change: "+3 this month",
+      tone: "blue" as const,
+      hint: "+3 this month",
     },
     {
       label: "Active Tasks",
-      value: 18,
+      value: taskLoading ? "..." : activeTaskCount,
       icon: <TaskIcon />,
-      color: "bg-green-50 border-green-100",
-      change: "5 due this week",
+      tone: "green" as const,
+      hint: taskLoading ? "Syncing tasks" : `${tasks.length} total tasks`,
     },
     {
       label: "Avg. Hours Rendered",
       value: "312h",
       icon: <ClockIcon />,
-      color: "bg-orange-50 border-orange-100",
-      change: "65% of required",
+      tone: "amber" as const,
+      hint: "65% of required",
     },
     {
       label: "Departments",
       value: 4,
       icon: <DeptIcon />,
-      color: "bg-purple-50 border-purple-100",
-      change: "All active",
+      tone: "purple" as const,
+      hint: "All active",
     },
   ];
 
@@ -180,15 +195,15 @@ export default function AdminDashboard() {
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((s) => (
-          <StatCard key={s.label} {...s} />
+          <DashboardStatCard key={s.label} {...s} />
         ))}
       </div>
 
       {/* Content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task overview */}
-        <Card title="Recent Tasks" subtitle="Tasks requiring attention">
-          <TaskBriefWidget />
+        <Card title="Task Brief" subtitle="Current task status summary">
+          <TaskBriefWidget tasks={tasks} isLoading={taskLoading} />
         </Card>
 
         {/* Attendance overview */}

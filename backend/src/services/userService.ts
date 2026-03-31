@@ -174,7 +174,6 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
 export const deleteWhitelistedUser = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found.");
-  if (user.is_active) throw new Error("Cannot delete an active user.");
 
   await user.deleteOne();
   return { message: "Whitelisted user deleted" };

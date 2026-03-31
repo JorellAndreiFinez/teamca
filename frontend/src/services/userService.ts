@@ -41,9 +41,11 @@ export const userService = {
     try {
       await api.delete(`/users/${userId}`);
       console.log(`[deleteUser] User ${userId} deleted successfully`);
-    } catch (err) {
-      console.error(`[deleteUser] Failed to delete user ${userId}:`, err);
-      throw err;
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || "Failed to delete user";
+      console.error(`[deleteUser] Failed to delete user ${userId}:`, message);
+      const error = new Error(message);
+      throw error;
     }
   },
 

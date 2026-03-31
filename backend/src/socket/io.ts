@@ -135,3 +135,19 @@ export const emitUsersNotification = (userIds: string[], payload: unknown) => {
     ioInstance.to(`user:${userId}`).emit("notification:received", payload);
   }
 };
+
+export const emitUsersDirectoryUpdated = (userIds: string[], payload: unknown) => {
+  if (!ioInstance) {
+    return;
+  }
+
+  const uniqueUserIds = [...new Set(
+    userIds
+      .map((userId) => userId.trim())
+      .filter((userId) => userId.length > 0),
+  )];
+
+  for (const userId of uniqueUserIds) {
+    ioInstance.to(`user:${userId}`).emit("user:directory-updated", payload);
+  }
+};

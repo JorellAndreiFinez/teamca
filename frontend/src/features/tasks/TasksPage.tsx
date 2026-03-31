@@ -781,6 +781,11 @@ export default function TasksPage() {
   };
 
   const handleToggleTaskSelection = (taskId: string) => {
+    const targetTask = orderedTasks.find((task) => String(task.task_id) === taskId);
+    if (!targetTask || !canDeleteTask(targetTask)) {
+      return;
+    }
+
     setSelectedTaskIds((prev) => (
       prev.includes(taskId)
         ? prev.filter((id) => id !== taskId)

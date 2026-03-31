@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { userService } from "@/services/userService";
 import { departmentService } from "@/services/departmentService";
+import { useAuthStore } from "@/store/authStore";
 import type { Department, User } from "@/types/user";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
   user: User | null;
+  scope?: "full" | "limited";
 }
 
 const departmentRoles = ["Intern", "Supervisor", "Head"];
@@ -21,7 +23,11 @@ export default function UpdateUserModal({
   onClose,
   onSuccess,
   user,
+  scope = "full",
 }: Props) {
+  const currentUser = useAuthStore((state) => state.user);
+  const setAuthUser = useAuthStore((state) => state.setUser);
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -94,28 +100,37 @@ export default function UpdateUserModal({
       const payload: any = {
         first_name: form.first_name,
         last_name: form.last_name,
-        global_role: form.global_role,
-        is_active: form.is_active,
       };
 
-      // only update password if provided
-      if (form.password) {
-        payload.password_hash = form.password;
+      if (scope === "full") {
+        payload.global_role = form.global_role;
+        payload.is_active = form.is_active;
+
+        // only update password if provided
+        if (form.password) {
+          payload.password_hash = form.password;
+        }
+
+        // departments handling
+        if (form.department_id) {
+          payload.departments = [
+            {
+              department_id: form.department_id,
+              department_role: form.department_role,
+            },
+          ];
+        } else {
+          payload.departments = [];
+        }
       }
 
-      // departments handling
-      if (form.department_id) {
-        payload.departments = [
-          {
-            department_id: form.department_id,
-            department_role: form.department_role,
-          },
-        ];
-      } else {
-        payload.departments = [];
-      }
+      const updated = await userService.updateUser(user._id, payload);
 
-      await userService.updateUser(user._id, payload);
+      const currentUserId = currentUser?.user_id || currentUser?._id;
+      const updatedUserId = updated?.user_id || updated?._id;
+      if (currentUserId && updatedUserId && String(currentUserId) === String(updatedUserId)) {
+        setAuthUser(updated);
+      }
 
       onSuccess();
       onClose();
@@ -172,6 +187,7 @@ export default function UpdateUserModal({
             placeholder="New Password (optional)"
             value={form.password}
             onChange={handleInputChange}
+            disabled={scope === "limited"}
           />
 
           {/* Role & Status */}
@@ -180,6 +196,7 @@ export default function UpdateUserModal({
               name="global_role"
               value={form.global_role}
               onChange={handleSelectChange}
+              disabled={scope === "limited"}
               className="w-full h-10 rounded-lg border px-3"
             >
               <option value="Superadmin">Superadmin</option>
@@ -191,6 +208,7 @@ export default function UpdateUserModal({
               name="is_active"
               value={String(form.is_active)}
               onChange={handleSelectChange}
+              disabled={scope === "limited"}
               className="w-full h-10 rounded-lg border px-3"
             >
               <option value="true">Active</option>
@@ -204,6 +222,7 @@ export default function UpdateUserModal({
               name="department_id"
               value={form.department_id}
               onChange={handleSelectChange}
+              disabled={scope === "limited"}
               className="w-full h-10 rounded-lg border px-3"
             >
               <option value="">None</option>
@@ -218,7 +237,7 @@ export default function UpdateUserModal({
               name="department_role"
               value={form.department_role}
               onChange={handleSelectChange}
-              disabled={!form.department_id}
+              disabled={scope === "limited" || !form.department_id}
               className="w-full h-10 rounded-lg border px-3"
             >
               <option value="">Select role</option>

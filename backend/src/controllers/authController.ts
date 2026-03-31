@@ -41,7 +41,7 @@ export const checkEmail = async (req: Request, res: Response) => {
  */
 // backend/controllers/authController.ts
 export const login = async (req: Request, res: Response) => {
-  console.log("\n🔐 [LOGIN ATTEMPT FROM FRONTEND]");
+  console.log("\n[LOGIN ATTEMPT FROM FRONTEND]");
   console.log("➡️ Email:", req.body.email);
   console.log("⏱ Timestamp:", new Date().toISOString());
 

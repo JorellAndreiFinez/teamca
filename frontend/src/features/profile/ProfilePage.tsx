@@ -16,6 +16,13 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
+  React.useEffect(() => {
+    setFormData({
+      first_name: user?.first_name ?? '',
+      last_name: user?.last_name ?? '',
+    });
+  }, [user?.first_name, user?.last_name]);
+
   if (!mounted) return null;
 
   if (!isAuthenticated) {
@@ -35,7 +42,7 @@ export default function ProfilePage() {
     ? 'Super Admin'
     : user?.global_role === 'Admin'
     ? 'Admin'
-    : user?.department_role || 'Intern';
+    : user?.departments?.[0]?.department_role || 'Intern';
 
   return (
     <div className="max-w-3xl mx-auto">
