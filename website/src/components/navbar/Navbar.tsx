@@ -1,79 +1,54 @@
+// website\src\components\navbar\Navbar.tsx
+
 import React, { useState } from "react";
+import Button from "../ui/Button";
 import MobileMenu from "./MobileMenu";
 import "../../styles/global.css";
+import { File, LogIn } from "lucide-react";
 
 const Navbar: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const links = ["Home", "About", "Careers", "Services", "Contact"];
+  const links = ["Home", "About", "Services", "Careers"];
 
   return (
     <div className="fixed top-0 left-0 w-full z-50">
-      <svg
-        className="absolute inset-0 w-full h-full -z-10"
-        width="1440"
-        height="720"
-        viewBox="0 0 1440 720"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path stroke="#1D293D" strokeOpacity=".7" d="M-15.227 702.342H1439.7" />
-        <circle
-          cx="711.819"
-          cy="372.562"
-          r="308.334"
-          stroke="#1D293D"
-          strokeOpacity=".7"
-        />
-        <circle
-          cx="16.942"
-          cy="20.834"
-          r="308.334"
-          stroke="#1D293D"
-          strokeOpacity=".7"
-        />
-        <path
-          stroke="#1D293D"
-          strokeOpacity=".7"
-          d="M-15.227 573.66H1439.7M-15.227 164.029H1439.7"
-        />
-        <circle
-          cx="782.595"
-          cy="411.166"
-          r="308.334"
-          stroke="#1D293D"
-          strokeOpacity=".7"
-        />
-      </svg>
-
-      <nav className="flex items-center justify-between w-full py-4 px-6 md:px-16 lg:px-24 xl:px-32 bg-white/90 z-99 text-sm">
+      <nav className="flex items-center justify-between w-full py-4 px-6 md:px-16 lg:px-24 xl:px-32 backdrop-blur-md border-b border-[--br-color-default] text-black">
         <a href="/" className="flex items-center space-x-3">
           <img
-            src="/icons/teamca-white-circle-logo.png"
+            src="/icons/teamca-transparent-logo-1.png"
             alt="Team CA Logo"
             className="w-10 h-10 object-cover"
           />
-          <span className="text-2xl font-extrabold tracking-wide">TEAM CA</span>
         </a>
 
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex gap-12 justify-center flex-1">
           {links.map((link) => (
             <a
               key={link}
               href={`/${link.toLowerCase()}`}
-              className="transition"
+              className="text-sm font-medium transition hover:text-primary-color"
             >
               {link}
             </a>
           ))}
         </div>
 
-        <button className="hidden md:block px-6 py-2.5 text-black bg-white hover:bg-slate-200 active:scale-95 transition-all rounded-full">
-          Login
-        </button>
+        <div className="hidden md:flex items-center gap-4">
+          <Button
+            variant="secondary"
+            className="flex items-center gap-2 backdrop-blur-md "
+          >
+            <File className="w-4 h-4" />
+            Application Guideline
+          </Button>
+
+          <Button variant="default" className="flex items-center gap-2">
+            <LogIn className="w-4 h-4" />
+            Login
+          </Button>
+        </div>
 
         <button
-          id="open-menu"
           className="md:hidden active:scale-90 transition"
           onClick={() => setMenuOpen(!menuOpen)}
         >
@@ -94,8 +69,6 @@ const Navbar: React.FC = () => {
           </svg>
         </button>
       </nav>
-
-      {menuOpen && <MobileMenu closeMenu={() => setMenuOpen(false)} />}
     </div>
   );
 };
