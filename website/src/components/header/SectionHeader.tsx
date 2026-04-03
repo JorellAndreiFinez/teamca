@@ -1,133 +1,64 @@
+// SectionHeader.tsx
 import React from "react";
-import Button from "../ui/Button";
 
-interface SectionHeaderProps {
-  subtitle?: string;
+type SectionHeaderProps = {
   title: string;
-  description?: string;
-  align?: "left" | "center" | "right" | "hybrid";
-  size?: "sm" | "md" | "lg" | "xl";
-  contrast?: "light" | "dark";
-  hasButton?: boolean;
-  buttonText?: string;
-  onButtonClick?: () => void;
-}
-
-const alignments: Record<"left" | "center" | "right", string> = {
-  left: "text-left items-start mx-0",
-  center: "text-center items-center mx-auto",
-  right: "text-right items-end ml-auto",
-};
-
-const contrasts: Record<"light" | "dark", React.CSSProperties> = {
-  light: { color: "var(--primary-color)" },
-  dark: { color: "var(--secondary-color)" },
-};
-
-const sizes: Record<
-  "sm" | "md" | "lg" | "xl",
-  { subtitle: string; title: string; description: string }
-> = {
-  sm: {
-    subtitle: "text-xs",
-    title: "text-2xl md:text-3xl",
-    description: "text-sm md:text-base",
-  },
-  md: {
-    subtitle: "text-sm",
-    title: "text-4xl md:text-5xl",
-    description: "text-base md:text-lg",
-  },
-  lg: {
-    subtitle: "text-base",
-    title: "text-5xl md:text-6xl lg:text-7xl",
-    description: "text-lg md:text-xl",
-  },
-  xl: {
-    subtitle: "text-base",
-    title: "text-6xl md:text-6xl lg:text-7xl",
-    description: "text-lg md:text-xl",
-  },
+  description?: string | null;
+  align?: "left" | "center" | "right";
+  color?: "yellow" | "white";
+  size?: "xs" | "sm" | "lg" | "xl";
 };
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
-  subtitle,
   title,
   description,
-  contrast = "light",
-  align = "center",
-  size = "md",
-  hasButton = false,
-  buttonText = "Learn More",
-  onButtonClick,
+  align = "left",
+  color = "white",
+  size = "lg",
 }) => {
-  const currentSize = sizes[size];
+  // Tailwind alignment mapping
+  const alignClasses: Record<string, string> = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+  };
 
-  if (align === "hybrid") {
-    return (
-      <div className="w-full">
-        {subtitle && (
-          <p
-            className={`${currentSize.subtitle} uppercase font-semibold tracking-widest ${contrasts[contrast]} mb-4 text-center lg:text-left`}
-          >
-            {subtitle}
-          </p>
-        )}
+  // Tailwind color mapping
+  const colorClasses: Record<string, string> = {
+    white: "text-[--white-color]",
+    yellow: "text-[--secondary-color]",
+  };
 
-        <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
-          <h2
-            className={`${currentSize.title} font-bold text-[--light-primary-color] leading-tight lg:w-1/2`}
-          >
-            {title}
-          </h2>
+  // Tailwind size mapping (h2 / p)
+  const sizeClasses: Record<string, { h2: string; p: string }> = {
+    xs: {
+      h2: "text-xl sm:text-2xl lg:text-3xl",
+      p: "text-sm sm:text-base lg:text-lg",
+    },
+    sm: {
+      h2: "text-2xl sm:text-3xl lg:text-4xl",
+      p: "text-base sm:text-lg lg:text-xl",
+    },
+    lg: {
+      h2: "text-3xl sm:text-4xl lg:text-5xl",
+      p: "text-lg sm:text-xl lg:text-2xl",
+    },
+    xl: {
+      h2: "text-4xl sm:text-5xl lg:text-6xl",
+      p: "text-xl sm:text-2xl lg:text-3xl",
+    },
+  };
 
-          {description && (
-            <p className={`${currentSize.description} text-gray-700 lg:w-1/2`}>
-              {description}
-            </p>
-          )}
-        </div>
-
-        {hasButton && (
-          <div className="mt-6">
-            <Button variant="primary" onClick={onButtonClick}>
-              {buttonText}
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const currentSize = sizeClasses[size];
 
   return (
-    <div className={`flex flex-col space-y-6 max-w-3xl ${alignments[align]}`}>
-      {subtitle && (
-        <p
-          className={`${currentSize.subtitle} uppercase font-semibold tracking-widest -mb-3 ${contrasts[contrast]}`}
-        >
-          {subtitle}
-        </p>
-      )}
-
+    <div className={`mb-8 ${alignClasses[align]} max-w-8xl`}>
       <h2
-        className={`${currentSize.title} font-bold text-[--light-primary-color] leading-tight`}
+        className={`font-bold my-10 ${colorClasses[color]} ${currentSize.h2}`}
       >
         {title}
       </h2>
-
-      {description && (
-        <p className={`${currentSize.description} text-gray-700`}>
-          {description}
-        </p>
-      )}
-
-      {hasButton && (
-        <div>
-          <Button variant="primary" onClick={onButtonClick}>
-            {buttonText}
-          </Button>
-        </div>
-      )}
+      {description && <p className={`mb-5 ${currentSize.p}`}>{description}</p>}
     </div>
   );
 };

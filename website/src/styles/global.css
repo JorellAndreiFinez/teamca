@@ -24,18 +24,36 @@
   --black-color: rgb(25, 23, 27);
 
   --dark-primary: #2f0101;
+  --dark-primary-2: #2b0000;
 
   --btn-default: linear-gradient(90deg, #ffbc20 0%, #ff9d00 100%);
   --btn-secondary: linear-gradient(90deg, #ac1212 0%, #781010 100%);
 
   --br-color-default: #ffce7e;
   --br-color-secondary: #d45b5b;
+  --br-color-card: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.01) 35%,
+    rgba(255, 255, 255, 0.01) 65%,
+    rgba(255, 255, 255, 0.54) 100%
+  );
+
+  --card-bg-color-primary: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+
+  --pagination-color: rgb(210, 159, 34, 0.5);
 
   --font-heading: "Alexandria", sans-serif;
   --font-body: "Poppins", sans-serif;
 
   --font-heading-weight: 700;
   --font-body-weight: 400;
+
+  --affliation-text: #99a1af;
 }
 
 html,
@@ -61,8 +79,8 @@ h6 {
 
 body,
 a,
-p,
-button {
+p {
+  color: var(--white-color);
   font-family: var(--font-body);
   font-weight: var(--font-body-weight);
 }
