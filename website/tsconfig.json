@@ -5,11 +5,9 @@
     "jsxImportSource": "react",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "baseUrl": "src",
-    "paths": {
-      "@/*": ["*"]
-    }
+    "noEmit": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

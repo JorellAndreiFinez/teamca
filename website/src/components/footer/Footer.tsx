@@ -3,7 +3,7 @@ import React from "react";
 const Footer: React.FC = () => {
   return (
     <div className="bg-[--dark-primary]">
-      <footer className="bg-[--primary-color] text-gray-200 rounded-t-2xl overflow-hidden shadow-2xl mx-auto max-w-7xl">
+      <footer className="bg-[--primary-color] text-gray-200 rounded-t-2xl overflow-hidden shadow-2xl mx-auto max-w-full">
         <div className="px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8">
             {/* Column 1 */}
