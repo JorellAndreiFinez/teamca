@@ -1,5 +1,5 @@
 import { Router } from "express";
-import authenticateJWT from "../middlewares/auth";
+import authenticateJWT from "../middleware/auth";
 import {
   addTaskCommentHandler,
   addTaskWorkLinkHandler,

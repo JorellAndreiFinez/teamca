@@ -1,207 +1,83 @@
-import React, { useEffect, useRef } from "react";
-import Button from "../ui/Button";
-import { File } from "lucide-react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
+import React from "react";
 
 const HomeHero: React.FC = () => {
-  const textRef = useRef<HTMLDivElement>(null);
-  const posterRef = useRef<HTMLDivElement>(null);
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const popImageRef = useRef<HTMLDivElement>(null);
-  const bottomImageRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!textRef.current || !posterRef.current || !sectionRef.current) return;
-
-    const poster = posterRef.current;
-    const posterImg = poster.querySelector("img");
-    const bottomImg = bottomImageRef.current;
-
-    // Hero text animation
-    gsap.fromTo(
-      textRef.current,
-      { y: 50, opacity: 0 },
-      {
-        y: 0,
-        opacity: 1,
-        duration: 0.8,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: textRef.current,
-          start: "top 80%",
-          toggleActions: "play reverse play reverse",
-        },
-      },
-    );
-
-    // Poster animation
-    gsap.set(poster, { yPercent: 800, opacity: 0 });
-    if (posterImg)
-      gsap.set(posterImg, {
-        scale: 1.6,
-        willChange: "transform",
-        force3D: true,
-      });
-
-    gsap.to(poster, {
-      yPercent: 0,
-      opacity: 1,
-      ease: "power3.out",
-      scrollTrigger: {
-        trigger: textRef.current,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 1,
-      },
-    });
-
-    if (posterImg) {
-      gsap.to(posterImg, {
-        scale: 1,
-        ease: "none",
-        scrollTrigger: {
-          trigger: textRef.current,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-    }
-
-    // Poster stops above bottom image
-    if (poster && bottomImg) {
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: () =>
-          `top+=${textRef.current!.offsetTop + textRef.current!.offsetHeight} bottom`,
-        end: "bottom bottom",
-        onUpdate: (self) => {
-          const bottomImageHeight = bottomImg.offsetHeight;
-          if (self.progress >= 1) {
-            poster.style.position = "absolute";
-            poster.style.bottom = `${bottomImageHeight}px`;
-          } else {
-            poster.style.position = "fixed";
-            poster.style.bottom = "0px";
-          }
-        },
-        scrub: true,
-      });
-    }
-
-    // Pop-in image animation
-    if (popImageRef.current) {
-      const pop = popImageRef.current;
-      const sectionHeight = sectionRef.current.offsetHeight;
-
-      gsap.set(pop, {
-        y: sectionHeight,
-        opacity: 1,
-        position: "absolute",
-        left: "50%",
-        xPercent: -50,
-        zIndex: 5,
-        width: "100%",
-      });
-
-      gsap.to(pop, {
-        y: -pop.offsetHeight,
-        ease: "none",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-    }
-
-    // Bottom full-width image animation
-    if (bottomImg) {
-      const sectionHeight = sectionRef.current.offsetHeight;
-      gsap.set(bottomImg, {
-        y: sectionHeight + 200,
-        opacity: 1,
-        position: "absolute",
-        left: 0,
-        width: "100%",
-        zIndex: 4,
-      });
-
-      gsap.to(bottomImg, {
-        y: 0,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top bottom",
-          end: "bottom bottom",
-          scrub: 1,
-        },
-      });
-    }
-  }, []);
-
   return (
-    <section
-      ref={sectionRef}
-      className="relative w-full min-h-[250vh] overflow-hidden"
-    >
+    <section className="relative w-full min-h-screen overflow-hidden m-0 p-0">
       <img
-        src="/partials/circle-gradient-shade.png"
-        className="absolute inset-0 w-full h-full object-cover z-0"
+        src="https://images.pexels.com/photos/6694492/pexels-photo-6694492.jpeg"
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
-      {/* Hero text */}
+      <div className="absolute inset-0 bg-black/80"></div>
+
+      {/* <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(circle at top left, rgba(106,52,5,0.95), transparent 75%),
+            radial-gradient(circle at bottom right, rgba(210,155,41,0.15), transparent 45%)
+          `,
+        }}
+      ></div> */}
+
       <div
-        ref={textRef}
-        className="absolute top-60 left-12 md:left-24 lg:left-32 max-w-5xl text-left z-20"
+        className="
+        absolute z-20 font-semibold
+        left-6 md:left-10 lg:left-14 xl:left-18
+        top-28 sm:top-32 md:top-1/2
+        md:-translate-y-1/2
+        w-[85%] sm:w-80 md:w-96
+        p-3 sm:p-4
+        rounded-lg
+        "
       >
-        <h1 className="text-6xl md:text-7xl font-heading text-white mb-4">
-          At Pru Life UK, we believe that every life is insurable.
-        </h1>
-        <p className="text-white/90 text-xl md:text-2xl mb-6 max-w-lg">
-          Because love means preparing for their future, no matter what.
+        <p className="text-lg text-white font-medium leading-relaxed">
+          TEAM CA is part of the Black Orcas Summit Life Insurance Agency,
+          providing professional opportunities for interns and financial
+          advisors under Pru Life UK Philippines.
         </p>
-        <Button variant="default" className="flex items-center gap-2">
-          <File className="w-4 h-4" />
-          Learn More
-        </Button>
       </div>
 
-      {/* Pop-in Image */}
-      <div
-        ref={popImageRef}
-        className="absolute left-1/2 -translate-x-1/2 z-5 w-full"
-      >
-        <img
-          src="/partials/pru-black-agency.png"
-          alt="Pop In"
-          className="w-full h-auto object-cover"
-        />
-      </div>
+      <div className="absolute bottom-10 left-4 md:left-8 lg:left-12 xl:left-14 flex flex-col sm:flex-row items-start sm:items-end gap-6 z-20">
+        <h1
+          className="font-bold text-[--light-primary-color] leading-none
+          text-7xl xs:text-8xl
+          tracking-tight
+          block sm:hidden"
+        >
+          TEAM CA
+        </h1>
+        <div className="bg-[--secondary-color] rounded-2xl p-5 md:p-8 space-y-4 shadow-lg max-w-sm md:max-w-md">
+          <p className="text-[--primary-color] text-lg md:text-xl">
+            Helping individuals and families secure their financial future
+            through smart financial planning and protection.
+          </p>
 
-      {/* Poster */}
-      <div
-        ref={posterRef}
-        className="w-full flex justify-center z-10 absolute left-1/2 -translate-x-1/2"
-      >
-        <img
-          src="/partials/team-poster.png"
-          alt="Team Poster"
-          className="h-full w-full object-contain"
-        />
-      </div>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <a
+              href="/services"
+              className="bg-white text-black px-5 py-2.5 rounded-md font-semibold hover:bg-gray-200 transition"
+            >
+              Our Services
+            </a>
 
-      {/* Bottom full-width image */}
-      <div ref={bottomImageRef} className="absolute bottom-0 left-0 w-full z-4">
-        <img
-          src="/partials/pru-gallery.png"
-          alt="Bottom Banner"
-          className="w-full h-auto object-cover"
-        />
+            <a
+              href="/contact"
+              className="border border-white text-black px-5 py-2.5 rounded-md hover:bg-white/20 transition"
+            >
+              Book Consultation
+            </a>
+          </div>
+        </div>
+
+        <h1
+          className="font-bold text-[--light-primary-color] leading-none
+          text-8xl lg:text-9xl mx-1 
+          tracking-tight
+          hidden sm:block"
+        >
+          TEAM CA
+        </h1>
       </div>
     </section>
   );

@@ -17,11 +17,8 @@ const MainLayout = ({ children }: LayoutProps) => {
           href="/icons/teamca-white-circle-logo.png"
         />
       </Helmet>
-
       <Navbar />
-
-      {/* FIX HERE */}
-      <main className="flex flex-col flex-grow">{children}</main>
+      <main className="flex-grow">{children}</main>
 
       <Footer />
     </div>
