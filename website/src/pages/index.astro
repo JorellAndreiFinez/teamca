@@ -6,7 +6,7 @@ import WhatWeDo from '../components/sections/home/WhatWeDo.tsx';
 import WhoWeAre from '../components/sections/home/WhoWeAre.tsx';
 import WhyFinancialMatters from '../components/sections/home/WhyFinancialMatters.tsx';
 import Testimonials from '../components/sections/home/Testimonials.tsx';
-import CTA from '../components/sections/CTA.tsx';
+import CTA from '../components/sections/home/CTA.tsx';
 
 ---
 <html lang="en">
@@ -16,18 +16,12 @@ import CTA from '../components/sections/CTA.tsx';
   <body>
     <MainLayout client:load>
       <HomeHero client:load />
-      <WhatWeDo  client:load/>
       <WhoWeAre client:load />
+      <WhatWeDo client:load />
       <WhyFinancialMatters client:load />
       <Testimonials client:load />
-      <CTA client:load
-        title="Be a Valued Financial Advisor"
-        subtitle="Looking for a meaningful career?"
-        contrast="dark"
-        buttonText="Sign Up"
-        buttonLink="#"
-        bgImage="/images/home/financial-advisors-2.jpg"
-      />
+      <CTA client:load />
+
     </MainLayout>
   </body>
 </html>
