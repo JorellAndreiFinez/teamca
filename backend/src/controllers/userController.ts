@@ -1,13 +1,11 @@
-// backend\src\controllers\userController.ts
-
-// backend\src\controllers\userController.ts
-
 import { Request, Response } from "express";
 import User from "../models/User";
 import {
   createUser as createUserService,
   updateUser as updateUserService,
   deleteWhitelistedUser as deleteUserService,
+  createWhitelistedUser,
+  activateWhitelistedUser,
 } from "../services/userService";
 import { createNotificationsForRecipients } from "../services/notificationService";
 import { emitUsersDirectoryUpdated, emitUsersNotification } from "../socket/io";
@@ -203,6 +201,73 @@ export const createUser = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[createUser] error:", err);
     res.status(400).json({ message: err.message || "Failed to create user" });
+  }
+};
+
+export const createWhitelistedUserHandler = async (req: Request, res: Response) => {
+  try {
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const newUser = await createWhitelistedUser({ email });
+
+    // Audit log: whitelist operation
+    console.log(`[createWhitelistedUser] Email whitelisted: ${email} by user ${req.user?.user_id}`);
+    res.status(201).json(newUser);
+  } catch (err: any) {
+    console.error("[createWhitelistedUser] error:", err);
+    res.status(400).json({ message: err.message || "Failed to whitelist email" });
+  }
+};
+
+export const activateWhitelistedUserHandler = async (req: Request, res: Response) => {
+  try {
+    const userId = getUserIdParam(req);
+    const first_name = String(req.body?.first_name ?? "").trim();
+    const last_name = String(req.body?.last_name ?? "").trim();
+    const password_hash = String(req.body?.password_hash ?? "");
+    const global_role = req.body?.global_role || "Standard_User";
+    const department_id = req.body?.department_id;
+    const department_role = req.body?.department_role || "Intern";
+
+    if (!first_name || !last_name || !password_hash) {
+      return res.status(400).json({ message: "First name, last name, and password are required" });
+    }
+
+    // Validate name length
+    if (first_name.length < 2 || last_name.length < 2) {
+      return res.status(400).json({ message: "Names must be at least 2 characters" });
+    }
+
+    // Validate password hash format (should be bcrypt hash)
+    if (!password_hash.startsWith("$2")) {
+      return res.status(400).json({ message: "Invalid password format" });
+    }
+
+    const user = await activateWhitelistedUser(userId, {
+      first_name,
+      last_name,
+      password_hash,
+      global_role: global_role as "Superadmin" | "Admin" | "Standard_User",
+      department_id,
+      department_role: department_role as "Head" | "Supervisor" | "Intern",
+    });
+
+    // Audit log: activation operation
+    console.log(`[activateWhitelistedUser] User activated: ${first_name} ${last_name} (${userId}) by ${req.user?.user_id}`);
+    res.json(user);
+  } catch (err: any) {
+    console.error("[activateWhitelistedUser] error:", err);
+    res.status(400).json({ message: err.message || "Failed to activate whitelisted user" });
   }
 };
 

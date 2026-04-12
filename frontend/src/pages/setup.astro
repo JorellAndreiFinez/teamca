@@ -6,7 +6,5 @@ const email = Astro.url.searchParams.get("email") ?? "";
 ---
 
 <AuthLayout>
-  <div class="min-h-screen bg-slate-50 px-4 py-10">
-    <FirstTimeSetupForm email={email} client:load />
-  </div>
+  <FirstTimeSetupForm email={email} client:load />
 </AuthLayout>

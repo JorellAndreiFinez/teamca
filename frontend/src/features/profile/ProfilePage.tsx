@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
+import { userService } from '../../services/userService';
+import { internProfileService } from '../../services/internProfileService';
+import type { InternProfile } from '../../types/user';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -9,19 +12,61 @@ export default function ProfilePage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [internProfile, setInternProfile] = useState<InternProfile | null>(null);
   const [formData, setFormData] = useState({
     first_name: user?.first_name ?? '',
     last_name: user?.last_name ?? '',
+    school_university: '',
+    required_hours: 0,
+    expected_end_date: '',
+    actual_end_date: '',
   });
   const [mounted, setMounted] = useState(false);
-  React.useEffect(() => { setMounted(true); }, []);
+  const [error, setError] = useState('');
+  const setUser = useAuthStore((state) => state.setUser);
 
   React.useEffect(() => {
-    setFormData({
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (user?._id) {
+      internProfileService
+        .getInternProfileByUserId(user._id)
+        .then((profile) => {
+          if (!profile) {
+            setInternProfile(null);
+            return;
+          }
+          setInternProfile(profile);
+          const endDate = profile.expected_end_date
+            ? new Date(profile.expected_end_date).toISOString().split('T')[0]
+            : '';
+          const actualDate = profile.actual_end_date
+            ? new Date(profile.actual_end_date).toISOString().split('T')[0]
+            : '';
+          setFormData((prev) => ({
+            ...prev,
+            school_university: profile.school_university,
+            required_hours: profile.required_hours,
+            expected_end_date: endDate,
+            actual_end_date: actualDate,
+          }));
+        })
+        .catch((err) => {
+          console.error('Failed to fetch intern profile:', err);
+          setInternProfile(null);
+        });
+    }
+  }, [user?._id]);
+
+  React.useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
       first_name: user?.first_name ?? '',
       last_name: user?.last_name ?? '',
-    });
-  }, [user?.first_name, user?.last_name]);
+    }));
+  }, [user?._id]);
 
   if (!mounted) return null;
 
@@ -31,11 +76,38 @@ export default function ProfilePage() {
   }
 
   const handleSave = async () => {
-    setSaving(true);
-    // TODO: connect to backend userService.updateProfile
-    await new Promise((r) => setTimeout(r, 800));
-    setSaving(false);
-    setEditing(false);
+    if (!user) return;
+
+    try {
+      setError('');
+      setSaving(true);
+
+      const userPromise = userService.updateUser(user._id, {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+      });
+
+      const profilePromise = internProfile
+        ? internProfileService.updateInternProfile(user._id, {
+            school_university: formData.school_university,
+            required_hours: formData.required_hours,
+            expected_end_date: formData.expected_end_date,
+            actual_end_date: formData.actual_end_date || null,
+          })
+        : Promise.resolve(null);
+
+      const [updatedUser, updatedProfile] = await Promise.all([userPromise, profilePromise]);
+
+      setUser(updatedUser);
+      if (updatedProfile) {
+        setInternProfile(updatedProfile);
+      }
+      setSaving(false);
+      setEditing(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save profile');
+      setSaving(false);
+    }
   };
 
   const roleLabel = user?.global_role === 'Superadmin'
@@ -56,7 +128,9 @@ export default function ProfilePage() {
         <div className="flex items-center gap-5">
           <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-2xl font-bold">
-              {user ? `${user.first_name[0]}${user.last_name[0]}` : 'U'}
+              {user && user.first_name && user.last_name
+                ? `${user.first_name[0]}${user.last_name[0]}`
+                : 'U'}
             </span>
           </div>
           <div>
@@ -87,8 +161,13 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Profile details */}
+      {/* Account Details */}
       <Card title="Account Details">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {editing ? (
             <>
@@ -109,6 +188,10 @@ export default function ProfilePage() {
                 helperText="Contact admin to change email"
                 disabled
               />
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-0.5">Role</p>
+                <p className="text-sm font-medium text-gray-800">{roleLabel}</p>
+              </div>
             </>
           ) : (
             <>
@@ -136,16 +219,75 @@ export default function ProfilePage() {
                   {user?.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>
-              {user?.department_id && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5">Department ID</p>
-                  <p className="text-sm text-gray-800">#{user.department_id}</p>
-                </div>
-              )}
             </>
           )}
         </div>
       </Card>
+
+      {/* Internship Details */}
+      {internProfile && (
+        <Card title="Internship Details" className="mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {editing ? (
+              <>
+                <Input
+                  label="School/University"
+                  value={formData.school_university}
+                  onChange={(e) => setFormData((p) => ({ ...p, school_university: e.target.value }))}
+                />
+                <Input
+                  label="Required Hours"
+                  type="number"
+                  min="1"
+                  value={formData.required_hours}
+                  onChange={(e) => setFormData((p) => ({ ...p, required_hours: parseInt(e.target.value) || 0 }))}
+                />
+                <Input
+                  label="Expected End Date"
+                  type="date"
+                  value={formData.expected_end_date}
+                  onChange={(e) => setFormData((p) => ({ ...p, expected_end_date: e.target.value }))}
+                />
+                <Input
+                  label="Actual End Date (Optional)"
+                  type="date"
+                  value={formData.actual_end_date}
+                  onChange={(e) => setFormData((p) => ({ ...p, actual_end_date: e.target.value }))}
+                />
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-0.5">School/University</p>
+                  <p className="text-sm text-gray-800">{internProfile.school_university}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-0.5">Required Hours</p>
+                  <p className="text-sm text-gray-800">{internProfile.required_hours} hours</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-0.5">Rendered Hours</p>
+                  <p className="text-sm text-gray-800">{internProfile.rendered_hours_total} hours</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-0.5">Expected End Date</p>
+                  <p className="text-sm text-gray-800">
+                    {new Date(internProfile.expected_end_date).toLocaleDateString()}
+                  </p>
+                </div>
+                {internProfile.actual_end_date && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-0.5">Actual End Date</p>
+                    <p className="text-sm text-gray-800">
+                      {new Date(internProfile.actual_end_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

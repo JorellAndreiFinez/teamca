@@ -137,7 +137,7 @@ export default function UserDirectory() {
   };
 
 
-  // If user is active, show deactivate modal; if inactive, show delete modal
+  // proper modal flow for delete/deactivate:
   const handleDelete = (user: User) => {
     if (!canDeleteUsers) {
       return;
@@ -161,9 +161,8 @@ export default function UserDirectory() {
       setUsers((prev) => prev.map((u) => (u._id === deleteTarget._id ? { ...u, is_active: false } : u)));
       await fetchUsers();
       setOpenDeactivateModal(false);
+      setDeleteTarget(null);
       setDeactivating(false);
-      // After deactivation, prompt for delete
-      setOpenDeleteModal(true);
     } catch (err: any) {
       setDeactivating(false);
       setDeactivateError(err?.message || "Failed to deactivate user.");
@@ -302,63 +301,6 @@ export default function UserDirectory() {
                           </Button>
                         )
                       ) : null}
-                          {/* Deactivate Modal */}
-                          <Modal
-                            open={openDeactivateModal}
-                            onClose={() => {
-                              if (deactivating) return;
-                              setOpenDeactivateModal(false);
-                              setDeleteTarget(null);
-                              setDeactivateError(null);
-                            }}
-                            title="Deactivate Account"
-                          >
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-3">
-                                <CircleStop className="h-8 w-8 text-red-600" />
-                                <span className="text-base font-semibold text-red-700">Deactivate User Account</span>
-                              </div>
-                              <p className="text-sm text-slate-700">
-                                This will immediately deactivate the account. The user will not be able to log in or access the system.<br />
-                              </p>
-                              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-                                <div className="font-medium">User</div>
-                                <div>
-                                  {deleteTarget
-                                    ? `${deleteTarget.first_name || ""} ${deleteTarget.last_name || ""}`.trim() || "Unknown user"
-                                    : "-"}
-                                </div>
-                                <div className="mt-1 text-xs text-red-700">{deleteTarget?.email || ""}</div>
-                              </div>
-                              {deactivateError ? (
-                                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                                  {deactivateError}
-                                </div>
-                              ) : null}
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setOpenDeactivateModal(false);
-                                    setDeleteTarget(null);
-                                    setDeactivateError(null);
-                                  }}
-                                  disabled={deactivating}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="danger"
-                                  onClick={() => void handleConfirmDeactivate()}
-                                  loading={deactivating}
-                                >
-                                  Deactivate Account
-                                </Button>
-                              </div>
-                            </div>
-                          </Modal>
                     </td>
                   </tr>
                 ))
@@ -394,29 +336,44 @@ export default function UserDirectory() {
           setDeleteTarget(null);
           setDeleteError(null);
         }}
-        title="Confirm Account Deletion"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-700">
-            You are about to permanently delete this account from the website and database.
-          </p>
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-            <div className="font-medium">User</div>
-            <div>
-              {deleteTarget
-                ? `${deleteTarget.first_name || ""} ${deleteTarget.last_name || ""}`.trim() || "Unknown user"
-                : "-"}
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-700" />
+              </div>
+              <h2 className="text-xl font-semibold text-slate-900">Delete Account Permanently?</h2>
             </div>
-            <div className="mt-1 text-xs text-red-700">{deleteTarget?.email || ""}</div>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              This action cannot be undone. All associated data will be permanently deleted from the system.
+            </p>
           </div>
 
+          {/* Warning Box */}
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-red-700">Account to Delete</div>
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-slate-900">
+                {deleteTarget
+                  ? `${deleteTarget.first_name || ""} ${deleteTarget.last_name || ""}`.trim() || "Unknown user"
+                  : "-"}
+              </div>
+              <div className="text-sm text-red-700">{deleteTarget?.email || ""}</div>
+            </div>
+          </div>
+
+          {/* Error State */}
           {deleteError ? (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {deleteError}
+            <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 space-y-1">
+              <div className="font-semibold">Unable to Delete</div>
+              <div>{deleteError}</div>
             </div>
           ) : null}
 
-          <div className="flex justify-end gap-2">
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -435,7 +392,78 @@ export default function UserDirectory() {
               onClick={() => void handleConfirmDelete()}
               loading={deleting}
             >
-              Delete Account
+              Permanently Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Deactivate Modal */}
+      <Modal
+        open={openDeactivateModal}
+        onClose={() => {
+          if (deactivating) return;
+          setOpenDeactivateModal(false);
+          setDeleteTarget(null);
+          setDeactivateError(null);
+        }}
+      >
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                <CircleStop className="h-6 w-6 text-amber-700" />
+              </div>
+              <h2 className="text-xl font-semibold text-slate-900">Deactivate Account?</h2>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              This will immediately suspend the account. The user will not be able to log in or access any system features.
+            </p>
+          </div>
+
+          {/* User Info Box */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Account to Deactivate</div>
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-slate-900">
+                {deleteTarget
+                  ? `${deleteTarget.first_name || ""} ${deleteTarget.last_name || ""}`.trim() || "Unknown user"
+                  : "-"}
+              </div>
+              <div className="text-sm text-amber-700">{deleteTarget?.email || ""}</div>
+            </div>
+          </div>
+
+          {/* Error State */}
+          {deactivateError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 space-y-1">
+              <div className="font-semibold">Error</div>
+              <div>{deactivateError}</div>
+            </div>
+          ) : null}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOpenDeactivateModal(false);
+                setDeleteTarget(null);
+                setDeactivateError(null);
+              }}
+              disabled={deactivating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => void handleConfirmDeactivate()}
+              loading={deactivating}
+            >
+              Deactivate Account
             </Button>
           </div>
         </div>

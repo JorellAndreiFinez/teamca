@@ -3,7 +3,7 @@ import type { InternProfile } from '../types/user';
 
 export interface InternProfilePayload {
   user_id: string;
-  school: string;
+  school_university: string;
   required_hours: number;
   rendered_hours_total?: number;
   expected_end_date: string;
@@ -11,9 +11,19 @@ export interface InternProfilePayload {
 }
 
 export const internProfileService = {
-  getInternProfileByUserId: async (userId: string): Promise<InternProfile> => {
-    const { data } = await api.get<InternProfile>(`/intern-profiles/user/${userId}`);
-    return data;
+  getInternProfileByUserId: async (userId: string): Promise<InternProfile | null> => {
+    return api
+      .get<InternProfile>(`/intern-profiles/user/${userId}`)
+      .then((response) => response.data)
+      .catch((err: any) => {
+        // 404 handling
+        const status = err?.response?.status || (err as any).status;
+        if (status === 404 || status === 304) {
+          return null;
+        }
+        console.debug('[internProfileService] Could not load profile:', { status, userId });
+        return null;
+      });
   },
 
   createInternProfile: async (payload: InternProfilePayload): Promise<InternProfile> => {
