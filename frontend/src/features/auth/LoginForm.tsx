@@ -84,16 +84,18 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+    <div className="w-full max-w-md md:bg-transparent md:py-8">
+      <div className="bg-white rounded-2xl p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 mb-4">
-            <span className="text-white font-bold text-lg">TC</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <img
+            src="/teamlogo.png"
+            alt="TeamCA Logo"
+            className="h-14 w-14 mx-auto mb-4 object-contain"
+          />
+          <h1 className="text-3xl font-bold text-gray-900">
             Welcome to TeamCA
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
+          <p className="text-sm text-gray-500 mt-2">Sign in to your account</p>
         </div>
 
         {step === "email" && (

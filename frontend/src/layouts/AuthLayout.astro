@@ -1,5 +1,6 @@
 ---
 import '../styles/globals.css';
+import ImageSlideshow from '../components/auth/ImageSlideshow';
 ---
 
 <html lang="en">
@@ -8,9 +9,22 @@ import '../styles/globals.css';
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TeamCA — Sign In</title>
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
-    <div class="auth-layout w-full flex items-center justify-center">
-      <slot />
+  <body class="min-h-screen bg-white overflow-hidden">
+    <div class="auth-layout w-full h-screen flex flex-col md:flex-row">
+      {/* mobile view */}
+      <div class="hidden max-md:block absolute inset-0 z-0">
+        <ImageSlideshow client:only="react" isMobile={true} />
+      </div>
+
+      {/* desktop login container */}
+      <div class="w-full md:w-2/5 flex items-center justify-center p-4 md:p-8 relative z-10">
+        <slot />
+      </div>
+
+      {/* desktop image slideshow */}
+      <div class="hidden md:flex md:w-3/5 relative bg-gradient-to-br from-blue-600 to-blue-900">
+        <ImageSlideshow client:only="react" isMobile={false} />
+      </div>
     </div>
   </body>
 </html>

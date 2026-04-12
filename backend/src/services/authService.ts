@@ -118,7 +118,7 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
     if (!existingProfile) {
       await InternProfile.create({
         user_id: user._id,
-        school: payload.school_university,
+        school_university: payload.school_university,
         required_hours: payload.required_hours,
         rendered_hours_total: 0,
         expected_end_date: expectedEndDate,

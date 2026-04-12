@@ -70,7 +70,7 @@ export const getInternProfileByUser = async (req: Request, res: Response) => {
 
     const profile = await getInternProfileByUserId(targetUserId);
     if (!profile) {
-      return res.status(404).json({ message: "Intern profile not found." });
+      return res.status(200).json(null);
     }
 
     return res.status(200).json(profile);
@@ -87,7 +87,6 @@ export const createInternProfileHandler = async (req: Request, res: Response) =>
 
     const payload = req.body as {
       user_id?: string;
-      school?: string;
       school_university?: string;
       required_hours?: number;
       rendered_hours_total?: number;
@@ -95,10 +94,10 @@ export const createInternProfileHandler = async (req: Request, res: Response) =>
       actual_end_date?: string | null;
     };
 
-    const school = (payload.school ?? payload.school_university ?? "").trim();
-    if (!payload.user_id || !school || typeof payload.required_hours !== "number" || !payload.expected_end_date) {
+    const schoolUniversity = (payload.school_university ?? "").trim();
+    if (!payload.user_id || !schoolUniversity || typeof payload.required_hours !== "number" || !payload.expected_end_date) {
       return res.status(400).json({
-        message: "user_id, school, required_hours, and expected_end_date are required.",
+        message: "user_id, school_university, required_hours, and expected_end_date are required.",
       });
     }
 
@@ -128,7 +127,7 @@ export const createInternProfileHandler = async (req: Request, res: Response) =>
 
     const created = await createInternProfile({
       user_id: payload.user_id,
-      school,
+      school_university: schoolUniversity,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
       expected_end_date: new Date(payload.expected_end_date),
@@ -173,7 +172,6 @@ export const updateInternProfileByUser = async (req: Request, res: Response) => 
     }
 
     const payload = req.body as {
-      school?: string;
       school_university?: string;
       required_hours?: number;
       rendered_hours_total?: number;
@@ -189,7 +187,7 @@ export const updateInternProfileByUser = async (req: Request, res: Response) => 
     }
 
     const updated = await updateInternProfileByUserId(targetUserId, {
-      school: payload.school ?? payload.school_university,
+      school_university: payload.school_university,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
       expected_end_date: payload.expected_end_date

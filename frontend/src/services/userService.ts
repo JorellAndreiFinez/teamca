@@ -1,4 +1,3 @@
-// frontend/src/services/userService.ts
 import api from "./api";
 import { User, UserProfile } from "../types/user";
 
@@ -54,8 +53,26 @@ export const userService = {
     return data;
   },
 
-  whitelistEmail: async (email: string): Promise<void> => {
-    await api.post("/users/whitelisted", { email });
+  createWhitelistedUser: async (email: string): Promise<User> => {
+    try {
+      const { data } = await api.post<User>("/users/whitelist", { email });
+      console.log("[createWhitelistedUser] success:", data);
+      return data;
+    } catch (err) {
+      console.error("[createWhitelistedUser] error:", err);
+      throw err;
+    }
+  },
+
+  activateWhitelistedUser: async (userId: string, payload: any): Promise<User> => {
+    try {
+      const { data } = await api.post<User>(`/users/${userId}/activate-whitelist`, payload);
+      console.log("[activateWhitelistedUser] success:", data);
+      return data;
+    } catch (err) {
+      console.error("[activateWhitelistedUser] error:", err);
+      throw err;
+    }
   },
 };
 
