@@ -293,12 +293,19 @@ export const updateUser = async (req: Request, res: Response) => {
     const actor = req.user;
     const actorCanManageFully = canViewAllUsers(actor);
     const actorIsHead = isHeadAdmin(actor);
+    const actorIsSelf = String(actor.user_id) === String(previousUser._id);
 
-    if (!actorCanManageFully && !actorIsHead) {
+    if (!actorCanManageFully && !actorIsHead && !actorIsSelf) {
       return res.status(403).json({ message: "Insufficient role permissions." });
     }
 
-    if (actorIsHead) {
+    if (actorIsSelf) {
+      const disallowedSelfFields = ["global_role", "departments", "is_active", "password_hash"];
+      const includesRestrictedField = disallowedSelfFields.some((field) => payload[field] !== undefined);
+      if (includesRestrictedField) {
+        return res.status(403).json({ message: "You can only edit your basic profile fields." });
+      }
+    } else if (actorIsHead) {
       if (!sharesAtLeastOneDepartment(actor, previousUser)) {
         return res.status(403).json({ message: "Heads can only edit users within their department." });
       }
@@ -320,7 +327,13 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
-    const sanitizedPayload = actorIsHead
+    const sanitizedPayload = actorIsSelf
+      ? {
+          first_name: payload.first_name,
+          last_name: payload.last_name,
+          email: payload.email,
+        }
+      : actorIsHead
       ? {
           first_name: payload.first_name,
           last_name: payload.last_name,

@@ -43,6 +43,11 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
     };
     const actionType = actionTypeMap[req.method] || "read";
 
+    // skip logging for reads to reduce noise
+    if (actionType === "read") {
+      return;
+    }
+
     const pathSegments = req.path.split("/").filter(Boolean);
     let resourceType = pathSegments[0] || "unknown";
 

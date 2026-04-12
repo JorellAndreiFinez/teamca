@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { userService } from '../../services/userService';
 import { internProfileService } from '../../services/internProfileService';
@@ -7,287 +7,487 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 
+const HOURS_PER_DAY = 9;
+
+type ProfileFormState = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  school_university: string;
+  required_hours: string;
+  expected_end_date: string;
+};
+
+const buildFormState = (user: any, profile: InternProfile | null): ProfileFormState => ({
+  first_name: user?.first_name ?? '',
+  last_name: user?.last_name ?? '',
+  email: user?.email ?? '',
+  school_university: profile?.school_university ?? '',
+  required_hours: profile ? String(profile.required_hours ?? '') : '',
+  expected_end_date: profile?.expected_end_date ? toDateInputValue(profile.expected_end_date) : '',
+});
+
+const toDateInputValue = (value?: string | Date | null) => {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const calculateExpectedEndDateFromHours = (hoursValue: string) => {
+  const hours = Number(hoursValue);
+  if (!Number.isFinite(hours) || hours <= 0) {
+    return '';
+  }
+
+  const daysNeeded = Math.max(1, Math.ceil(hours / HOURS_PER_DAY));
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + daysNeeded - 1);
+  return toDateInputValue(endDate);
+};
+
+const formatDate = (value?: string | Date | null) => {
+  if (!value) {
+    return 'Not provided';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Not provided';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+};
+
+const getInitials = (firstName?: string, lastName?: string) => {
+  const first = firstName?.trim()?.[0] ?? '';
+  const last = lastName?.trim()?.[0] ?? '';
+  return first || last ? `${first}${last}`.toUpperCase() : 'U';
+};
+
+function DetailField({
+  label,
+  children,
+  className = '',
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-xl border border-slate-200 bg-white p-3 shadow-sm ${className}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
+      <div className="mt-1.5 text-sm text-slate-900">{children}</div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [internProfile, setInternProfile] = useState<InternProfile | null>(null);
-  const [formData, setFormData] = useState({
-    first_name: user?.first_name ?? '',
-    last_name: user?.last_name ?? '',
-    school_university: '',
-    required_hours: 0,
-    expected_end_date: '',
-    actual_end_date: '',
-  });
-  const [mounted, setMounted] = useState(false);
-  const [error, setError] = useState('');
   const setUser = useAuthStore((state) => state.setUser);
 
-  React.useEffect(() => {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState('');
+  const [internProfile, setInternProfile] = useState<InternProfile | null>(null);
+  const [formData, setFormData] = useState<ProfileFormState>(() => buildFormState(user, null));
+
+  useEffect(() => {
     setMounted(true);
   }, []);
 
-  React.useEffect(() => {
-    if (user?._id) {
-      internProfileService
-        .getInternProfileByUserId(user._id)
-        .then((profile) => {
-          if (!profile) {
-            setInternProfile(null);
-            return;
-          }
-          setInternProfile(profile);
-          const endDate = profile.expected_end_date
-            ? new Date(profile.expected_end_date).toISOString().split('T')[0]
-            : '';
-          const actualDate = profile.actual_end_date
-            ? new Date(profile.actual_end_date).toISOString().split('T')[0]
-            : '';
-          setFormData((prev) => ({
-            ...prev,
-            school_university: profile.school_university,
-            required_hours: profile.required_hours,
-            expected_end_date: endDate,
-            actual_end_date: actualDate,
-          }));
-        })
-        .catch((err) => {
-          console.error('Failed to fetch intern profile:', err);
-          setInternProfile(null);
-        });
+  useEffect(() => {
+    if (!user?._id) {
+      setInternProfile(null);
+      return;
     }
+
+    internProfileService
+      .getInternProfileByUserId(user._id)
+      .then((profile) => {
+        setInternProfile(profile);
+      })
+      .catch(() => {
+        setInternProfile(null);
+      });
   }, [user?._id]);
 
-  React.useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      first_name: user?.first_name ?? '',
-      last_name: user?.last_name ?? '',
-    }));
-  }, [user?._id]);
+  useEffect(() => {
+    if (!editing) {
+      setFormData(buildFormState(user, internProfile));
+    }
+  }, [user, internProfile, editing]);
+  const initials = getInitials(user?.first_name, user?.last_name);
+  const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || 'Unnamed User';
+  const jobTitleLabel = String((user as any)?.job_title || (user as any)?.job_role || 'Front End Developer');
+  const departmentRoleLabel = String(user?.departments?.[0]?.department_role || 'Intern');
+  const profileRoleLine = `${jobTitleLabel} · ${departmentRoleLabel}`;
 
-  if (!mounted) return null;
+  const hasAnyInternInput = Boolean(
+    formData.school_university.trim() ||
+      formData.required_hours.trim() ||
+      formData.expected_end_date.trim(),
+  );
+
+  const requiredHoursValue = Number(formData.required_hours || internProfile?.required_hours || 0);
+  const renderedHoursValue = Number(internProfile?.rendered_hours_total ?? 0);
+  const progressPercentage =
+    requiredHoursValue > 0
+      ? Math.min(100, Math.round((renderedHoursValue / requiredHoursValue) * 100))
+      : 0;
+
+  if (!mounted) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     window.location.replace('/login');
     return null;
   }
 
+  const resetForm = () => {
+    setFormData(buildFormState(user, internProfile));
+  };
+
+  const handleCancel = () => {
+    setError('');
+    setEditing(false);
+    resetForm();
+  };
+
+  const handleRequiredHoursChange = (value: string) => {
+    const nextExpectedEndDate = calculateExpectedEndDateFromHours(value);
+
+    setFormData((prev) => ({
+      ...prev,
+      required_hours: value,
+      expected_end_date: nextExpectedEndDate,
+    }));
+  };
+
+  const handleEmailBlur = async () => {
+    if (!user?._id) {
+      return;
+    }
+
+    const nextEmail = formData.email.trim().toLowerCase();
+    const currentEmail = String(user?.email ?? '').trim().toLowerCase();
+
+    if (!nextEmail || nextEmail === currentEmail) {
+      return;
+    }
+
+    try {
+      const updatedUser = await userService.updateUser(user._id, {
+        email: nextEmail,
+      });
+
+      setUser(updatedUser);
+      setFormData((prev) => ({
+        ...prev,
+        email: updatedUser.email ?? nextEmail,
+      }));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Failed to update email');
+      setFormData((prev) => ({
+        ...prev,
+        email: currentEmail,
+      }));
+    }
+  };
+
   const handleSave = async () => {
-    if (!user) return;
+    if (!user?._id) {
+      return;
+    }
+
+    const nextFirstName = formData.first_name.trim();
+    const nextLastName = formData.last_name.trim();
+
+    if (!nextFirstName || !nextLastName) {
+      setError('First name and last name are required.');
+      return;
+    }
+
+    const shouldPersistInternProfile = Boolean(internProfile || hasAnyInternInput);
+    let nextInternProfile = internProfile;
+
+    if (shouldPersistInternProfile) {
+      const nextSchool = formData.school_university.trim();
+      const nextRequiredHours = Number(formData.required_hours);
+      const nextExpectedEndDate = calculateExpectedEndDateFromHours(formData.required_hours) || formData.expected_end_date.trim();
+
+      if (!nextSchool || !nextExpectedEndDate || !Number.isFinite(nextRequiredHours) || nextRequiredHours <= 0) {
+        setError('School/University, required hours, and expected end date are required for the internship profile.');
+        return;
+      }
+
+      const internPayload = {
+        school_university: nextSchool,
+        required_hours: nextRequiredHours,
+        expected_end_date: nextExpectedEndDate,
+        actual_end_date: toDateInputValue(internProfile?.actual_end_date ?? null) || null,
+      };
+      const nextEmail = formData.email.trim().toLowerCase();
+
+      if (!nextEmail) {
+        setError('Email is required.');
+        return;
+      }
+
+      try {
+        setError('');
+        setSaving(true);
+
+        const updatedUser = await userService.updateUser(user._id, {
+          first_name: nextFirstName,
+          last_name: nextLastName,
+          email: nextEmail,
+        });
+
+        if (internProfile) {
+          nextInternProfile = await internProfileService.updateInternProfile(user._id, internPayload);
+        } else {
+          nextInternProfile = await internProfileService.createInternProfile({
+            user_id: user._id,
+            ...internPayload,
+          });
+        }
+
+        setUser(updatedUser);
+        setInternProfile(nextInternProfile);
+        setEditing(false);
+        setFormData(buildFormState(updatedUser, nextInternProfile));
+      } catch (err: any) {
+        setError(err?.response?.data?.message || err?.message || 'Failed to save profile');
+      } finally {
+        setSaving(false);
+      }
+
+      return;
+    }
 
     try {
       setError('');
       setSaving(true);
 
-      const userPromise = userService.updateUser(user._id, {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+      const nextEmail = formData.email.trim().toLowerCase();
+
+      if (!nextEmail) {
+        setError('Email is required.');
+        return;
+      }
+
+      const updatedUser = await userService.updateUser(user._id, {
+        first_name: nextFirstName,
+        last_name: nextLastName,
+        email: nextEmail,
       });
 
-      const profilePromise = internProfile
-        ? internProfileService.updateInternProfile(user._id, {
-            school_university: formData.school_university,
-            required_hours: formData.required_hours,
-            expected_end_date: formData.expected_end_date,
-            actual_end_date: formData.actual_end_date || null,
-          })
-        : Promise.resolve(null);
-
-      const [updatedUser, updatedProfile] = await Promise.all([userPromise, profilePromise]);
-
       setUser(updatedUser);
-      if (updatedProfile) {
-        setInternProfile(updatedProfile);
-      }
-      setSaving(false);
       setEditing(false);
+      setFormData(buildFormState(updatedUser, internProfile));
     } catch (err: any) {
-      setError(err?.message || 'Failed to save profile');
+      setError(err?.response?.data?.message || err?.message || 'Failed to save profile');
+    } finally {
       setSaving(false);
     }
   };
 
-  const roleLabel = user?.global_role === 'Superadmin'
-    ? 'Super Admin'
-    : user?.global_role === 'Admin'
-    ? 'Admin'
-    : user?.departments?.[0]?.department_role || 'Intern';
-
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your personal information</p>
-      </div>
+    <div className="min-h-full bg-transparent">
+      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8 lg:py-4">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">My Profile</h1>
+            <p className="max-w-2xl text-sm text-slate-600">
+              Update your account and internship details.
+            </p>
+          </div>
 
-      {/* Avatar + name */}
-      <Card className="mb-6">
-        <div className="flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-2xl font-bold">
-              {user && user.first_name && user.last_name
-                ? `${user.first_name[0]}${user.last_name[0]}`
-                : 'U'}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {user?.first_name} {user?.last_name}
-            </h2>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-            <span className="inline-block mt-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-              {roleLabel}
-            </span>
-          </div>
-          <div className="ml-auto">
+          <div className="shrink-0">
             {!editing ? (
-              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              <Button variant="primary" size="sm" onClick={() => setEditing(true)}>
                 Edit Profile
               </Button>
             ) : (
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" size="sm" onClick={handleCancel} disabled={saving}>
                   Cancel
                 </Button>
                 <Button variant="primary" size="sm" loading={saving} onClick={handleSave}>
-                  Save
+                  Save Changes
                 </Button>
               </div>
             )}
           </div>
         </div>
-      </Card>
 
-      {/* Account Details */}
-      <Card title="Account Details">
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            {error}
+        <div className="relative overflow-hidden rounded-3xl border border-rose-900/40 bg-[#2b0b10] text-white shadow-[0_12px_36px_-20px_rgba(127,29,29,0.45)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(244,63,94,0.18),_transparent_22%),radial-gradient(circle_at_bottom_left,_rgba(220,38,38,0.14),_transparent_24%)]" />
+          <div className="relative grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-center">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 shadow-lg shadow-slate-950/20 backdrop-blur">
+                <span className="text-xl font-semibold tracking-wide text-white">{initials}</span>
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{fullName}</h2>
+                <p className="mt-1 text-sm text-slate-300">{profileRoleLine}</p>
+                <p className="mt-1 text-sm text-slate-300">{user?.email}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200/80">Internship Progress</p>
+              <p className="mt-1.5 text-xl font-semibold text-white">{progressPercentage}%</p>
+              <p className="mt-1 text-xs text-slate-200/80">
+                {requiredHoursValue > 0
+                  ? `${renderedHoursValue} / ${requiredHoursValue} hours`
+                  : 'No internship hours yet'}
+              </p>
+              <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white/20">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-rose-400 to-orange-300 transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
           </div>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {editing ? (
-            <>
-              <Input
-                label="First Name"
-                value={formData.first_name}
-                onChange={(e) => setFormData((p) => ({ ...p, first_name: e.target.value }))}
-              />
-              <Input
-                label="Last Name"
-                value={formData.last_name}
-                onChange={(e) => setFormData((p) => ({ ...p, last_name: e.target.value }))}
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={user?.email ?? ''}
-                helperText="Contact admin to change email"
-                disabled
-              />
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-0.5">Role</p>
-                <p className="text-sm font-medium text-gray-800">{roleLabel}</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-0.5">First Name</p>
-                <p className="text-sm text-gray-800">{user?.first_name}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-0.5">Last Name</p>
-                <p className="text-sm text-gray-800">{user?.last_name}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-0.5">Email</p>
-                <p className="text-sm text-gray-800">{user?.email}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-0.5">Role</p>
-                <p className="text-sm text-gray-800">{roleLabel}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-0.5">Account Status</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  user?.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {user?.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-            </>
-          )}
         </div>
-      </Card>
 
-      {/* Internship Details */}
-      {internProfile && (
-        <Card title="Internship Details" className="mt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {editing ? (
-              <>
-                <Input
-                  label="School/University"
-                  value={formData.school_university}
-                  onChange={(e) => setFormData((p) => ({ ...p, school_university: e.target.value }))}
-                />
-                <Input
-                  label="Required Hours"
-                  type="number"
-                  min="1"
-                  value={formData.required_hours}
-                  onChange={(e) => setFormData((p) => ({ ...p, required_hours: parseInt(e.target.value) || 0 }))}
-                />
-                <Input
-                  label="Expected End Date"
-                  type="date"
-                  value={formData.expected_end_date}
-                  onChange={(e) => setFormData((p) => ({ ...p, expected_end_date: e.target.value }))}
-                />
-                <Input
-                  label="Actual End Date (Optional)"
-                  type="date"
-                  value={formData.actual_end_date}
-                  onChange={(e) => setFormData((p) => ({ ...p, actual_end_date: e.target.value }))}
-                />
-              </>
-            ) : (
-              <>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5">School/University</p>
-                  <p className="text-sm text-gray-800">{internProfile.school_university}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5">Required Hours</p>
-                  <p className="text-sm text-gray-800">{internProfile.required_hours} hours</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5">Rendered Hours</p>
-                  <p className="text-sm text-gray-800">{internProfile.rendered_hours_total} hours</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5">Expected End Date</p>
-                  <p className="text-sm text-gray-800">
-                    {new Date(internProfile.expected_end_date).toLocaleDateString()}
-                  </p>
-                </div>
-                {internProfile.actual_end_date && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-0.5">Actual End Date</p>
-                    <p className="text-sm text-gray-800">
-                      {new Date(internProfile.actual_end_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-              </>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card
+            title="Account Details"
+            subtitle="Your personal information"
+            className="border-slate-200 shadow-sm shadow-slate-200/60"
+          >
+            {error && (
+              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
             )}
-          </div>
-        </Card>
-      )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <DetailField label="First Name">
+                {editing ? (
+                  <Input
+                    value={formData.first_name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, first_name: e.target.value }))}
+                    placeholder="First name"
+                  />
+                ) : (
+                  <p className="text-base font-medium text-slate-900">{user?.first_name || 'Not provided'}</p>
+                )}
+              </DetailField>
+
+              <DetailField label="Last Name">
+                {editing ? (
+                  <Input
+                    value={formData.last_name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, last_name: e.target.value }))}
+                    placeholder="Last name"
+                  />
+                ) : (
+                  <p className="text-base font-medium text-slate-900">{user?.last_name || 'Not provided'}</p>
+                )}
+              </DetailField>
+
+              <DetailField label="Email" className="sm:col-span-2">
+                {editing ? (
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                    placeholder="Email address"
+                    onBlur={handleEmailBlur}
+                  />
+                ) : (
+                  <p className="text-base font-medium text-slate-900">{user?.email || 'Not provided'}</p>
+                )}
+              </DetailField>
+            </div>
+          </Card>
+
+          <Card
+            title="Internship Profile"
+            subtitle="Information regarding your internship status"
+            className="border-slate-200 shadow-sm shadow-slate-200/60"
+          >
+            {internProfile || editing ? (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailField label="School / University" className="sm:col-span-2">
+                    {editing ? (
+                      <Input
+                        value={formData.school_university}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, school_university: e.target.value }))}
+                        placeholder="School or university"
+                      />
+                    ) : (
+                      <p className="text-base font-medium text-slate-900">{internProfile?.school_university || 'Not provided'}</p>
+                    )}
+                  </DetailField>
+
+                  <DetailField label="Internship Hours">
+                    {editing ? (
+                      <Input
+                        type="number"
+                        min="1"
+                        value={formData.required_hours}
+                        onChange={(e) => handleRequiredHoursChange(e.target.value)}
+                        placeholder="Hours needed"
+                      />
+                    ) : (
+                      <p className="text-base font-medium text-slate-900">
+                        {internProfile ? `${internProfile.required_hours} hours` : 'Not provided'}
+                      </p>
+                    )}
+                  </DetailField>
+
+                  <DetailField label="Expected End Date">
+                    {editing ? (
+                      <Input
+                        type="date"
+                        value={formData.expected_end_date}
+                        disabled
+                        helperText="Auto-calculated from internship hours at 9 hours per day."
+                      />
+                    ) : (
+                      <p className="text-base font-medium text-slate-900">
+                        {internProfile?.expected_end_date ? formatDate(internProfile.expected_end_date) : 'Not provided'}
+                      </p>
+                    )}
+                  </DetailField>
+
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+                <p className="text-base font-medium text-slate-900">No internship profile yet</p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Click Edit Profile to add internship details.
+                </p>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

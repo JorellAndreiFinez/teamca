@@ -24,6 +24,7 @@ export type ActivateWhitelistedUserInput = {
 export type UpdateUserInput = {
   first_name?: string;
   last_name?: string;
+  email?: string;
   password_hash?: string;
   global_role?: GlobalRole;
   departments?: {
@@ -158,6 +159,22 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   // Basic fields
   if (payload.first_name !== undefined) user.first_name = payload.first_name;
   if (payload.last_name !== undefined) user.last_name = payload.last_name;
+  if (payload.email !== undefined) {
+    const nextEmail = payload.email.trim().toLowerCase();
+    if (!nextEmail) {
+      throw new Error("Email is required");
+    }
+
+    const existingEmailUser = await User.findOne({
+      email: nextEmail,
+      _id: { $ne: userId },
+    });
+    if (existingEmailUser) {
+      throw new Error("Email already exists.");
+    }
+
+    user.email = nextEmail;
+  }
   if (payload.password_hash !== undefined)
     user.password_hash = payload.password_hash;
   if (payload.global_role !== undefined) user.global_role = payload.global_role;

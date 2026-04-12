@@ -70,7 +70,7 @@ export const getInternProfileByUser = async (req: Request, res: Response) => {
 
     const profile = await getInternProfileByUserId(targetUserId);
     if (!profile) {
-      return res.status(404).json({ message: "Intern profile not found." });
+      return res.status(200).json(null);
     }
 
     return res.status(200).json(profile);
