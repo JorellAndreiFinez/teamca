@@ -73,21 +73,80 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
 
     const logs = await ActivityLog.find(filter).lean().sort({ timestamp: -1 });
 
+    const escapeCsv = (value: unknown): string => {
+      const raw = value == null ? "" : String(value);
+      const escaped = raw.replace(/"/g, '""');
+      return `"${escaped}"`;
+    };
+
+    const formatValue = (value: unknown): string => {
+      if (value == null || value === "") {
+        return "-";
+      }
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      if (typeof value === "object") {
+        return JSON.stringify(value);
+      }
+      return String(value);
+    };
+
+    const formatChanges = (changes?: Record<string, any>): string => {
+      if (!changes || typeof changes !== "object" || Object.keys(changes).length === 0) {
+        return "-";
+      }
+
+      return Object.entries(changes)
+        .map(([field, value]) => {
+          if (
+            value &&
+            typeof value === "object" &&
+            !Array.isArray(value) &&
+            ("from" in value || "to" in value)
+          ) {
+            const fromValue = formatValue((value as Record<string, unknown>).from);
+            const toValue = formatValue((value as Record<string, unknown>).to);
+            return `${field}: ${fromValue} -> ${toValue}`;
+          }
+
+          return `${field}: ${formatValue(value)}`;
+        })
+        .join(" | ");
+    };
+
+    const toTitleCase = (value: string): string =>
+      value
+        .replace(/[_-]+/g, " ")
+        .split(" ")
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(" ");
+
     // csv header
-    const headers = ["Timestamp", "User", "Action", "Resource Type", "Resource ID", "Description", "Changes", "Status"];
-    const rows = [headers.join(",")];
+    const headers = [
+      "Date Time",
+      "User",
+      "Action",
+      "Resource",
+      "Resource ID",
+      "Description",
+      "Changes",
+      "Status",
+    ];
+    const rows = [headers.map(escapeCsv).join(",")];
 
     // csv rows
     logs.forEach((log: any) => {
       const row = [
-        new Date(log.timestamp).toISOString(),
-        `"${log.user_name}"`,
-        log.action_type,
-        log.resource_type,
-        log.resource_id || "-",
-        `"${log.description}"`,
-        log.changes ? `"${JSON.stringify(log.changes)}"` : "-",
-        log.status,
+        escapeCsv(new Date(log.timestamp).toLocaleString()),
+        escapeCsv(log.user_name || "-"),
+        escapeCsv(toTitleCase(String(log.action_type || "-"))),
+        escapeCsv(toTitleCase(String(log.resource_type || "-"))),
+        escapeCsv(log.resource_id || "-"),
+        escapeCsv(log.description || "-"),
+        escapeCsv(formatChanges(log.changes)),
+        escapeCsv(toTitleCase(String(log.status || "-"))),
       ];
       rows.push(row.join(","));
     });
