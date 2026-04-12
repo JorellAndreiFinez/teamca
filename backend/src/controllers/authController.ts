@@ -82,7 +82,6 @@ export const login = async (req: Request, res: Response) => {
       action_type: "login",
       resource_type: "auth",
       description: `Login successful for ${user.email}`,
-      ip_address: (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || "unknown",
       status: "success",
       changes: { email: user.email },
     }).catch(() => {}); // Ignore logging errors
@@ -98,7 +97,6 @@ export const login = async (req: Request, res: Response) => {
         action_type: "login",
         resource_type: "auth",
         description: `Login failed for ${email}`,
-        ip_address: (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || "unknown",
         status: "failed",
         changes: { reason: "invalid credentials or server error" },
       }).catch(() => {}); // Ignore logging errors
@@ -174,7 +172,6 @@ export const completeSetup = async (req: Request, res: Response) => {
       action_type: "create",
       resource_type: "auth",
       description: `Account setup completed for ${email}`,
-      ip_address: (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || "unknown",
       status: "success",
       changes: { email, first_name, last_name, global_role: user.global_role },
     }).catch(() => {}); // ignore logging errors
