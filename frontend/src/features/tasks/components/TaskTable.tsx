@@ -5,9 +5,21 @@ type TaskTableProps = {
   tasks: TaskListItem[];
   isLoading: boolean;
   onRowClick: (taskId: string) => void;
+  selectionMode: boolean;
+  selectedTaskIds: string[];
+  canSelectTask: (task: TaskListItem) => boolean;
+  onToggleTaskSelection: (taskId: string) => void;
 };
 
-export default function TaskTable({ tasks, isLoading, onRowClick }: TaskTableProps) {
+export default function TaskTable({
+  tasks,
+  isLoading,
+  onRowClick,
+  selectionMode,
+  selectedTaskIds,
+  canSelectTask,
+  onToggleTaskSelection,
+}: TaskTableProps) {
   if (isLoading) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
@@ -29,6 +41,7 @@ export default function TaskTable({ tasks, isLoading, onRowClick }: TaskTablePro
       <table className="min-w-full text-left">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
+            {selectionMode ? <th className="w-12 px-3 py-3" aria-label="Select" /> : null}
             <th className="px-3 py-3">Status</th>
             <th className="px-3 py-3">Task Title</th>
             <th className="px-3 py-3">Assigned Users</th>
@@ -39,7 +52,15 @@ export default function TaskTable({ tasks, isLoading, onRowClick }: TaskTablePro
         </thead>
         <tbody>
           {tasks.map((task) => (
-            <TaskRow key={task.task_id} task={task} onClick={() => onRowClick(String(task.task_id))} />
+            <TaskRow
+              key={task.task_id}
+              task={task}
+              onClick={() => onRowClick(String(task.task_id))}
+              selectionMode={selectionMode}
+              selected={selectedTaskIds.includes(String(task.task_id))}
+              canSelect={canSelectTask(task)}
+              onToggleSelect={() => onToggleTaskSelection(String(task.task_id))}
+            />
           ))}
         </tbody>
       </table>

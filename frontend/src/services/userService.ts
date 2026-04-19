@@ -1,14 +1,14 @@
-// frontend/src/services/userService.ts
 import api from "./api";
-import { User } from "../types/user";
+import { User, UserProfile } from "../types/user";
+
+export type UserProfileResponse = UserProfile;
 
 export const userService = {
   getAllUsers: async (): Promise<User[]> => {
     try {
       const { data } = await api.get<User[]>("/users");
       return data;
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
+    } catch {
       return [];
     }
   },
@@ -40,9 +40,39 @@ export const userService = {
     try {
       await api.delete(`/users/${userId}`);
       console.log(`[deleteUser] User ${userId} deleted successfully`);
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || "Failed to delete user";
+      console.error(`[deleteUser] Failed to delete user ${userId}:`, message);
+      const error = new Error(message);
+      throw error;
+    }
+  },
+
+  getProfile: async (userId: string): Promise<UserProfileResponse> => {
+    const { data } = await api.get<UserProfileResponse>(`/users/${userId}`);
+    return data;
+  },
+
+  createWhitelistedUser: async (email: string): Promise<User> => {
+    try {
+      const { data } = await api.post<User>("/users/whitelist", { email });
+      console.log("[createWhitelistedUser] success:", data);
+      return data;
     } catch (err) {
-      console.error(`[deleteUser] Failed to delete user ${userId}:`, err);
+      console.error("[createWhitelistedUser] error:", err);
+      throw err;
+    }
+  },
+
+  activateWhitelistedUser: async (userId: string, payload: any): Promise<User> => {
+    try {
+      const { data } = await api.post<User>(`/users/${userId}/activate-whitelist`, payload);
+      console.log("[activateWhitelistedUser] success:", data);
+      return data;
+    } catch (err) {
+      console.error("[activateWhitelistedUser] error:", err);
       throw err;
     }
   },
 };
+

@@ -9,13 +9,19 @@ import TaskWorkLink from "../models/TaskWorkLink";
 import User, { type IUser } from "../models/User";
 
 type ActorRole = IUser["global_role"];
-type ActorDepartmentRole = NonNullable<IUser["department_role"]>;
+type ActorDepartmentRole = IUser["departments"][number]["department_role"];
+type UserWithDepartments = {
+  departments?: Array<{
+    department_id?: Types.ObjectId | string;
+    department_role?: ActorDepartmentRole;
+  }>;
+};
 
 export type CreateTaskInput = {
   title: string;
   description?: string;
   priority?: TaskPriority;
-  deadline: Date;
+  deadline?: Date;
   assigned_to?: string[];
 };
 
@@ -28,6 +34,17 @@ export type UpdateTaskStatusInput = {
   taskId: string;
   newStatus: TaskStatus;
   updateNotes?: string;
+};
+
+export type UpdateTaskDetailsInput = {
+  taskId: string;
+  title?: string;
+  description?: string;
+  deadline?: Date | null;
+};
+
+export type DeleteTasksInput = {
+  taskIds: string[];
 };
 
 export type AddTaskFeedbackInput = {
@@ -157,7 +174,7 @@ const normalizeTask = (task: ITask | {
   created_by: Types.ObjectId | string;
   status: TaskStatus;
   priority: TaskPriority;
-  deadline: Date;
+  deadline?: Date;
   created_at: Date;
 }) => ({
   task_id: String(task._id),
@@ -169,6 +186,15 @@ const normalizeTask = (task: ITask | {
   deadline: task.deadline,
   created_at: task.created_at,
 });
+
+const getDeadlineSortValue = (value?: string | Date): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? null : time;
+};
 
 const normalizeFeedback = (feedback: {
   _id: Types.ObjectId;
@@ -224,6 +250,29 @@ const normalizeUser = (user: {
   email: user.email?.trim() || "",
 });
 
+const getUserDepartmentIds = (user: UserWithDepartments): string[] => {
+  return (user.departments ?? [])
+    .map((department) => department.department_id)
+    .filter((departmentId): departmentId is Types.ObjectId | string => !!departmentId)
+    .map((departmentId) => String(departmentId));
+};
+
+const userHasDepartment = (user: UserWithDepartments, departmentId?: string): boolean => {
+  if (!departmentId) {
+    return false;
+  }
+
+  return getUserDepartmentIds(user).includes(String(departmentId));
+};
+
+const createDepartmentMembershipFilter = (departmentId: string) => {
+  if (Types.ObjectId.isValid(departmentId)) {
+    return { "departments.department_id": new Types.ObjectId(departmentId) };
+  }
+
+  return { "departments.department_id": departmentId };
+};
+
 const uniqueAssignees = (assignees: string[]): string[] => {
   const cleaned = assignees
     .map((value) => value.trim())
@@ -246,7 +295,7 @@ const requireInternIncludesSelf = (actor: Express.AuthUser, assigneeUserIds: str
 
 const ensureAssigneeExists = async (assigneeUserId: string) => {
   const assignee = await User.findById(assigneeUserId)
-    .select("global_role department_role department_id is_active")
+    .select("global_role departments is_active")
     .lean();
 
   if (!assignee || !assignee.is_active) {
@@ -270,7 +319,7 @@ const assertCanAssign = async (
   if (canManageDepartment(actor.department_role)) {
     const assignee = await ensureAssigneeExists(assigneeUserId);
 
-    if (!actor.department_id || !assignee.department_id || String(actor.department_id) !== String(assignee.department_id)) {
+    if (!actor.department_id || !userHasDepartment(assignee, actor.department_id)) {
       throw new Error("Department managers can only assign tasks within their department.");
     }
 
@@ -281,7 +330,7 @@ const assertCanAssign = async (
 
   const actorIsIntern = actor.global_role === "Standard_User" && actor.department_role === "Intern";
   if (actorIsIntern) {
-    if (!actor.department_id || !assignee.department_id || String(actor.department_id) !== String(assignee.department_id)) {
+    if (!actor.department_id || !userHasDepartment(assignee, actor.department_id)) {
       throw new Error("Interns can only assign tasks within their department.");
     }
 
@@ -317,20 +366,20 @@ const canAccessTaskScope = async (
 
   if (canManageDepartment(actor.department_role)) {
     const [taskCreator, taskAssignees] = await Promise.all([
-      User.findById(task.created_by).select("department_id").lean(),
+      User.findById(task.created_by).select("departments").lean(),
       TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
     ]);
 
     const creatorInDepartment =
-      !!taskCreator?.department_id &&
       !!actor.department_id &&
-      String(taskCreator.department_id) === String(actor.department_id);
+      !!taskCreator &&
+      userHasDepartment(taskCreator, actor.department_id);
 
     const hasAssigneeInDepartment =
       !!actor.department_id &&
       (await User.exists({
         _id: { $in: taskAssignees.map((item) => item.assigned_to) },
-        department_id: String(actor.department_id),
+        ...createDepartmentMembershipFilter(String(actor.department_id)),
       })) !== null;
 
     return creatorInDepartment || hasAssigneeInDepartment;
@@ -359,20 +408,20 @@ const canChangeTaskStatus = async (
 
   if (canManageDepartment(actor.department_role)) {
     const [taskCreator, taskAssignees] = await Promise.all([
-      User.findById(task.created_by).select("department_id").lean(),
+      User.findById(task.created_by).select("departments").lean(),
       TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
     ]);
 
     const creatorInDepartment =
-      !!taskCreator?.department_id &&
       !!actor.department_id &&
-      String(taskCreator.department_id) === String(actor.department_id);
+      !!taskCreator &&
+      userHasDepartment(taskCreator, actor.department_id);
 
     const hasAssigneeInDepartment =
       !!actor.department_id &&
       (await User.exists({
         _id: { $in: taskAssignees.map((item) => item.assigned_to) },
-        department_id: String(actor.department_id),
+        ...createDepartmentMembershipFilter(String(actor.department_id)),
       })) !== null;
 
     return creatorInDepartment || hasAssigneeInDepartment;
@@ -391,6 +440,32 @@ const canChangeTaskStatus = async (
   }
 
   return false;
+};
+
+const canManageOrOwnTask = (
+  actor: Express.AuthUser,
+  task: { created_by: Types.ObjectId | string },
+): boolean => {
+  if (canManageGlobally(actor.global_role)) {
+    return true;
+  }
+
+  return String(task.created_by) === String(actor.user_id);
+};
+
+const canDeleteTaskByPolicy = (
+  actor: Express.AuthUser,
+  task: { created_by: Types.ObjectId | string; status: TaskStatus },
+): boolean => {
+  if (task.status === "Completed" && actor.global_role !== "Superadmin") {
+    return false;
+  }
+
+  if (canManageGlobally(actor.global_role)) {
+    return true;
+  }
+
+  return String(task.created_by) === String(actor.user_id);
 };
 
 const resolveTaskOrThrow = async (taskId: string) => {
@@ -458,7 +533,7 @@ const getUsersByIds = async (userIds: string[]) => {
   }
 
   const users = await User.find({ _id: { $in: userIds } })
-    .select("first_name last_name email department_id")
+    .select("first_name last_name email departments")
     .lean();
 
   const map = new Map<string, TaskUserSummary>();
@@ -470,12 +545,11 @@ const getUsersByIds = async (userIds: string[]) => {
 };
 
 const getInvolvedDepartments = async (
-  users: Array<{ department_id?: string | null }>,
+  users: UserWithDepartments[],
 ): Promise<TaskDepartmentSummary[]> => {
   const departmentIds = [...new Set(
-    users
-      .map((item) => item.department_id)
-      .filter((item): item is string => !!item && item.trim().length > 0),
+    users.flatMap((item) => getUserDepartmentIds(item))
+      .filter((item) => item.trim().length > 0),
   )];
 
   if (departmentIds.length === 0) {
@@ -597,13 +671,18 @@ export const assignTask = async (actor: Express.AuthUser, input: AssignTaskInput
 
   if (canManageDepartment(actor.department_role) && !canManageGlobally(actor.global_role)) {
     const taskCreator = await User.findById(task.created_by)
-      .select("department_id")
+      .select("departments")
       .lean();
 
-    if (!taskCreator?.department_id || !actor.department_id || String(taskCreator.department_id) !== String(actor.department_id)) {
+    if (!taskCreator || !actor.department_id || !userHasDepartment(taskCreator, actor.department_id)) {
       throw new Error("Department managers can only assign tasks within their department.");
     }
   }
+
+  await TaskAssignment.deleteMany({
+    task_id: task._id,
+    assigned_to: { $nin: assigneeUserIds },
+  });
 
   const assignmentDocs = await Promise.all(
     assigneeUserIds.map((assigneeUserId) =>
@@ -653,7 +732,10 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
   }
 
   if (canManageDepartment(actor.department_role)) {
-    const teammates = await User.find({ department_id: actor.department_id, is_active: true })
+    const teammates = await User.find({
+      is_active: true,
+      ...(actor.department_id ? createDepartmentMembershipFilter(actor.department_id) : {}),
+    })
       .select("_id")
       .lean();
 
@@ -798,11 +880,41 @@ export const listAccessibleTasksPaginated = async (
     }
 
     if (sortBy === "deadline_asc") {
-      return new Date(left.deadline).getTime() - new Date(right.deadline).getTime();
+      const leftDeadline = getDeadlineSortValue(left.deadline);
+      const rightDeadline = getDeadlineSortValue(right.deadline);
+
+      if (leftDeadline === null && rightDeadline === null) {
+        return 0;
+      }
+
+      if (leftDeadline === null) {
+        return 1;
+      }
+
+      if (rightDeadline === null) {
+        return -1;
+      }
+
+      return leftDeadline - rightDeadline;
     }
 
     if (sortBy === "deadline_desc") {
-      return new Date(right.deadline).getTime() - new Date(left.deadline).getTime();
+      const leftDeadline = getDeadlineSortValue(left.deadline);
+      const rightDeadline = getDeadlineSortValue(right.deadline);
+
+      if (leftDeadline === null && rightDeadline === null) {
+        return 0;
+      }
+
+      if (leftDeadline === null) {
+        return 1;
+      }
+
+      if (rightDeadline === null) {
+        return -1;
+      }
+
+      return rightDeadline - leftDeadline;
     }
 
     return left.title.localeCompare(right.title);
@@ -1170,6 +1282,77 @@ export const addTaskComment = async (actor: Express.AuthUser, input: AddTaskComm
   }, userMap);
 };
 
+export const updateTaskDetails = async (actor: Express.AuthUser, input: UpdateTaskDetailsInput) => {
+  const task = await Task.findById(input.taskId);
+  if (!task) {
+    throw new Error("Task not found.");
+  }
+
+  if (!canManageOrOwnTask(actor, { created_by: task.created_by as Types.ObjectId })) {
+    throw new Error("You do not have permission to update this task.");
+  }
+
+  if (input.title !== undefined) {
+    task.title = input.title.trim();
+  }
+
+  if (input.description !== undefined) {
+    task.description = input.description.trim() || undefined;
+  }
+
+  if (input.deadline !== undefined) {
+    task.deadline = input.deadline || undefined;
+  }
+
+  await task.save();
+  return normalizeTask(task);
+};
+
+export const deleteTasks = async (actor: Express.AuthUser, input: DeleteTasksInput) => {
+  const uniqueTaskIds = [...new Set(
+    input.taskIds
+      .map((taskId) => taskId.trim())
+      .filter((taskId) => taskId.length > 0),
+  )];
+
+  if (uniqueTaskIds.length === 0) {
+    throw new Error("At least one task id is required.");
+  }
+
+  const tasks = await Task.find({ _id: { $in: uniqueTaskIds } })
+    .select("_id created_by status")
+    .lean();
+
+  if (tasks.length === 0) {
+    throw new Error("Task not found.");
+  }
+
+  const undeletableTask = tasks.find((task) => !canDeleteTaskByPolicy(actor, {
+    created_by: task.created_by,
+    status: task.status,
+  }));
+  if (undeletableTask) {
+    throw new Error("You do not have permission to delete one or more selected tasks.");
+  }
+
+  const deletableTaskIds = tasks.map((task) => String(task._id));
+  const objectIds = deletableTaskIds.map((taskId) => new Types.ObjectId(taskId));
+
+  await Promise.all([
+    Task.deleteMany({ _id: { $in: objectIds } }),
+    TaskAssignment.deleteMany({ task_id: { $in: objectIds } }),
+    TaskComment.deleteMany({ task_id: { $in: objectIds } }),
+    TaskFeedback.deleteMany({ task_id: { $in: objectIds } }),
+    TaskStatusHistory.deleteMany({ task_id: { $in: objectIds } }),
+    TaskWorkLink.deleteMany({ task_id: { $in: objectIds } }),
+  ]);
+
+  return {
+    deleted_count: deletableTaskIds.length,
+    deleted_task_ids: deletableTaskIds,
+  };
+};
+
 export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Promise<TaskDetailResponse> => {
   const task = await resolveTaskOrThrow(taskId);
 
@@ -1197,7 +1380,7 @@ export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Pr
   const userMap = await getUsersByIds(allUserIds);
 
   const involvedUsers = await User.find({ _id: { $in: allUserIds } })
-    .select("department_id")
+    .select("departments")
     .lean();
 
   const involved_departments = await getInvolvedDepartments(involvedUsers);

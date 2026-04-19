@@ -3,7 +3,7 @@ import User from '../models/User';
 
 export type InternProfilePayload = {
   user_id: string;
-  school: string;
+  school_university: string;
   required_hours: number;
   rendered_hours_total?: number;
   expected_end_date: Date;
@@ -27,7 +27,7 @@ export const createInternProfile = async (payload: InternProfilePayload) => {
 
   return InternProfile.create({
     user_id: payload.user_id,
-    school: payload.school,
+    school_university: payload.school_university,
     required_hours: payload.required_hours,
     rendered_hours_total: payload.rendered_hours_total ?? 0,
     expected_end_date: payload.expected_end_date,
@@ -44,8 +44,8 @@ export const updateInternProfileByUserId = async (
     throw new Error('Intern profile not found.');
   }
 
-  if (typeof payload.school !== 'undefined') {
-    profile.school = payload.school;
+  if (typeof payload.school_university !== 'undefined') {
+    profile.school_university = payload.school_university;
   }
   if (typeof payload.required_hours !== 'undefined') {
     profile.required_hours = payload.required_hours;

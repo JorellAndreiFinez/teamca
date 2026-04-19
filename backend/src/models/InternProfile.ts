@@ -9,7 +9,7 @@ const internProfileSchema = new Schema(
       unique: true,
       index: true,
     },
-    school: {
+    school_university: {
       type: String,
       required: true,
       trim: true,

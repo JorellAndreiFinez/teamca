@@ -70,6 +70,11 @@ export const initTaskSocket = (server: HttpServer, allowedOrigins: string[]) => 
   });
 
   io.on("connection", (socket: Socket) => {
+    const userId = String(socket.data.userId || "");
+    if (userId) {
+      socket.join(`user:${userId}`);
+    }
+
     socket.on("task:join", (taskId: string) => {
       if (!taskId || typeof taskId !== "string") {
         return;
@@ -105,4 +110,44 @@ export const emitTaskCommentCreated = (taskId: string, payload: unknown) => {
   }
 
   ioInstance.to(`task:${taskId}`).emit("task:comment-created", payload);
+};
+
+export const emitUserNotification = (userId: string, payload: unknown) => {
+  if (!ioInstance) {
+    return;
+  }
+
+  ioInstance.to(`user:${userId}`).emit("notification:received", payload);
+};
+
+export const emitUsersNotification = (userIds: string[], payload: unknown) => {
+  if (!ioInstance) {
+    return;
+  }
+
+  const uniqueUserIds = [...new Set(
+    userIds
+      .map((userId) => userId.trim())
+      .filter((userId) => userId.length > 0),
+  )];
+
+  for (const userId of uniqueUserIds) {
+    ioInstance.to(`user:${userId}`).emit("notification:received", payload);
+  }
+};
+
+export const emitUsersDirectoryUpdated = (userIds: string[], payload: unknown) => {
+  if (!ioInstance) {
+    return;
+  }
+
+  const uniqueUserIds = [...new Set(
+    userIds
+      .map((userId) => userId.trim())
+      .filter((userId) => userId.length > 0),
+  )];
+
+  for (const userId of uniqueUserIds) {
+    ioInstance.to(`user:${userId}`).emit("user:directory-updated", payload);
+  }
 };

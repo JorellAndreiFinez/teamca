@@ -1,10 +1,8 @@
-// backend\src\middlewares\authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "teamca-dev-secret-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || "teamca-dev-secret-change-in-production";
 
 export const authMiddleware = async (
   req: Request,
@@ -12,26 +10,35 @@ export const authMiddleware = async (
   next: NextFunction,
 ) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer "))
+  if (!authHeader?.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
+  }
 
   const token = authHeader.slice(7);
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { user_id: string };
-    const userId = payload.user_id; // ✅ match your login JWT
+    const userId = payload.user_id;
 
-    // fetch full user from DB
     const user = await User.findById(userId)
-      .select(
-        "email first_name last_name global_role department_role departments is_active",
-      )
+      .select("email global_role departments is_active")
       .lean();
 
-    if (!user || !user.is_active)
+    if (!user || !user.is_active) {
       return res.status(403).json({ message: "Account inactive or not found" });
+    }
 
-    req.user = user; // attach full user object
+    const primaryDepartment = user.departments?.[0];
+
+    req.user = {
+      user_id: user._id,
+      email: user.email,
+      global_role: user.global_role,
+      department_role: primaryDepartment?.department_role,
+      department_id: primaryDepartment ? String(primaryDepartment.department_id) : undefined,
+      is_active: user.is_active,
+    };
+
     next();
   } catch (err) {
     console.error("[authMiddleware] JWT error:", err);

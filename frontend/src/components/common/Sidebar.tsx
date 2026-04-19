@@ -1,6 +1,11 @@
 import React from 'react';
+import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import NotificationBell from './NotificationBell';
+import { userService } from '../../services/userService';
+import { config } from '../../config/env';
+import type { NotificationItem } from '../../types/notification';
 
 interface NavItem {
   label: string;
@@ -79,8 +84,26 @@ function MenuIcon() {
   );
 }
 
+function LogsIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+const isUserNotificationEvent = (eventType?: string): boolean => {
+  return eventType === 'user_profile_updated'
+    || eventType === 'user_role_changed'
+    || eventType === 'user_activation_changed'
+    || eventType === 'user_deleted';
+};
+
 export default function Sidebar() {
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const canManageUsers = useAuthStore((state) => state.canManageUsers);
   const canWhitelistEmails = useAuthStore((state) => state.canWhitelistEmails);
@@ -90,6 +113,80 @@ export default function Sidebar() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
+
+  const currentUserId = React.useMemo(
+    () => user?.user_id || user?._id,
+    [user],
+  );
+
+  const refreshCurrentUser = React.useCallback(async () => {
+    if (!currentUserId) {
+      return;
+    }
+
+    try {
+      const profile = await userService.getProfile(String(currentUserId));
+      setUser(profile);
+    } catch {
+      // Keep existing UI state when a background sync fails.
+    }
+  }, [currentUserId, setUser]);
+
+  const socket = React.useMemo<Socket | null>(() => {
+    if (!token) {
+      return null;
+    }
+
+    return io(config.backendUrl, {
+      transports: ['websocket'],
+      auth: { token },
+      autoConnect: true,
+    });
+  }, [token]);
+
+  React.useEffect(() => {
+    if (!mounted || !token || !currentUserId) {
+      return;
+    }
+
+    void refreshCurrentUser();
+  }, [mounted, token, currentUserId, refreshCurrentUser]);
+
+  React.useEffect(() => {
+    if (!socket || !currentUserId) {
+      return;
+    }
+
+    const onNotificationReceived = (payload: NotificationItem) => {
+      if (!isUserNotificationEvent(payload?.event_type)) {
+        return;
+      }
+
+      const notificationUserId =
+        (typeof payload?.metadata?.user_id === 'string' && payload.metadata.user_id)
+        || (typeof payload?.entity_id === 'string' && payload.entity_id)
+        || null;
+
+      if (!notificationUserId || String(notificationUserId) !== String(currentUserId)) {
+        return;
+      }
+
+      if (payload.event_type === 'user_deleted') {
+        logout();
+        window.location.replace('/login');
+        return;
+      }
+
+      void refreshCurrentUser();
+    };
+
+    socket.on('notification:received', onNotificationReceived);
+
+    return () => {
+      socket.off('notification:received', onNotificationReceived);
+      socket.disconnect();
+    };
+  }, [currentUserId, logout, refreshCurrentUser, socket]);
 
   const currentPath = mounted && typeof window !== 'undefined' ? window.location.pathname : '';
 
@@ -101,11 +198,15 @@ export default function Sidebar() {
   ];
 
   const adminNavItems: NavItem[] = mounted && canManageUsers()
-    ? [{ label: 'Users', href: '/users', icon: <UsersIcon /> }]
+    ? [
+        { label: 'User Directory', href: '/users', icon: <UsersIcon /> },
+      ]
     : [];
 
   const superadminNavItems: NavItem[] = mounted && canWhitelistEmails()
-    ? [{ label: 'Superadmin', href: '/superadmin', icon: <ShieldIcon /> }]
+    ? [
+        { label: 'Activity Logs', href: '/activity-logs', icon: <LogsIcon /> },
+      ]
     : [];
 
   const navItems = [...baseNavItems, ...adminNavItems, ...superadminNavItems];
@@ -123,16 +224,19 @@ export default function Sidebar() {
       ? 'Super Admin'
       : user?.global_role === 'Admin'
       ? 'Admin'
-      : user?.department_role || 'Intern'
+      : user?.departments?.[0]?.department_role || 'Intern'
     : '';
 
   if (!sidebarOpen) {
     return (
-      <div className="fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 w-16 shadow-xl">
+      <div className="fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 w-16 shadow-xl transition-all duration-300 ease-in-out">
         <div className="flex items-center justify-center h-16 border-b border-slate-700">
           <button onClick={toggleSidebar} className="text-slate-400 hover:text-white transition-colors">
             <MenuIcon />
           </button>
+        </div>
+        <div className="flex items-center justify-center border-b border-slate-700 py-2">
+          <NotificationBell compact />
         </div>
         <nav className="flex-1 py-4">
           {navItems.map((item) => (
@@ -163,20 +267,21 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 w-64 shadow-xl">
+    <div className="fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 w-64 shadow-xl transition-all duration-300 ease-in-out">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-slate-700">
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 flex-shrink-0">
           <span className="text-white font-bold text-sm">TC</span>
         </div>
-        <span className="text-white font-semibold text-lg flex-1">TeamCA</span>
+        <span className="text-white font-semibold text-lg flex-1 opacity-0 animate-fade-in">TeamCA</span>
+        <NotificationBell />
         <button onClick={toggleSidebar} className="text-slate-400 hover:text-white transition-colors">
-          <MenuIcon />
-        </button>
-      </div>
+            <MenuIcon />
+          </button>
+        </div>
 
       {/* User info */}
-      <div className="px-4 py-3 border-b border-slate-700">
+      <div className="px-4 py-3 border-b border-slate-700 opacity-0 animate-fade-in" style={{ animationDelay: '60ms' }}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-semibold">
@@ -192,23 +297,62 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {navItems.map((item) => (
+        {/* core items */}
+        {baseNavItems.map((item, idx) => (
           <a
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5
+            className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5 opacity-0 animate-fade-in
               ${currentPath === item.href
                 ? 'bg-blue-600 text-white'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+            style={{ animationDelay: `${100 + idx * 40}ms` }}
           >
             {item.icon}
             <span className="text-sm font-medium">{item.label}</span>
           </a>
         ))}
+
+        {/* superadmin section */}
+        {(adminNavItems.length > 0 || superadminNavItems.length > 0) && (
+          <>
+            <div className="px-4 py-3 mt-2 mb-1 opacity-0 animate-fade-in" style={{ animationDelay: '320ms' }}>
+              <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">superadmin</p>
+            </div>
+            {adminNavItems.map((item, idx) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5 opacity-0 animate-fade-in
+                  ${currentPath === item.href
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                style={{ animationDelay: `${360 + idx * 40}ms` }}
+              >
+                {item.icon}
+                <span className="text-sm font-medium">{item.label}</span>
+              </a>
+            ))}
+            {superadminNavItems.map((item, idx) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5 opacity-0 animate-fade-in
+                  ${currentPath === item.href
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                style={{ animationDelay: `${400 + idx * 40}ms` }}
+              >
+                {item.icon}
+                <span className="text-sm font-medium">{item.label}</span>
+              </a>
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Logout */}
-      <div className="p-3 border-t border-slate-700">
+      <div className="p-3 border-t border-slate-700 opacity-0 animate-fade-in" style={{ animationDelay: '500ms' }}>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-slate-400 hover:bg-red-900/50 hover:text-red-300 transition-colors"
