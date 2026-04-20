@@ -4,8 +4,9 @@ import MainLayout from '../layouts/MainLayout.tsx';
 import HomeHero from '../components/hero/HomeHero.tsx';
 import WhatWeDo from '../components/sections/home/WhatWeDo.tsx';
 import WhoWeAre from '../components/sections/home/WhoWeAre.tsx';
+import WhyFinancialMatters from '../components/sections/home/WhyFinancialMatters.tsx';
 import Testimonials from '../components/sections/home/Testimonials.tsx';
-import CTA from '../components/sections/CTA.tsx';
+import CTA from '../components/sections/home/CTA.tsx';
 
 ---
 <html lang="en">
@@ -16,6 +17,11 @@ import CTA from '../components/sections/CTA.tsx';
     <MainLayout client:load>
       <HomeHero client:load />
       <WhoWeAre client:load />
+      <WhatWeDo client:load />
+      <WhyFinancialMatters client:load />
+      <Testimonials client:load />
+      <CTA client:load />
+
     </MainLayout>
   </body>
 </html>

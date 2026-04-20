@@ -12,10 +12,7 @@ const Navbar: React.FC = () => {
 
   return (
     <div className="fixed top-0 left-0 w-full z-50">
-      <nav
-        className="flex items-center justify-between w-full py-4 px-6 md:px-16 lg:px-24 xl:px-32 
-                      backdrop-blur-md border-b border-[--br-color-default] text-black"
-      >
+      <nav className="flex items-center justify-between w-full py-4 px-6 md:px-16 lg:px-24 xl:px-32 backdrop-blur-md border-b border-[--br-color-default] text-black">
         <a href="/" className="flex items-center space-x-3">
           <img
             src="/icons/teamca-transparent-logo-1.png"

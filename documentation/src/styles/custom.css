@@ -1,0 +1,42 @@
+
+/* Dark Mode - Deep Brown & Warm Gold Palette */
+:root[data-theme='dark'] {
+  /* Backgrounds - Dark brown base */
+  --sl-color-white: #f5ede4;
+  --sl-color-gray-1: #ebe2d5;
+  --sl-color-gray-2: #d4bfa5;
+  --sl-color-gray-3: #b8987a;
+  --sl-color-gray-4: #8b6e4f;
+  --sl-color-gray-5: #5c463a;
+  --sl-color-gray-6: #3d2f28;
+  --sl-color-black: #1a1410;
+
+  /* Accents - Warm Gold */
+  --sl-color-accent: #d4af6a;
+  --sl-color-accent-high: #e8c752;
+  --sl-color-text-accent: #e8c752;
+
+  /* Status Colors */
+  --sl-color-error-high: #ff6b5a;
+  --sl-color-warning-high: #e8c752;
+  --sl-color-success-high: #7aae7a;
+  --sl-color-info-high: #d4af6a;
+
+  /* Text & Semantic */
+  --sl-color-text: #f5ede4;
+  --sl-color-text-secondary: #d4bfa5;
+}
+
+/* ===========================
+   HEADER CUSTOMIZATION
+   =========================== */
+
+/* Hide theme toggle button */
+[data-theme-toggle] {
+  display: none !important;
+}
+
+/* Move search bar to far right */
+.header-search {
+  margin-left: auto !important;
+}
