@@ -1,6 +1,45 @@
 {
+  "name": "teamca",
+  "version": "1.0.0",
+  "description": "TeamCA - Comprehensive Intern Management System",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "website",
+    "documentation"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "backend:dev": "npm run dev -w backend",
+    "backend:build": "npm run build -w backend",
+    "frontend:dev": "npm run dev -w frontend",
+    "frontend:build": "npm run build -w frontend",
+    "website:dev": "npm run dev -w website",
+    "website:build": "npm run build -w website",
+    "docs:dev": "npm run dev -w documentation",
+    "docs:build": "npm run build -w documentation",
+    "docs:preview": "npm run preview -w documentation",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "keywords": [
+    "intern-management",
+    "task-tracking",
+    "dtr",
+    "rbac",
+    "full-stack"
+  ],
+  "author": "TeamCA Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
-    "@astrojs/check": "^0.9.8",
     "typescript": "^5.9.3"
   }
 }
