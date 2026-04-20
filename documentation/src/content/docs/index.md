@@ -77,7 +77,7 @@ Select a section from the menu to dive deeper into specific areas of the system.
 ---
 ### Happy viewing!
 
-Feel free to edit the markdowns for future updates. See [Starlight Configs](guides/starlight-config.md) for more information and content guidelines.
+Feel free to edit the markdowns for future updates. See [Starlight Configs](guides/starlight-config) for more information and content guidelines.
 
 ---
 

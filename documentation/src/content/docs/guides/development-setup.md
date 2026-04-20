@@ -354,10 +354,10 @@ localStorage.clear()
 
 ## Next Steps
 
-- [Deploy to Production](./deployment.md)
-- [Best Practices](./best-practices.md)
-- [API Documentation](../api/overview.md)
-- [Backend Architecture](../backend/overview.md)
+- [Deploy to Production](./deployment)
+- [Best Practices](./best-practices)
+- [API Documentation](../api/overview)
+- [Backend Architecture](../backend/overview)
 
 ---
 

@@ -610,7 +610,7 @@ npm run build
 
 - Read the [Astro Starlight Docs](https://starlight.astro.build)
 - Explore [Astro Configuration](https://docs.astro.build/en/reference/configuration-reference/)
-- Check the [API Reference](./api/overview.md)
+- Check the [API Reference](./api/overview)
 
 ---
 

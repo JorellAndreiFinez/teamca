@@ -413,4 +413,4 @@ fetch("http://localhost:3000/api/tasks", {
 
 ---
 
-**Recommendation**: Learn about [Real-time with Socket.io](./socket.md)
+**Recommendation**: Learn about [Real-time with Socket.io](./socket)

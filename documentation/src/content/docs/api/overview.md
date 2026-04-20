@@ -240,14 +240,14 @@ Future versions will be at `/api/v2/`, etc.
 
 ## Documentation by Module
 
-- **[Auth API](./auth.md)**
-- **[Tasks API](./tasks.md)**
-- **[DTR API](./dtr.md)**
-- **[Users API](./users.md)**
-- **[Departments API](./departments.md)**
-- **[Notifications API](./notifications.md)**
-- **[Activity Logs API](./activity-logs.md)**
+- **[Auth API](./auth)**
+- **[Tasks API](./tasks)**
+- **[DTR API](./dtr)**
+- **[Users API](./users)**
+- **[Departments API](./departments)**
+- **[Notifications API](./notifications)**
+- **[Activity Logs API](./activity-logs)**
 
 ---
 
-**Recommendation**: Explore individual API modules or return to [Backend Architecture](../backend/overview.md)
+**Recommendation**: Explore individual API modules or return to [Backend Architecture](../backend/overview)
