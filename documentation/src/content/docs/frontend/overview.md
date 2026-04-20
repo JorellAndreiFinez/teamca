@@ -433,4 +433,4 @@ UI updates instantly
 
 ---
 
-**Recommendation**: Read about [Frontend Features](./features.md) or see [Components](./components.md)
+**Recommendation**: Read about [Frontend Features](./features) or see [Components](./components)

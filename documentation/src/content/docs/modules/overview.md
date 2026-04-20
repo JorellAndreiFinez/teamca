@@ -51,7 +51,7 @@ Feature
 - Session management
 - Auto-logout on token expiry
 
-See detailed [Auth Module](./auth.md)
+See detailed [Auth Module](./auth)
 
 ---
 
@@ -80,7 +80,7 @@ See detailed [Auth Module](./auth.md)
 - Priority and deadline management
 - Real-time updates via Socket.io
 
-See detailed [Tasks Module](./tasks.md)
+See detailed [Tasks Module](./tasks)
 
 ---
 
@@ -90,7 +90,7 @@ See detailed [Tasks Module](./tasks.md)
 
 To be filled later once done...
 
-See detailed [DTR Module](./dtr.md)
+See detailed [DTR Module](./dtr)
 
 ---
 
@@ -120,7 +120,7 @@ See detailed [DTR Module](./dtr.md)
 - Notification preferences
 - Desktop notifications (optional)
 
-See detailed [Notifications Module](./notifications.md)
+See detailed [Notifications Module](./notifications)
 
 ---
 
@@ -149,7 +149,7 @@ See detailed [Notifications Module](./notifications.md)
 - Password management
 - Working hours configuration
 
-See detailed [User Management Module](./users.md)
+See detailed [User Management Module](./users)
 
 ---
 
@@ -175,7 +175,7 @@ See detailed [User Management Module](./users.md)
 - Department-scoped permissions
 - Department reports
 
-See detailed [Departments Module](./departments.md)
+See detailed [Departments Module](./departments)
 
 ---
 
@@ -200,7 +200,7 @@ See detailed [Departments Module](./departments.md)
 - Internship duration
 - Document management (future)
 
-See detailed [Intern Profiles Module](./intern-profiles.md)
+See detailed [Intern Profiles Module](./intern-profiles)
 
 ---
 
@@ -226,7 +226,7 @@ See detailed [Intern Profiles Module](./intern-profiles.md)
 - IP address and user agent logging
 - Compliance and audit trails
 
-See detailed [Activity Logs Module](./activity-logs.md)
+See detailed [Activity Logs Module](./activity-logs)
 
 ---
 
@@ -335,4 +335,4 @@ All Modules
 
 ---
 
-**Next**: Explore individual modules or learn about [API Endpoints](../api/overview.md)
+**Next**: Explore individual modules or learn about [API Endpoints](../api/overview)

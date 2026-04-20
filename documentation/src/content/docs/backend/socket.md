@@ -510,4 +510,4 @@ socket.on("event-name", (data, callback) => {
 
 ---
 
-**Recommendation**: Read about [API Reference](../api/overview.md) or explore [Modules](../modules/overview.md)
+**Recommendation**: Read about [API Reference](../api/overview) or explore [Modules](../modules/overview)

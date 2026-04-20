@@ -515,4 +515,4 @@ async updateTaskWithHistory(taskId: string, updates: object) {
 
 ---
 
-**Recommendation**: Learn about [Models & Validation](./models.md)
+**Recommendation**: Learn about [Models & Validation](./models)

@@ -423,4 +423,4 @@ async delete(req: Request, res: Response) {
 
 ---
 
-**Recommendation**: Learn about [Services](./services.md)
+**Recommendation**: Learn about [Services](./services)

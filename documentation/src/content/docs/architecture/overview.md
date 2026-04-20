@@ -185,4 +185,4 @@ All connected clients receive update
 
 ---
 
-**Recommendation**: Dive into [Backend Architecture](../backend/overview.md) or [Frontend Architecture](../frontend/overview.md)
+**Recommendation**: Dive into [Backend Architecture](../backend/overview) or [Frontend Architecture](../frontend/overview)

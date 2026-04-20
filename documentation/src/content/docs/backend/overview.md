@@ -182,7 +182,7 @@ Mongoose schemas defining the data structure and validation.
 12. ActivityLog
 13. Whitelist
 
-See [Data Models](../architecture/data-models.md) for detailed schemas.
+See [Data Models](../architecture/data-models) for detailed schemas.
 
 ## Routes
 
@@ -305,4 +305,4 @@ Consistent error responses:
 ---
 
 **Recommendation**: Read about specific components:  
-[Controllers](./controllers.md) | [Services](./services.md) | [Models](./models.md) | [Middlewares & RBAC](./middlewares.md) | [Real-time with Socket.io](./socket.md)
+[Controllers](./controllers) | [Services](./services) | [Models](./models) | [Middlewares & RBAC](./middlewares) | [Real-time with Socket.io](./socket)
