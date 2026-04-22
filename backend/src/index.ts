@@ -7,6 +7,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db";
 import { initTaskSocket } from "./socket/io";
+import routes from "./routes/index";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
@@ -86,6 +87,7 @@ const apiLimiter = rateLimit({
 // ── MongoDB connection
 connectDB().then(() => console.log("MongoDB ready"));
 
+<<<<<<< Updated upstream
 // ── Activity logging middleware
 import { activityLogger } from "./middlewares/activityLogger";
 app.use(activityLogger);
@@ -109,6 +111,9 @@ app.use("/intern-profiles", internProfileRoutes);
 app.use("/tasks", apiLimiter, taskRoutes);
 app.use("/notifications", apiLimiter, notificationRoutes);
 app.use("/activity-logs", activityRoutes);
+=======
+app.use("/api", routes);
+>>>>>>> Stashed changes
 
 // ── Health check
 app.get("/health", (_req, res) =>

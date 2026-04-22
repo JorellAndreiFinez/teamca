@@ -4,14 +4,13 @@ import { useAuthStore } from "@/store/authStore";
 import { config } from "@/config/env";
 
 const api = axios.create({
-  baseURL: config.backendUrl,
+  baseURL: config.backendUrl + "/api",
   headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use((req) => {
   let token = useAuthStore.getState().token;
 
-  // 🔥 fallback if Zustand not ready
   if (!token) {
     const stored = localStorage.getItem("auth-storage");
     if (stored) {

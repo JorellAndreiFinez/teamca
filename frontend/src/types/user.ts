@@ -13,17 +13,25 @@ export interface User {
 
   first_name?: string;
   last_name?: string;
-  email: string;
+  email?: string;
 
   global_role?: GlobalRole;
   is_active?: boolean;
 
   departments?: DepartmentAssignment[];
 
-  createdAt?: string; // backend ISO string
+  required_hours?: number;
+
+  working_hours?: {
+    start?: string;
+    end?: string;
+  };
+
+  working_days?: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
+
+  createdAt?: string;
   updatedAt?: string;
 }
-
 export interface InternProfile {
   profile_id: number;
   user_id: string;

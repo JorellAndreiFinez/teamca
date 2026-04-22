@@ -1,4 +1,3 @@
-// src/components/ui/Dialog.tsx
 import * as React from "react";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
@@ -6,19 +5,29 @@ import { cn } from "@/lib/utils";
 // Root
 export const Dialog = RadixDialog.Root;
 
-// Trigger
-export const DialogTrigger = RadixDialog.Trigger;
+export const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof RadixDialog.Overlay>,
+  React.ComponentPropsWithoutRef<typeof RadixDialog.Overlay>
+>(({ className, ...props }, ref) => (
+  <RadixDialog.Overlay
+    ref={ref}
+    className={cn("fixed inset-0 z-50 bg-black/50 backdrop-blur-sm", className)}
+    {...props}
+  />
+));
+DialogOverlay.displayName = "DialogOverlay";
 
-// Content
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof RadixDialog.Content>,
   React.ComponentPropsWithoutRef<typeof RadixDialog.Content>
 >(({ className, children, ...props }, ref) => (
   <RadixDialog.Portal>
+    <DialogOverlay />
+
     <RadixDialog.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-full max-w-lg rounded-2xl bg-white p-6 shadow-lg",
+        "fixed z-50 left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-lg",
         className,
       )}
       {...props}
@@ -56,13 +65,3 @@ export const DialogTitle = React.forwardRef<
   />
 ));
 DialogTitle.displayName = "DialogTitle";
-
-// Footer
-export const DialogFooter: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-}> = ({ children, className }) => (
-  <div className={cn("flex justify-end space-x-2 pt-2", className)}>
-    {children}
-  </div>
-);

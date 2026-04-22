@@ -1,9 +1,12 @@
+// frontend\src\store\authStore.ts
+
+import { User } from "@/types/user";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface AuthState {
   token: string | null;
-  user: any | null;
+  user: User | null;
   isAuthenticated: boolean;
 
   isHydrated: boolean;
@@ -56,7 +59,9 @@ export const useAuthStore = create(
 
       canManageUsers: () => {
         const user = get().user;
-        return user?.global_role === "Admin" || user?.global_role === "Superadmin";
+        return (
+          user?.global_role === "Admin" || user?.global_role === "Superadmin"
+        );
       },
 
       canWhitelistEmails: () => {
@@ -72,7 +77,9 @@ export const useAuthStore = create(
 
       canViewAllDepartments: () => {
         const user = get().user;
-        return user?.global_role === "Admin" || user?.global_role === "Superadmin";
+        return (
+          user?.global_role === "Admin" || user?.global_role === "Superadmin"
+        );
       },
 
       isIntern: () => {
@@ -82,7 +89,9 @@ export const useAuthStore = create(
 
       getUserFullName: () => {
         const user = get().user;
-        return user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() : "";
+        return user
+          ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
+          : "";
       },
 
       isSuperadmin: () => {

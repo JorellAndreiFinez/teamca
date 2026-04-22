@@ -15,6 +15,7 @@ import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
 
 const router = express.Router();
 
+<<<<<<< Updated upstream
 // rate limit 
 const whitelistLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -43,6 +44,8 @@ router.post(
   activateWhitelistedUserHandler,
 );
 
+=======
+>>>>>>> Stashed changes
 router.get(
   "/whitelisted",
   authMiddleware,

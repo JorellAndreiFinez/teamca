@@ -1,24 +1,63 @@
+// backend\src\models\DTR.ts
+
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IDTR extends Document {
-  user_id: string;
-  date: string;
-  clock_in_time: Date;
-  clock_out_time?: Date;
-  hours_rendered: number;
-  status: string;
+export interface IClock {
+  timeIn: Date;
+  timeOut?: Date;
+  totalHours?: number;
+  overtimeHours?: number;
+  status?: "present" | "late" | "very_late" | "absent";
+  remarks?: string;
 }
 
-const dtrSchema = new Schema<IDTR>(
+export interface IDTR extends Document {
+  userId: mongoose.Types.ObjectId;
+  date: Date;
+  clocks: IClock[];
+  status?: "pending" | "approved" | "rejected";
+  remarks?: string;
+
+  attendanceStatus?: "present" | "late" | "very_late" | "absent";
+}
+
+const ClockSchema: Schema = new Schema(
   {
-    user_id: { type: String, required: true },
-    date: { type: String, required: true },
-    clock_in_time: { type: Date, required: true },
-    clock_out_time: { type: Date },
-    hours_rendered: { type: Number, default: 0 },
-    status: { type: String, default: "Present" },
+    timeIn: { type: Date, required: true },
+    timeOut: { type: Date },
+    totalHours: { type: Number },
+    overtimeHours: { type: Number },
+
+    status: {
+      type: String,
+      enum: ["present", "late", "very_late", "absent"],
+    },
+
+    remarks: { type: String },
+  },
+  { _id: false },
+);
+
+const DTRSchema: Schema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    date: { type: Date, required: true },
+    clocks: [ClockSchema],
+
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
+    remarks: { type: String },
+
+    attendanceStatus: {
+      type: String,
+      enum: ["present", "late", "very_late", "absent"],
+    },
   },
   { timestamps: true },
 );
 
-export default mongoose.model<IDTR>("DTR", dtrSchema);
+export default mongoose.model<IDTR>("DTR", DTRSchema);

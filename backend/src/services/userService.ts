@@ -27,11 +27,21 @@ export type UpdateUserInput = {
   email?: string;
   password_hash?: string;
   global_role?: GlobalRole;
+
   departments?: {
     department_id: string;
     department_role: DepartmentRole;
   }[];
+
   is_active?: boolean;
+  required_hours?: number;
+
+  working_hours?: {
+    start?: string;
+    end?: string;
+  };
+
+  working_days?: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
 };
 
 export type CreateUserInput = {
@@ -41,10 +51,20 @@ export type CreateUserInput = {
   password_hash: string;
   global_role: GlobalRole;
   is_active?: boolean;
+
   departments?: {
     department_id: string;
     department_role: DepartmentRole;
   }[];
+
+  required_hours?: number;
+
+  working_hours?: {
+    start: string;
+    end: string;
+  };
+
+  working_days?: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
 };
 
 export type UpsertInternProfileInput = {
@@ -54,8 +74,6 @@ export type UpsertInternProfileInput = {
   expected_end_date?: Date;
   actual_end_date?: Date | null;
 };
-
-// ------------------ USER SERVICES ------------------
 
 export const getAllUsers = async () => {
   return User.find().select(SAFE_USER_SELECT).sort({ createdAt: -1 }).lean();
@@ -140,6 +158,16 @@ export const createUser = async (payload: CreateUserInput) => {
     password_hash: payload.password_hash,
     global_role: payload.global_role,
     is_active: payload.is_active ?? true,
+
+    required_hours: payload.required_hours ?? 0,
+
+    working_hours: {
+      start: payload.working_hours?.start || "",
+      end: payload.working_hours?.end || "",
+    },
+
+    working_days: payload.working_days || [],
+
     departments: (payload.departments || []).map((d) => ({
       department_id: new mongoose.Types.ObjectId(d.department_id),
       department_role: d.department_role,
@@ -147,7 +175,6 @@ export const createUser = async (payload: CreateUserInput) => {
   };
 
   const created = await User.create(userPayload);
-  console.log("[createUser] created:", created._id);
 
   return getUserById(String(created._id));
 };
@@ -156,7 +183,6 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // Basic fields
   if (payload.first_name !== undefined) user.first_name = payload.first_name;
   if (payload.last_name !== undefined) user.last_name = payload.last_name;
   if (payload.email !== undefined) {
@@ -180,7 +206,22 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   if (payload.global_role !== undefined) user.global_role = payload.global_role;
   if (payload.is_active !== undefined) user.is_active = payload.is_active;
 
-  // Departments array
+  if (payload.required_hours !== undefined)
+    user.required_hours = payload.required_hours;
+
+  // ✅ working_hours
+  if (payload.working_hours) {
+    user.working_hours = {
+      start: payload.working_hours.start ?? user.working_hours?.start ?? "",
+      end: payload.working_hours.end ?? user.working_hours?.end ?? "",
+    };
+  }
+
+  // ✅ working_days
+  if (Array.isArray(payload.working_days)) {
+    user.working_days = payload.working_days;
+  }
+
   if (Array.isArray(payload.departments)) {
     user.departments = payload.departments.map((d) => ({
       department_id: new mongoose.Types.ObjectId(d.department_id),
@@ -189,7 +230,6 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   }
 
   await user.save();
-  console.log("[updateUser] updated:", user._id);
 
   // lightweight update response without intern profile
   return user.toObject();
@@ -272,7 +312,10 @@ export const deleteUser = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found.");
 
+<<<<<<< Updated upstream
   // prevent deletion of Superadmin users
+=======
+>>>>>>> Stashed changes
   if (user.global_role === "Superadmin") {
     throw new Error("Cannot delete a Superadmin user.");
   }

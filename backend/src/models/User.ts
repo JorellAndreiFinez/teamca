@@ -13,11 +13,24 @@ export interface IUser extends Document {
   global_role: "Superadmin" | "Admin" | "Standard_User";
   departments: IUserDepartment[];
   is_active: boolean;
+<<<<<<< Updated upstream
   working_days?: string[];
   working_hours?: {
     start: string;
     end: string;
   };
+=======
+
+  required_hours: number;
+
+  working_hours: {
+    start: string; // "08:00"
+    end: string; // "17:00"
+  };
+
+  working_days: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
+
+>>>>>>> Stashed changes
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,12 +56,18 @@ const userSchema = new Schema<IUser>(
     first_name: { type: String, default: "" },
     last_name: { type: String, default: "" },
     email: { type: String, required: true, unique: true },
+<<<<<<< Updated upstream
     password_hash: { type: String },
+=======
+    password_hash: { type: String, required: true },
+
+>>>>>>> Stashed changes
     global_role: {
       type: String,
       enum: ["Superadmin", "Admin", "Standard_User"],
       default: "Standard_User",
     },
+<<<<<<< Updated upstream
     departments: { type: [userDepartmentSchema], default: [] },
     is_active: { type: Boolean, default: true },
     working_days: { type: [String], default: [] },
@@ -58,6 +77,27 @@ const userSchema = new Schema<IUser>(
         end: { type: String, default: "" },
       },
       default: {},
+=======
+
+    departments: { type: [userDepartmentSchema], default: [] },
+    is_active: { type: Boolean, default: true },
+
+    required_hours: { type: Number, default: 0 },
+
+    working_hours: {
+      start: { type: String, default: "" }, // "08:00"
+      end: { type: String, default: "" }, // "17:00"
+    },
+
+    working_days: {
+      type: [
+        {
+          type: String,
+          enum: ["M", "T", "W", "Th", "F", "Sat", "Sun"],
+        },
+      ],
+      default: [],
+>>>>>>> Stashed changes
     },
   },
   { timestamps: true },

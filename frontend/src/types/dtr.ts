@@ -1,12 +1,21 @@
-export type DTRStatus = 'Present' | 'Absent' | 'Leave' | 'Holiday';
+// frontend\src\types\dtr.ts
+
+export type DTRStatus = "Present" | "Absent" | "Leave" | "Holiday";
+
+// frontend/src/types/dtr.ts
+export interface ClockEntry {
+  timeIn: string;
+  timeOut?: string;
+  totalHours?: number;
+}
 
 export interface DailyTimeRecord {
-  dtr_id: number;
-  user_id: string; // uuid
-  date: Date;
-  clock_in_time: Date;
-  clock_out_time?: Date;
-  hours_rendered: number;
-  status: DTRStatus;
-  daily_activity_summary?: string;
+  _id: string;
+  userId: string;
+  date: string;
+  clocks: ClockEntry[];
+  status: "pending" | "approved" | "rejected";
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import MainLayout from '../layouts/MainLayout.tsx';
+import AboutHero from '../components/hero/AboutHero.tsx';
 
 ---
 <html lang="en">
@@ -9,7 +10,8 @@ import MainLayout from '../layouts/MainLayout.tsx';
   </head>
   <body>
     <MainLayout client:load>
-      
+      <AboutHero client:load />
+
     </MainLayout>
   </body>
 </html>
