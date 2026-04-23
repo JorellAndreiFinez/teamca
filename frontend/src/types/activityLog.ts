@@ -1,5 +1,17 @@
-export type ActionType = "create" | "read" | "update" | "delete" | "login" | "logout";
-export type ResourceType = "user" | "task" | "department" | "dtr" | "internProfile" | "auth";
+export type ActionType =
+  | "create"
+  | "read"
+  | "update"
+  | "delete"
+  | "login"
+  | "logout";
+export type ResourceType =
+  | "user"
+  | "task"
+  | "department"
+  | "dtr"
+  | "internProfile"
+  | "auth";
 export type LogStatus = "success" | "failed";
 
 export interface ActivityLog {
@@ -11,7 +23,7 @@ export interface ActivityLog {
   resource_type: ResourceType;
   resource_id?: string;
   description: string;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   status: LogStatus;
 }
 

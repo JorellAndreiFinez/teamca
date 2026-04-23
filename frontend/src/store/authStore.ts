@@ -1,5 +1,3 @@
-// frontend\src\store\authStore.ts
-
 import { User } from "@/types/user";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -12,8 +10,8 @@ interface AuthState {
   isHydrated: boolean;
   setHydrated: (state: boolean) => void;
 
-  login: (token: string, user: any) => void;
-  setUser: (user: any) => void;
+  login: (token: string, user: User) => void;
+  setUser: (user: User) => void;
   logout: () => void;
 
   canManageUsers: () => boolean;

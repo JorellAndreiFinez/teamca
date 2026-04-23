@@ -1,5 +1,9 @@
-export type TaskStatus = 'Not Started' | 'In Progress' | 'Under Review' | 'Completed';
-export type TaskPriority = 'Low' | 'Medium' | 'High';
+export type TaskStatus =
+  | "Not Started"
+  | "In Progress"
+  | "Under Review"
+  | "Completed";
+export type TaskPriority = "Low" | "Medium" | "High";
 
 export interface Task {
   task_id: string | number;
@@ -155,6 +159,13 @@ export interface TaskListQuery {
   status?: TaskStatus;
   priority?: TaskPriority;
   search?: string;
-  created_date?: 'all' | 'today' | '7d' | '30d';
-  sort_by?: 'created_desc' | 'created_asc' | 'priority_desc' | 'priority_asc' | 'deadline_asc' | 'deadline_desc' | 'title_asc';
+  created_date?: "all" | "today" | "7d" | "30d";
+  sort_by?:
+    | "created_desc"
+    | "created_asc"
+    | "priority_desc"
+    | "priority_asc"
+    | "deadline_asc"
+    | "deadline_desc"
+    | "title_asc";
 }

@@ -37,43 +37,45 @@ export const checkEmail = async (req: Request, res: Response) => {
   }
 };
 
-
 export const login = async (req: Request, res: Response) => {
-  console.log("\n[LOGIN ATTEMPT FROM FRONTEND]");
-  console.log("➡️ Email:", req.body.email);
-  console.log("⏱ Timestamp:", new Date().toISOString());
-
   try {
     const email = String(req.body?.email ?? "")
       .trim()
       .toLowerCase();
     const password = String(req.body?.password ?? "");
-    if (!email || !password)
+    if (!email || !password) {
       return res
         .status(400)
         .json({ message: "Email and password are required" });
+    }
 
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
-    if (!user.is_active)
-      return res
-        .status(403)
-        .json({ message: "Account setup is incomplete. Please complete your setup." });
+    if (!user.is_active) {
+      return res.status(403).json({
+        message: "Account setup is incomplete. Please complete your setup.",
+      });
+    }
 
-    if (!user.password_hash)
-      return res.status(403).json({ message: "Account setup is incomplete. Please complete your setup." });
+    if (!user.password_hash) {
+      return res.status(403).json({
+        message: "Account setup is incomplete. Please complete your setup.",
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     const token = jwt.sign({ user_id: user._id }, JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    const { password_hash, ...userData } = user.toObject();
+    const { ...userData } = user.toObject();
 
     // log successful login activity
     await logActivity({
@@ -88,8 +90,10 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({ token, user: userData });
   } catch (err) {
-    // log failed login 
-    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    // log failed login
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
     if (email) {
       await logActivity({
         user_id: "anonymous",
@@ -105,7 +109,6 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 export const completeSetup = async (req: Request, res: Response) => {
   try {
@@ -128,16 +131,24 @@ export const completeSetup = async (req: Request, res: Response) => {
 
     // Validate password strength (min 8 chars, uppercase, lowercase, number)
     if (password.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 8 characters long" });
     }
     if (!/[A-Z]/.test(password)) {
-      return res.status(400).json({ message: "Password must contain at least one uppercase letter" });
+      return res.status(400).json({
+        message: "Password must contain at least one uppercase letter",
+      });
     }
     if (!/[a-z]/.test(password)) {
-      return res.status(400).json({ message: "Password must contain at least one lowercase letter" });
+      return res.status(400).json({
+        message: "Password must contain at least one lowercase letter",
+      });
     }
     if (!/[0-9]/.test(password)) {
-      return res.status(400).json({ message: "Password must contain at least one number" });
+      return res
+        .status(400)
+        .json({ message: "Password must contain at least one number" });
     }
 
     // check if whitelisted
@@ -149,12 +160,16 @@ export const completeSetup = async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Account is already active" });
     }
     if (user.password_hash) {
-      return res.status(403).json({ message: "Account setup is already complete" });
+      return res
+        .status(403)
+        .json({ message: "Account setup is already complete" });
     }
 
     // Validate name length
     if (first_name.length < 2 || last_name.length < 2) {
-      return res.status(400).json({ message: "Names must be at least 2 characters" });
+      return res
+        .status(400)
+        .json({ message: "Names must be at least 2 characters" });
     }
 
     // update user with setup info
@@ -183,7 +198,6 @@ export const completeSetup = async (req: Request, res: Response) => {
     const userData = user.toObject();
     delete userData.password_hash;
 
-    console.log(`[completeSetup] User account completed: ${email}`);
     res.status(200).json({ token, user: userData });
   } catch (err) {
     console.error(err);

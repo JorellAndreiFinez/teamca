@@ -52,8 +52,13 @@ export const authService = {
     return response.data;
   },
 
-  completeSetup: async (payload: CompleteSetupPayload): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>("/auth/complete-setup", payload);
+  completeSetup: async (
+    payload: CompleteSetupPayload,
+  ): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>(
+      "/auth/complete-setup",
+      payload,
+    );
     return response.data;
   },
 };

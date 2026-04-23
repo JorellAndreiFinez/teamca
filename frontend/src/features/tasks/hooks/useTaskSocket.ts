@@ -1,16 +1,26 @@
-import { useEffect, useMemo } from 'react';
-import { io, type Socket } from 'socket.io-client';
-import { config } from '../../../config/env';
+import { useEffect, useMemo } from "react";
+import { io, type Socket } from "socket.io-client";
+import { config } from "../../../config/env";
+
+type TaskCommentPayload = {
+  id: string;
+  message: string;
+};
+
+type TaskStatusPayload = {
+  taskId: string;
+  status: string;
+};
 
 type UseTaskSocketArgs = {
   taskId: string | null;
-  onCommentCreated: (payload: any) => void;
-  onStatusUpdated: (payload: any) => void;
+  onCommentCreated: (payload: TaskCommentPayload) => void;
+  onStatusUpdated: (payload: TaskStatusPayload) => void;
 };
 
 const getToken = (): string | null => {
   try {
-    const stored = localStorage.getItem('auth-storage');
+    const stored = localStorage.getItem("auth-storage");
     if (!stored) {
       return null;
     }
@@ -22,7 +32,11 @@ const getToken = (): string | null => {
   }
 };
 
-export const useTaskSocket = ({ taskId, onCommentCreated, onStatusUpdated }: UseTaskSocketArgs) => {
+export const useTaskSocket = ({
+  taskId,
+  onCommentCreated,
+  onStatusUpdated,
+}: UseTaskSocketArgs) => {
   const socket = useMemo<Socket | null>(() => {
     const token = getToken();
     if (!token) {
@@ -30,7 +44,7 @@ export const useTaskSocket = ({ taskId, onCommentCreated, onStatusUpdated }: Use
     }
 
     return io(config.backendUrl, {
-      transports: ['websocket'],
+      transports: ["websocket"],
       auth: { token },
       autoConnect: true,
     });
@@ -41,12 +55,12 @@ export const useTaskSocket = ({ taskId, onCommentCreated, onStatusUpdated }: Use
       return;
     }
 
-    socket.on('task:comment-created', onCommentCreated);
-    socket.on('task:status-updated', onStatusUpdated);
+    socket.on("task:comment-created", onCommentCreated);
+    socket.on("task:status-updated", onStatusUpdated);
 
     return () => {
-      socket.off('task:comment-created', onCommentCreated);
-      socket.off('task:status-updated', onStatusUpdated);
+      socket.off("task:comment-created", onCommentCreated);
+      socket.off("task:status-updated", onStatusUpdated);
     };
   }, [onCommentCreated, onStatusUpdated, socket]);
 
@@ -55,10 +69,10 @@ export const useTaskSocket = ({ taskId, onCommentCreated, onStatusUpdated }: Use
       return;
     }
 
-    socket.emit('task:join', taskId);
+    socket.emit("task:join", taskId);
 
     return () => {
-      socket.emit('task:leave', taskId);
+      socket.emit("task:leave", taskId);
     };
   }, [socket, taskId]);
 

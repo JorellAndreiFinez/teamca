@@ -1,5 +1,5 @@
 // store global UI state (dark mode, sidebar, etc.) using Zustand
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface UIState {
   darkMode: boolean;

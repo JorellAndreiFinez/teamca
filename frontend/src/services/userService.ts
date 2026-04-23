@@ -3,6 +3,20 @@ import { User, UserProfile } from "../types/user";
 
 export type UserProfileResponse = UserProfile;
 
+// safe API error shape
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+};
+
+// proper payload types (no any)
+export type CreateUserPayload = Record<string, unknown>;
+export type ActivateWhitelistPayload = Record<string, unknown>;
+
 export const userService = {
   getAllUsers: async (): Promise<User[]> => {
     try {
@@ -13,12 +27,11 @@ export const userService = {
     }
   },
 
-  createUser: async (payload: any): Promise<User> => {
+  createUser: async (payload: CreateUserPayload): Promise<User> => {
     try {
       const { data } = await api.post<User>("/users", payload);
-      console.log("[createUser] success:", data);
       return data;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[createUser] error:", err);
       throw err;
     }
@@ -27,24 +40,25 @@ export const userService = {
   updateUser: async (userId: string, payload: Partial<User>): Promise<User> => {
     try {
       const { data } = await api.put<User>(`/users/${userId}`, payload);
-      console.log("[updateUser] success:", data);
       return data;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[updateUser] error:", err);
       throw err;
     }
   },
 
-  // DELETE USER
   deleteUser: async (userId: string): Promise<void> => {
     try {
       await api.delete(`/users/${userId}`);
-      console.log(`[deleteUser] User ${userId} deleted successfully`);
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || "Failed to delete user";
+    } catch (err: unknown) {
+      const e = err as ApiError;
+
+      const message =
+        e?.response?.data?.message || e?.message || "Failed to delete user";
+
       console.error(`[deleteUser] Failed to delete user ${userId}:`, message);
-      const error = new Error(message);
-      throw error;
+
+      throw new Error(message, { cause: err });
     }
   },
 
@@ -56,23 +70,26 @@ export const userService = {
   createWhitelistedUser: async (email: string): Promise<User> => {
     try {
       const { data } = await api.post<User>("/users/whitelist", { email });
-      console.log("[createWhitelistedUser] success:", data);
       return data;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[createWhitelistedUser] error:", err);
       throw err;
     }
   },
 
-  activateWhitelistedUser: async (userId: string, payload: any): Promise<User> => {
+  activateWhitelistedUser: async (
+    userId: string,
+    payload: ActivateWhitelistPayload,
+  ): Promise<User> => {
     try {
-      const { data } = await api.post<User>(`/users/${userId}/activate-whitelist`, payload);
-      console.log("[activateWhitelistedUser] success:", data);
+      const { data } = await api.post<User>(
+        `/users/${userId}/activate-whitelist`,
+        payload,
+      );
       return data;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[activateWhitelistedUser] error:", err);
       throw err;
     }
   },
 };
-

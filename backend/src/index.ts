@@ -66,8 +66,7 @@ app.use(
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
-// ── Rate limiters
-const authLimiter = rateLimit({
+const _authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50,
   standardHeaders: "draft-8",
@@ -75,7 +74,7 @@ const authLimiter = rateLimit({
   message: { message: "Too many auth requests. Please try again shortly." },
 });
 
-const apiLimiter = rateLimit({
+const _apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: "draft-8",
@@ -84,36 +83,9 @@ const apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-// ── MongoDB connection
-connectDB().then(() => console.log("MongoDB ready"));
+connectDB().then(() => console.warn("MongoDB ready"));
 
-<<<<<<< Updated upstream
-// ── Activity logging middleware
-import { activityLogger } from "./middlewares/activityLogger";
-app.use(activityLogger);
-
-// ── Routes
-import authRoutes from "./routes/authRoutes";
-import departmentRoutes from "./routes/departmentRoutes";
-import userRoutes from "./routes/userRoutes";
-import internProfileRoutes from "./routes/internProfileRoutes";
-// import dtrRoutes from "./routes/dtrRoutes";
-import taskRoutes from "./routes/taskRoutes";
-import notificationRoutes from "./routes/notificationRoutes";
-import activityRoutes from "./routes/activityRoutes";
-
-app.use(apiLimiter);
-app.use("/auth", authLimiter, authRoutes);
-app.use("/departments", departmentRoutes);
-app.use("/users", userRoutes);
-app.use("/intern-profiles", internProfileRoutes);
-// app.use("/dtr", apiLimiter, dtrRoutes);
-app.use("/tasks", apiLimiter, taskRoutes);
-app.use("/notifications", apiLimiter, notificationRoutes);
-app.use("/activity-logs", activityRoutes);
-=======
 app.use("/api", routes);
->>>>>>> Stashed changes
 
 // ── Health check
 app.get("/health", (_req, res) =>
@@ -124,5 +96,5 @@ const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
 server.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`),
+  console.warn(`Server running at http://localhost:${PORT}`),
 );

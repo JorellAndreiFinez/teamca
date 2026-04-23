@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 
-const JWT_SECRET = process.env.JWT_SECRET || "teamca-dev-secret-change-in-production";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "teamca-dev-secret-change-in-production";
 
 export const authMiddleware = async (
   req: Request,
@@ -35,7 +36,9 @@ export const authMiddleware = async (
       email: user.email,
       global_role: user.global_role,
       department_role: primaryDepartment?.department_role,
-      department_id: primaryDepartment ? String(primaryDepartment.department_id) : undefined,
+      department_id: primaryDepartment
+        ? String(primaryDepartment.department_id)
+        : undefined,
       is_active: user.is_active,
     };
 

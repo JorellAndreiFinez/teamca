@@ -1,6 +1,6 @@
 // backend\src\services\leaveService.ts
 
-import Leave, { ILeave, LeaveStatus } from "../models/Leave";
+import Leave, { ILeave } from "../models/Leave";
 import User from "../models/User";
 
 export const createLeave = async (userId: string, data: Partial<ILeave>) => {
@@ -10,7 +10,18 @@ export const createLeave = async (userId: string, data: Partial<ILeave>) => {
     throw new Error("User is not assigned to any department");
   }
 
-  const departmentId = user.departments[0].department_id;
+  const rawDepartmentId = user.departments[0].department_id;
+
+  /**
+   * FIX: normalize string | string[] → string
+   */
+  const departmentId = Array.isArray(rawDepartmentId)
+    ? rawDepartmentId[0]
+    : rawDepartmentId;
+
+  if (!departmentId) {
+    throw new Error("Invalid department ID");
+  }
 
   const leave = await Leave.create({
     userId,

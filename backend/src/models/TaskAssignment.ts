@@ -7,11 +7,24 @@ export interface ITaskAssignment extends Document {
 }
 
 const taskAssignmentSchema = new Schema<ITaskAssignment>({
-  task_id: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true },
-  assigned_to: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  task_id: {
+    type: Schema.Types.ObjectId,
+    ref: "Task",
+    required: true,
+    index: true,
+  },
+  assigned_to: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  },
   assigned_at: { type: Date, default: Date.now },
 });
 
 taskAssignmentSchema.index({ task_id: 1, assigned_to: 1 }, { unique: true });
 
-export default mongoose.model<ITaskAssignment>("TaskAssignment", taskAssignmentSchema);
+export default mongoose.model<ITaskAssignment>(
+  "TaskAssignment",
+  taskAssignmentSchema,
+);

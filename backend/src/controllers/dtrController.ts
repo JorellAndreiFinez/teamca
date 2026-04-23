@@ -1,39 +1,49 @@
-// backend\src\controllers\dtrController.ts
-
 import { Request, Response } from "express";
 import * as dtrService from "../services/dtrService";
 
-export const timeIn = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user._id;
+type AuthRequest = Request;
 
-    console.log("TIME-IN REQUEST:", {
+const getUserId = (req: AuthRequest): string => {
+  const user = req.user;
+
+  if (!user) {
+    throw new Error("Unauthorized: Missing user");
+  }
+
+  return user.user_id.toString();
+};
+
+export const timeIn = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = getUserId(req);
+
+    console.warn("TIME-IN REQUEST:", {
       userId,
       time: new Date().toISOString(),
     });
 
     const result = await dtrService.timeIn(userId);
 
-    console.log("TIME-IN RESULT:", result);
-
     res.json({
       success: true,
       message: "Time-in recorded successfully",
       data: result,
     });
-  } catch (error: any) {
-    console.error("TIME-IN ERROR:", error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+
+    console.error("TIME-IN ERROR:", err.message);
 
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: err.message,
     });
   }
 };
 
-export const timeOut = async (req: Request, res: Response) => {
+export const timeOut = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).user._id;
+    const userId = getUserId(req);
     const { remarks } = req.body;
 
     const result = await dtrService.timeOut(userId, remarks);
@@ -43,35 +53,41 @@ export const timeOut = async (req: Request, res: Response) => {
       message: "Time-out recorded successfully",
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
+
+    console.error(err.message);
+
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: err.message,
     });
   }
 };
 
-export const getMyDTR = async (req: Request, res: Response) => {
+export const getMyDTR = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).user._id;
+    const userId = getUserId(req);
 
-    console.log("FETCH DTR FOR:", userId);
+    console.warn("FETCH DTR FOR:", userId);
 
     const dtrs = await dtrService.getMyDTR(userId);
 
-    console.log("DTR RESULT COUNT:", dtrs.length);
+    console.warn("DTR RESULT COUNT:", dtrs.length);
 
     res.json({
       success: true,
       count: dtrs.length,
       data: dtrs,
     });
-  } catch (error: any) {
-    console.error("GET DTR ERROR:", error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+
+    console.error("GET DTR ERROR:", err.message);
 
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: err.message,
     });
   }
 };

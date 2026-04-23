@@ -35,7 +35,12 @@ export interface INotification extends Document {
 }
 
 const notificationSchema = new Schema<INotification>({
-  recipient_id: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  recipient_id: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  },
   actor_id: { type: Schema.Types.ObjectId, ref: "User" },
   event_type: {
     type: String,
@@ -75,4 +80,7 @@ const notificationSchema = new Schema<INotification>({
 notificationSchema.index({ recipient_id: 1, created_at: -1 });
 notificationSchema.index({ recipient_id: 1, is_read: 1, created_at: -1 });
 
-export default mongoose.model<INotification>("Notification", notificationSchema);
+export default mongoose.model<INotification>(
+  "Notification",
+  notificationSchema,
+);

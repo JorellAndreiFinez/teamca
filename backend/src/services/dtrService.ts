@@ -1,3 +1,5 @@
+// backend\src\services\dtrService.ts
+
 import DTR from "../models/DTR";
 
 /**
@@ -151,8 +153,6 @@ export const timeOut = async (userId: string, remarks: string) => {
   lastClock.overtimeHours = parseFloat(overtimeHours.toFixed(2));
 
   await dtr.save();
-
-  console.log("TIME-OUT RECORDED:", lastClock);
 
   return lastClock;
 };
