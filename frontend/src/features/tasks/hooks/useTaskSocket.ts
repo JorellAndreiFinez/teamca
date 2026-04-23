@@ -2,10 +2,20 @@ import { useEffect, useMemo } from "react";
 import { io, type Socket } from "socket.io-client";
 import { config } from "../../../config/env";
 
+type TaskCommentPayload = {
+  id: string;
+  message: string;
+};
+
+type TaskStatusPayload = {
+  taskId: string;
+  status: string;
+};
+
 type UseTaskSocketArgs = {
   taskId: string | null;
-  onCommentCreated: (payload: any) => void;
-  onStatusUpdated: (payload: any) => void;
+  onCommentCreated: (payload: TaskCommentPayload) => void;
+  onStatusUpdated: (payload: TaskStatusPayload) => void;
 };
 
 const getToken = (): string | null => {

@@ -10,6 +10,13 @@ export interface InternProfilePayload {
   actual_end_date?: string | null;
 }
 
+type ApiError = {
+  response?: {
+    status?: number;
+  };
+  status?: number;
+};
+
 export const internProfileService = {
   getInternProfileByUserId: async (
     userId: string,
@@ -17,16 +24,19 @@ export const internProfileService = {
     return api
       .get<InternProfile>(`/intern-profiles/user/${userId}`)
       .then((response) => response.data)
-      .catch((err: any) => {
+      .catch((err: ApiError) => {
         // 404 handling
-        const status = err?.response?.status || (err as any).status;
+        const status = err?.response?.status || err?.status;
+
         if (status === 404 || status === 304) {
           return null;
         }
-        console.debug("[internProfileService] Could not load profile:", {
+
+        console.warn("[internProfileService] Could not load profile:", {
           status,
           userId,
         });
+
         return null;
       });
   },
@@ -35,6 +45,7 @@ export const internProfileService = {
     payload: InternProfilePayload,
   ): Promise<InternProfile> => {
     const { data } = await api.post<InternProfile>("/intern-profiles", payload);
+
     return data;
   },
 
@@ -46,6 +57,7 @@ export const internProfileService = {
       `/intern-profiles/user/${userId}`,
       payload,
     );
+
     return data;
   },
 };

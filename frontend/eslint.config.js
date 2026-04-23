@@ -18,6 +18,7 @@ export default tseslint.config(
       ],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "@typescript-eslint/no-explicit-any": "warn",
+      "no-throw-literal": "off",
       "prefer-const": "error",
       "no-debugger": "error",
       eqeqeq: ["warn", "always"],
