@@ -1,6 +1,10 @@
 import { Types } from "mongoose";
 import Department from "../models/Department";
-import Task, { type ITask, type TaskPriority, type TaskStatus } from "../models/Task";
+import Task, {
+  type ITask,
+  type TaskPriority,
+  type TaskStatus,
+} from "../models/Task";
 import TaskAssignment from "../models/TaskAssignment";
 import TaskComment from "../models/TaskComment";
 import TaskFeedback from "../models/TaskFeedback";
@@ -75,7 +79,14 @@ export type ListTasksInput = {
   priority?: TaskPriority;
   search?: string;
   createdDate?: "all" | "today" | "7d" | "30d";
-  sortBy?: "created_desc" | "created_asc" | "priority_desc" | "priority_asc" | "deadline_asc" | "deadline_desc" | "title_asc";
+  sortBy?:
+    | "created_desc"
+    | "created_asc"
+    | "priority_desc"
+    | "priority_asc"
+    | "deadline_asc"
+    | "deadline_desc"
+    | "title_asc";
 };
 
 export type TaskLinkPermissions = {
@@ -167,16 +178,20 @@ const MANAGER_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
   "Under Review": ["In Progress", "Completed"],
 };
 
-const normalizeTask = (task: ITask | {
-  _id: Types.ObjectId | string;
-  title: string;
-  description?: string;
-  created_by: Types.ObjectId | string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  deadline?: Date;
-  created_at: Date;
-}) => ({
+const normalizeTask = (
+  task:
+    | ITask
+    | {
+        _id: Types.ObjectId | string;
+        title: string;
+        description?: string;
+        created_by: Types.ObjectId | string;
+        status: TaskStatus;
+        priority: TaskPriority;
+        deadline?: Date;
+        created_at: Date;
+      },
+) => ({
   task_id: String(task._id),
   title: task.title,
   description: task.description ?? "",
@@ -253,11 +268,16 @@ const normalizeUser = (user: {
 const getUserDepartmentIds = (user: UserWithDepartments): string[] => {
   return (user.departments ?? [])
     .map((department) => department.department_id)
-    .filter((departmentId): departmentId is Types.ObjectId | string => !!departmentId)
+    .filter(
+      (departmentId): departmentId is Types.ObjectId | string => !!departmentId,
+    )
     .map((departmentId) => String(departmentId));
 };
 
-const userHasDepartment = (user: UserWithDepartments, departmentId?: string): boolean => {
+const userHasDepartment = (
+  user: UserWithDepartments,
+  departmentId?: string,
+): boolean => {
   if (!departmentId) {
     return false;
   }
@@ -281,8 +301,12 @@ const uniqueAssignees = (assignees: string[]): string[] => {
   return [...new Set(cleaned)];
 };
 
-const requireInternIncludesSelf = (actor: Express.AuthUser, assigneeUserIds: string[]) => {
-  const actorIsIntern = actor.global_role === "Standard_User" && actor.department_role === "Intern";
+const requireInternIncludesSelf = (
+  actor: Express.AuthUser,
+  assigneeUserIds: string[],
+) => {
+  const actorIsIntern =
+    actor.global_role === "Standard_User" && actor.department_role === "Intern";
   if (!actorIsIntern) {
     return;
   }
@@ -319,8 +343,13 @@ const assertCanAssign = async (
   if (canManageDepartment(actor.department_role)) {
     const assignee = await ensureAssigneeExists(assigneeUserId);
 
-    if (!actor.department_id || !userHasDepartment(assignee, actor.department_id)) {
-      throw new Error("Department managers can only assign tasks within their department.");
+    if (
+      !actor.department_id ||
+      !userHasDepartment(assignee, actor.department_id)
+    ) {
+      throw new Error(
+        "Department managers can only assign tasks within their department.",
+      );
     }
 
     return;
@@ -328,9 +357,13 @@ const assertCanAssign = async (
 
   const assignee = await ensureAssigneeExists(assigneeUserId);
 
-  const actorIsIntern = actor.global_role === "Standard_User" && actor.department_role === "Intern";
+  const actorIsIntern =
+    actor.global_role === "Standard_User" && actor.department_role === "Intern";
   if (actorIsIntern) {
-    if (!actor.department_id || !userHasDepartment(assignee, actor.department_id)) {
+    if (
+      !actor.department_id ||
+      !userHasDepartment(assignee, actor.department_id)
+    ) {
       throw new Error("Interns can only assign tasks within their department.");
     }
 
@@ -342,8 +375,14 @@ const assertCanAssign = async (
   }
 };
 
-const getAllowedTransitions = (actor: Express.AuthUser, currentStatus: TaskStatus): TaskStatus[] => {
-  if (canManageGlobally(actor.global_role) || canManageDepartment(actor.department_role)) {
+const getAllowedTransitions = (
+  actor: Express.AuthUser,
+  currentStatus: TaskStatus,
+): TaskStatus[] => {
+  if (
+    canManageGlobally(actor.global_role) ||
+    canManageDepartment(actor.department_role)
+  ) {
     return MANAGER_TRANSITIONS[currentStatus] ?? [];
   }
 
@@ -389,7 +428,10 @@ const canAccessTaskScope = async (
     return true;
   }
 
-  const selfAssignment = await TaskAssignment.findOne({ task_id: task._id, assigned_to: actorId })
+  const selfAssignment = await TaskAssignment.findOne({
+    task_id: task._id,
+    assigned_to: actorId,
+  })
     .select("_id")
     .lean();
 
@@ -432,7 +474,10 @@ const canChangeTaskStatus = async (
       return true;
     }
 
-    const selfAssignment = await TaskAssignment.findOne({ task_id: task._id, assigned_to: actorId })
+    const selfAssignment = await TaskAssignment.findOne({
+      task_id: task._id,
+      assigned_to: actorId,
+    })
       .select("_id")
       .lean();
 
@@ -478,7 +523,9 @@ const resolveTaskOrThrow = async (taskId: string) => {
 };
 
 const getTaskAssigneeIdsMap = async (taskIds: string[]) => {
-  const assignments = await TaskAssignment.find({ task_id: { $in: taskIds } }).lean();
+  const assignments = await TaskAssignment.find({
+    task_id: { $in: taskIds },
+  }).lean();
   const map = new Map<string, string[]>();
 
   for (const item of assignments) {
@@ -496,8 +543,13 @@ const getTaskLinksCountMap = async (taskIds: string[]) => {
     return new Map<string, number>();
   }
 
-  const rows = await TaskWorkLink.aggregate<{ _id: Types.ObjectId; count: number }>([
-    { $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } } },
+  const rows = await TaskWorkLink.aggregate<{
+    _id: Types.ObjectId;
+    count: number;
+  }>([
+    {
+      $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } },
+    },
     { $group: { _id: "$task_id", count: { $sum: 1 } } },
   ]);
 
@@ -514,8 +566,13 @@ const getTaskCommentsCountMap = async (taskIds: string[]) => {
     return new Map<string, number>();
   }
 
-  const rows = await TaskComment.aggregate<{ _id: Types.ObjectId; count: number }>([
-    { $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } } },
+  const rows = await TaskComment.aggregate<{
+    _id: Types.ObjectId;
+    count: number;
+  }>([
+    {
+      $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } },
+    },
     { $group: { _id: "$task_id", count: { $sum: 1 } } },
   ]);
 
@@ -547,10 +604,13 @@ const getUsersByIds = async (userIds: string[]) => {
 const getInvolvedDepartments = async (
   users: UserWithDepartments[],
 ): Promise<TaskDepartmentSummary[]> => {
-  const departmentIds = [...new Set(
-    users.flatMap((item) => getUserDepartmentIds(item))
-      .filter((item) => item.trim().length > 0),
-  )];
+  const departmentIds = [
+    ...new Set(
+      users
+        .flatMap((item) => getUserDepartmentIds(item))
+        .filter((item) => item.trim().length > 0),
+    ),
+  ];
 
   if (departmentIds.length === 0) {
     return [];
@@ -605,7 +665,11 @@ export const createTaskWithAssignment = async (
 
   requireInternIncludesSelf(actor, assigneeUserIds);
 
-  await Promise.all(assigneeUserIds.map((assigneeUserId) => assertCanAssign(actor, assigneeUserId)));
+  await Promise.all(
+    assigneeUserIds.map((assigneeUserId) =>
+      assertCanAssign(actor, assigneeUserId),
+    ),
+  );
 
   const task = await Task.create({
     title: input.title,
@@ -638,14 +702,20 @@ export const createTaskWithAssignment = async (
   };
 };
 
-export const assignTask = async (actor: Express.AuthUser, input: AssignTaskInput) => {
+export const assignTask = async (
+  actor: Express.AuthUser,
+  input: AssignTaskInput,
+) => {
   const task = await Task.findById(input.taskId).lean();
   if (!task) {
     throw new Error("Task not found.");
   }
 
   const actorId = String(actor.user_id);
-  if (!canManageGlobally(actor.global_role) && !canManageDepartment(actor.department_role)) {
+  if (
+    !canManageGlobally(actor.global_role) &&
+    !canManageDepartment(actor.department_role)
+  ) {
     if (String(task.created_by) !== actorId) {
       const existingSelfAssignment = await TaskAssignment.findOne({
         task_id: task._id,
@@ -655,7 +725,9 @@ export const assignTask = async (actor: Express.AuthUser, input: AssignTaskInput
         .lean();
 
       if (!existingSelfAssignment) {
-        throw new Error("Standard users can only assign people on tasks they created or are assigned to.");
+        throw new Error(
+          "Standard users can only assign people on tasks they created or are assigned to.",
+        );
       }
     }
   }
@@ -667,15 +739,28 @@ export const assignTask = async (actor: Express.AuthUser, input: AssignTaskInput
 
   requireInternIncludesSelf(actor, assigneeUserIds);
 
-  await Promise.all(assigneeUserIds.map((assigneeUserId) => assertCanAssign(actor, assigneeUserId)));
+  await Promise.all(
+    assigneeUserIds.map((assigneeUserId) =>
+      assertCanAssign(actor, assigneeUserId),
+    ),
+  );
 
-  if (canManageDepartment(actor.department_role) && !canManageGlobally(actor.global_role)) {
+  if (
+    canManageDepartment(actor.department_role) &&
+    !canManageGlobally(actor.global_role)
+  ) {
     const taskCreator = await User.findById(task.created_by)
       .select("departments")
       .lean();
 
-    if (!taskCreator || !actor.department_id || !userHasDepartment(taskCreator, actor.department_id)) {
-      throw new Error("Department managers can only assign tasks within their department.");
+    if (
+      !taskCreator ||
+      !actor.department_id ||
+      !userHasDepartment(taskCreator, actor.department_id)
+    ) {
+      throw new Error(
+        "Department managers can only assign tasks within their department.",
+      );
     }
   }
 
@@ -734,18 +819,24 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
   if (canManageDepartment(actor.department_role)) {
     const teammates = await User.find({
       is_active: true,
-      ...(actor.department_id ? createDepartmentMembershipFilter(actor.department_id) : {}),
+      ...(actor.department_id
+        ? createDepartmentMembershipFilter(actor.department_id)
+        : {}),
     })
       .select("_id")
       .lean();
 
     const teammateIds = teammates.map((user) => String(user._id));
 
-    const teammateAssignments = await TaskAssignment.find({ assigned_to: { $in: teammateIds } })
+    const teammateAssignments = await TaskAssignment.find({
+      assigned_to: { $in: teammateIds },
+    })
       .select("task_id")
       .lean();
 
-    const taskIdsFromAssignments = teammateAssignments.map((item) => item.task_id);
+    const taskIdsFromAssignments = teammateAssignments.map(
+      (item) => item.task_id,
+    );
 
     const tasks = await Task.find({
       $or: [
@@ -756,7 +847,9 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
       .sort({ created_at: -1 })
       .lean();
 
-    const assignments = await TaskAssignment.find({ task_id: { $in: tasks.map((task) => task._id) } }).lean();
+    const assignments = await TaskAssignment.find({
+      task_id: { $in: tasks.map((task) => task._id) },
+    }).lean();
     const assignmentMap = new Map<string, string[]>();
     for (const item of assignments) {
       const taskId = String(item.task_id);
@@ -771,7 +864,9 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
     }));
   }
 
-  const selfAssignments = await TaskAssignment.find({ assigned_to: actorId }).select("task_id").lean();
+  const selfAssignments = await TaskAssignment.find({ assigned_to: actorId })
+    .select("task_id")
+    .lean();
   const assignedTaskIds = selfAssignments.map((item) => item.task_id);
 
   const tasks = await Task.find({
@@ -780,7 +875,9 @@ export const listAccessibleTasks = async (actor: Express.AuthUser) => {
     .sort({ created_at: -1 })
     .lean();
 
-  const assignments = await TaskAssignment.find({ task_id: { $in: tasks.map((task) => task._id) } }).lean();
+  const assignments = await TaskAssignment.find({
+    task_id: { $in: tasks.map((task) => task._id) },
+  }).lean();
   const assignmentMap = new Map<string, string[]>();
   for (const item of assignments) {
     const taskId = String(item.task_id);
@@ -805,16 +902,24 @@ export const listAccessibleTasksPaginated = async (
   const assigneeMap = await getTaskAssigneeIdsMap(taskIds);
   const commentsCountMap = await getTaskCommentsCountMap(taskIds);
 
-  const userIds = [...new Set(allTasks.flatMap((task) => [
-    String(task.created_by),
-    ...(assigneeMap.get(String(task.task_id)) ?? []),
-  ]))];
+  const userIds = [
+    ...new Set(
+      allTasks.flatMap((task) => [
+        String(task.created_by),
+        ...(assigneeMap.get(String(task.task_id)) ?? []),
+      ]),
+    ),
+  ];
 
   const userMap = await getUsersByIds(userIds);
   const normalizedSearch = (input.search || "").trim().toLowerCase();
 
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
   const startOf7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const startOf30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -849,9 +954,14 @@ export const listAccessibleTasksPaginated = async (
       .filter((item): item is TaskUserSummary => !!item);
 
     const taskTitle = task.title.toLowerCase();
-    const assigneeNames = assignedUsers.map((user) => `${user.first_name} ${user.last_name}`.trim().toLowerCase());
+    const assigneeNames = assignedUsers.map((user) =>
+      `${user.first_name} ${user.last_name}`.trim().toLowerCase(),
+    );
 
-    return taskTitle.includes(normalizedSearch) || assigneeNames.some((name) => name.includes(normalizedSearch));
+    return (
+      taskTitle.includes(normalizedSearch) ||
+      assigneeNames.some((name) => name.includes(normalizedSearch))
+    );
   });
 
   const priorityRank: Record<TaskPriority, number> = {
@@ -864,11 +974,17 @@ export const listAccessibleTasksPaginated = async (
     const sortBy = input.sortBy ?? "created_desc";
 
     if (sortBy === "created_asc") {
-      return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+      return (
+        new Date(left.created_at).getTime() -
+        new Date(right.created_at).getTime()
+      );
     }
 
     if (sortBy === "created_desc") {
-      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+      return (
+        new Date(right.created_at).getTime() -
+        new Date(left.created_at).getTime()
+      );
     }
 
     if (sortBy === "priority_desc") {
@@ -947,7 +1063,10 @@ export const listAccessibleTasksPaginated = async (
   };
 };
 
-export const listTaskStatusHistory = async (actor: Express.AuthUser, taskId: string): Promise<ListTaskStatusHistoryItem[]> => {
+export const listTaskStatusHistory = async (
+  actor: Express.AuthUser,
+  taskId: string,
+): Promise<ListTaskStatusHistoryItem[]> => {
   const task = await Task.findById(taskId).select("_id created_by").lean();
   if (!task) {
     throw new Error("Task not found.");
@@ -966,7 +1085,9 @@ export const listTaskStatusHistory = async (actor: Express.AuthUser, taskId: str
     .sort({ timestamp: -1 })
     .lean();
 
-  const userMap = await getUsersByIds([...new Set(historyItems.map((item) => String(item.updated_by)))]);
+  const userMap = await getUsersByIds([
+    ...new Set(historyItems.map((item) => String(item.updated_by))),
+  ]);
 
   return historyItems.map((item) => ({
     history_id: String(item._id),
@@ -980,7 +1101,10 @@ export const listTaskStatusHistory = async (actor: Express.AuthUser, taskId: str
   }));
 };
 
-export const updateTaskStatus = async (actor: Express.AuthUser, input: UpdateTaskStatusInput) => {
+export const updateTaskStatus = async (
+  actor: Express.AuthUser,
+  input: UpdateTaskStatusInput,
+) => {
   const task = await Task.findById(input.taskId);
   if (!task) {
     throw new Error("Task not found.");
@@ -1008,13 +1132,17 @@ export const updateTaskStatus = async (actor: Express.AuthUser, input: UpdateTas
   if (previousStatus === "In Progress" && input.newStatus === "Under Review") {
     const linksCount = await TaskWorkLink.countDocuments({ task_id: task._id });
     if (linksCount === 0) {
-      throw new Error("Attach at least one work link before sending a task for review.");
+      throw new Error(
+        "Attach at least one work link before sending a task for review.",
+      );
     }
   }
 
   const allowed = getAllowedTransitions(actor, previousStatus);
   if (!allowed.includes(input.newStatus)) {
-    throw new Error(`Invalid status transition from ${previousStatus} to ${input.newStatus}.`);
+    throw new Error(
+      `Invalid status transition from ${previousStatus} to ${input.newStatus}.`,
+    );
   }
 
   task.status = input.newStatus;
@@ -1045,14 +1173,24 @@ export const updateTaskStatus = async (actor: Express.AuthUser, input: UpdateTas
   };
 };
 
-export const addTaskFeedback = async (actor: Express.AuthUser, input: AddTaskFeedbackInput) => {
-  const task = await Task.findById(input.taskId).select("_id created_by").lean();
+export const addTaskFeedback = async (
+  actor: Express.AuthUser,
+  input: AddTaskFeedbackInput,
+) => {
+  const task = await Task.findById(input.taskId)
+    .select("_id created_by")
+    .lean();
   if (!task) {
     throw new Error("Task not found.");
   }
 
-  if (!canManageGlobally(actor.global_role) && !canManageDepartment(actor.department_role)) {
-    throw new Error("Only supervisors, heads, admins, or superadmins can submit feedback.");
+  if (
+    !canManageGlobally(actor.global_role) &&
+    !canManageDepartment(actor.department_role)
+  ) {
+    throw new Error(
+      "Only supervisors, heads, admins, or superadmins can submit feedback.",
+    );
   }
 
   const hasAccess = await canAccessTaskScope(actor, {
@@ -1061,7 +1199,9 @@ export const addTaskFeedback = async (actor: Express.AuthUser, input: AddTaskFee
   });
 
   if (!hasAccess) {
-    throw new Error("You do not have permission to submit feedback for this task.");
+    throw new Error(
+      "You do not have permission to submit feedback for this task.",
+    );
   }
 
   const feedback = await TaskFeedback.create({
@@ -1079,8 +1219,13 @@ export const addTaskFeedback = async (actor: Express.AuthUser, input: AddTaskFee
   });
 };
 
-export const addTaskWorkLink = async (actor: Express.AuthUser, input: AddTaskWorkLinkInput) => {
-  const task = await Task.findById(input.taskId).select("_id created_by status").lean();
+export const addTaskWorkLink = async (
+  actor: Express.AuthUser,
+  input: AddTaskWorkLinkInput,
+) => {
+  const task = await Task.findById(input.taskId)
+    .select("_id created_by status")
+    .lean();
   if (!task) {
     throw new Error("Task not found.");
   }
@@ -1091,11 +1236,15 @@ export const addTaskWorkLink = async (actor: Express.AuthUser, input: AddTaskWor
   });
 
   if (!hasAccess) {
-    throw new Error("You do not have permission to attach work links for this task.");
+    throw new Error(
+      "You do not have permission to attach work links for this task.",
+    );
   }
 
   if (task.status === "Under Review" || task.status === "Completed") {
-    throw new Error("Work links can only be added before the task enters review.");
+    throw new Error(
+      "Work links can only be added before the task enters review.",
+    );
   }
 
   const created = await TaskWorkLink.create({
@@ -1115,7 +1264,10 @@ export const addTaskWorkLink = async (actor: Express.AuthUser, input: AddTaskWor
   });
 };
 
-export const listTaskWorkLinks = async (actor: Express.AuthUser, taskId: string) => {
+export const listTaskWorkLinks = async (
+  actor: Express.AuthUser,
+  taskId: string,
+) => {
   const task = await Task.findById(taskId).select("_id created_by").lean();
   if (!task) {
     throw new Error("Task not found.");
@@ -1127,7 +1279,9 @@ export const listTaskWorkLinks = async (actor: Express.AuthUser, taskId: string)
   });
 
   if (!hasAccess) {
-    throw new Error("You do not have permission to view work links for this task.");
+    throw new Error(
+      "You do not have permission to view work links for this task.",
+    );
   }
 
   const links = await TaskWorkLink.find({ task_id: task._id })
@@ -1146,8 +1300,13 @@ export const listTaskWorkLinks = async (actor: Express.AuthUser, taskId: string)
   );
 };
 
-export const deleteTaskWorkLink = async (actor: Express.AuthUser, input: DeleteTaskWorkLinkInput) => {
-  const task = await Task.findById(input.taskId).select("_id created_by status").lean();
+export const deleteTaskWorkLink = async (
+  actor: Express.AuthUser,
+  input: DeleteTaskWorkLinkInput,
+) => {
+  const task = await Task.findById(input.taskId)
+    .select("_id created_by status")
+    .lean();
   if (!task) {
     throw new Error("Task not found.");
   }
@@ -1158,11 +1317,15 @@ export const deleteTaskWorkLink = async (actor: Express.AuthUser, input: DeleteT
   });
 
   if (!hasAccess) {
-    throw new Error("You do not have permission to remove work links for this task.");
+    throw new Error(
+      "You do not have permission to remove work links for this task.",
+    );
   }
 
   if (task.status === "Under Review" || task.status === "Completed") {
-    throw new Error("Work links can only be removed before the task enters review.");
+    throw new Error(
+      "Work links can only be removed before the task enters review.",
+    );
   }
 
   const workLink = await TaskWorkLink.findOne({
@@ -1177,7 +1340,9 @@ export const deleteTaskWorkLink = async (actor: Express.AuthUser, input: DeleteT
   }
 
   const actorId = String(actor.user_id);
-  const isManager = canManageGlobally(actor.global_role) || canManageDepartment(actor.department_role);
+  const isManager =
+    canManageGlobally(actor.global_role) ||
+    canManageDepartment(actor.department_role);
   const isOwner = String(workLink.submitted_by) === actorId;
 
   if (!isManager && !isOwner) {
@@ -1193,7 +1358,10 @@ export const deleteTaskWorkLink = async (actor: Express.AuthUser, input: DeleteT
   };
 };
 
-export const listTaskFeedback = async (actor: Express.AuthUser, taskId: string) => {
+export const listTaskFeedback = async (
+  actor: Express.AuthUser,
+  taskId: string,
+) => {
   const task = await Task.findById(taskId).select("_id created_by").lean();
   if (!task) {
     throw new Error("Task not found.");
@@ -1205,7 +1373,9 @@ export const listTaskFeedback = async (actor: Express.AuthUser, taskId: string) 
   });
 
   if (!hasAccess) {
-    throw new Error("You do not have permission to view feedback for this task.");
+    throw new Error(
+      "You do not have permission to view feedback for this task.",
+    );
   }
 
   const feedbackItems = await TaskFeedback.find({ task_id: task._id })
@@ -1223,7 +1393,10 @@ export const listTaskFeedback = async (actor: Express.AuthUser, taskId: string) 
   );
 };
 
-export const listTaskComments = async (actor: Express.AuthUser, taskId: string): Promise<TaskCommentItem[]> => {
+export const listTaskComments = async (
+  actor: Express.AuthUser,
+  taskId: string,
+): Promise<TaskCommentItem[]> => {
   const task = await resolveTaskOrThrow(taskId);
 
   const hasAccess = await canAccessTaskScope(actor, {
@@ -1232,28 +1405,38 @@ export const listTaskComments = async (actor: Express.AuthUser, taskId: string):
   });
 
   if (!hasAccess) {
-    throw new Error("You do not have permission to view comments for this task.");
+    throw new Error(
+      "You do not have permission to view comments for this task.",
+    );
   }
 
   const comments = await TaskComment.find({ task_id: task._id })
     .sort({ created_at: 1 })
     .lean();
 
-  const userIds = [...new Set(comments.map((comment) => String(comment.user_id)))];
+  const userIds = [
+    ...new Set(comments.map((comment) => String(comment.user_id))),
+  ];
   const userMap = await getUsersByIds(userIds);
 
   return comments.map((comment) =>
-    normalizeComment({
-      _id: comment._id,
-      task_id: comment.task_id,
-      user_id: comment.user_id,
-      message: comment.message,
-      created_at: comment.created_at,
-    }, userMap),
+    normalizeComment(
+      {
+        _id: comment._id,
+        task_id: comment.task_id,
+        user_id: comment.user_id,
+        message: comment.message,
+        created_at: comment.created_at,
+      },
+      userMap,
+    ),
   );
 };
 
-export const addTaskComment = async (actor: Express.AuthUser, input: AddTaskCommentInput): Promise<TaskCommentItem> => {
+export const addTaskComment = async (
+  actor: Express.AuthUser,
+  input: AddTaskCommentInput,
+): Promise<TaskCommentItem> => {
   const task = await resolveTaskOrThrow(input.taskId);
 
   const hasAccess = await canAccessTaskScope(actor, {
@@ -1273,22 +1456,32 @@ export const addTaskComment = async (actor: Express.AuthUser, input: AddTaskComm
 
   const userMap = await getUsersByIds([String(actor.user_id)]);
 
-  return normalizeComment({
-    _id: created._id,
-    task_id: created.task_id,
-    user_id: created.user_id,
-    message: created.message,
-    created_at: created.created_at,
-  }, userMap);
+  return normalizeComment(
+    {
+      _id: created._id,
+      task_id: created.task_id,
+      user_id: created.user_id,
+      message: created.message,
+      created_at: created.created_at,
+    },
+    userMap,
+  );
 };
 
-export const updateTaskDetails = async (actor: Express.AuthUser, input: UpdateTaskDetailsInput) => {
+export const updateTaskDetails = async (
+  actor: Express.AuthUser,
+  input: UpdateTaskDetailsInput,
+) => {
   const task = await Task.findById(input.taskId);
   if (!task) {
     throw new Error("Task not found.");
   }
 
-  if (!canManageOrOwnTask(actor, { created_by: task.created_by as Types.ObjectId })) {
+  if (
+    !canManageOrOwnTask(actor, {
+      created_by: task.created_by as Types.ObjectId,
+    })
+  ) {
     throw new Error("You do not have permission to update this task.");
   }
 
@@ -1308,12 +1501,17 @@ export const updateTaskDetails = async (actor: Express.AuthUser, input: UpdateTa
   return normalizeTask(task);
 };
 
-export const deleteTasks = async (actor: Express.AuthUser, input: DeleteTasksInput) => {
-  const uniqueTaskIds = [...new Set(
-    input.taskIds
-      .map((taskId) => taskId.trim())
-      .filter((taskId) => taskId.length > 0),
-  )];
+export const deleteTasks = async (
+  actor: Express.AuthUser,
+  input: DeleteTasksInput,
+) => {
+  const uniqueTaskIds = [
+    ...new Set(
+      input.taskIds
+        .map((taskId) => taskId.trim())
+        .filter((taskId) => taskId.length > 0),
+    ),
+  ];
 
   if (uniqueTaskIds.length === 0) {
     throw new Error("At least one task id is required.");
@@ -1327,16 +1525,23 @@ export const deleteTasks = async (actor: Express.AuthUser, input: DeleteTasksInp
     throw new Error("Task not found.");
   }
 
-  const undeletableTask = tasks.find((task) => !canDeleteTaskByPolicy(actor, {
-    created_by: task.created_by,
-    status: task.status,
-  }));
+  const undeletableTask = tasks.find(
+    (task) =>
+      !canDeleteTaskByPolicy(actor, {
+        created_by: task.created_by,
+        status: task.status,
+      }),
+  );
   if (undeletableTask) {
-    throw new Error("You do not have permission to delete one or more selected tasks.");
+    throw new Error(
+      "You do not have permission to delete one or more selected tasks.",
+    );
   }
 
   const deletableTaskIds = tasks.map((task) => String(task._id));
-  const objectIds = deletableTaskIds.map((taskId) => new Types.ObjectId(taskId));
+  const objectIds = deletableTaskIds.map(
+    (taskId) => new Types.ObjectId(taskId),
+  );
 
   await Promise.all([
     Task.deleteMany({ _id: { $in: objectIds } }),
@@ -1353,7 +1558,10 @@ export const deleteTasks = async (actor: Express.AuthUser, input: DeleteTasksInp
   };
 };
 
-export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Promise<TaskDetailResponse> => {
+export const getTaskDetail = async (
+  actor: Express.AuthUser,
+  taskId: string,
+): Promise<TaskDetailResponse> => {
   const task = await resolveTaskOrThrow(taskId);
 
   const hasAccess = await canAccessTaskScope(actor, {
@@ -1368,14 +1576,23 @@ export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Pr
   const [assigneeRows, links, historyRows, commentsRows] = await Promise.all([
     TaskAssignment.find({ task_id: task._id }).select("assigned_to").lean(),
     TaskWorkLink.find({ task_id: task._id }).sort({ created_at: -1 }).lean(),
-    TaskStatusHistory.find({ task_id: task._id }).sort({ timestamp: -1 }).lean(),
+    TaskStatusHistory.find({ task_id: task._id })
+      .sort({ timestamp: -1 })
+      .lean(),
     TaskComment.find({ task_id: task._id }).sort({ created_at: 1 }).lean(),
   ]);
 
   const assigneeIds = assigneeRows.map((row) => String(row.assigned_to));
   const historyUserIds = historyRows.map((row) => String(row.updated_by));
   const commentUserIds = commentsRows.map((row) => String(row.user_id));
-  const allUserIds = [...new Set([String(task.created_by), ...assigneeIds, ...historyUserIds, ...commentUserIds])];
+  const allUserIds = [
+    ...new Set([
+      String(task.created_by),
+      ...assigneeIds,
+      ...historyUserIds,
+      ...commentUserIds,
+    ]),
+  ];
 
   const userMap = await getUsersByIds(allUserIds);
 
@@ -1397,13 +1614,16 @@ export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Pr
   }));
 
   const comments: TaskCommentItem[] = commentsRows.map((item) =>
-    normalizeComment({
-      _id: item._id,
-      task_id: item.task_id,
-      user_id: item.user_id,
-      message: item.message,
-      created_at: item.created_at,
-    }, userMap),
+    normalizeComment(
+      {
+        _id: item._id,
+        task_id: item.task_id,
+        user_id: item.user_id,
+        message: item.message,
+        created_at: item.created_at,
+      },
+      userMap,
+    ),
   );
 
   const assigned_users = assigneeIds
@@ -1411,8 +1631,11 @@ export const getTaskDetail = async (actor: Express.AuthUser, taskId: string): Pr
     .filter((item): item is TaskUserSummary => !!item);
 
   const normalizedTask = normalizeTask(task);
-  const canEditLinksByStatus = task.status !== "Under Review" && task.status !== "Completed";
-  const managerCanDeleteAny = canManageGlobally(actor.global_role) || canManageDepartment(actor.department_role);
+  const canEditLinksByStatus =
+    task.status !== "Under Review" && task.status !== "Completed";
+  const managerCanDeleteAny =
+    canManageGlobally(actor.global_role) ||
+    canManageDepartment(actor.department_role);
   const link_permissions: TaskLinkPermissions = {
     can_add_links: canEditLinksByStatus,
     can_delete_any_link: canEditLinksByStatus && managerCanDeleteAny,

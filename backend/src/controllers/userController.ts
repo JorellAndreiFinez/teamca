@@ -353,11 +353,9 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     } else if (actorIsHead) {
       if (!sharesAtLeastOneDepartment(actor, previousUser)) {
-        return res
-          .status(403)
-          .json({
-            message: "Heads can only edit users within their department.",
-          });
+        return res.status(403).json({
+          message: "Heads can only edit users within their department.",
+        });
       }
 
       const disallowedHeadFields = [
@@ -378,19 +376,15 @@ export const updateUser = async (req: Request, res: Response) => {
 
     if (!isSuperadmin(actor)) {
       if (previousUser.global_role === "Superadmin") {
-        return res
-          .status(403)
-          .json({
-            message: "Only Superadmins can modify Superadmin accounts.",
-          });
+        return res.status(403).json({
+          message: "Only Superadmins can modify Superadmin accounts.",
+        });
       }
 
       if (payload.global_role === "Superadmin") {
-        return res
-          .status(403)
-          .json({
-            message: "Only Superadmins can assign the Superadmin role.",
-          });
+        return res.status(403).json({
+          message: "Only Superadmins can assign the Superadmin role.",
+        });
       }
     }
 
@@ -582,11 +576,9 @@ export const deleteUser = async (req: Request, res: Response) => {
     const actor = req.user;
     const actorCanDelete = isSuperadmin(actor) || isSupervisorAdmin(actor);
     if (!actorCanDelete) {
-      return res
-        .status(403)
-        .json({
-          message: "Only Supervisor(Admin) or Superadmin can delete users.",
-        });
+      return res.status(403).json({
+        message: "Only Supervisor(Admin) or Superadmin can delete users.",
+      });
     }
 
     if (!isSuperadmin(actor)) {

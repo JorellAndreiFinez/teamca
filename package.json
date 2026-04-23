@@ -22,9 +22,16 @@
     "docs:dev": "npm run dev -w documentation",
     "docs:build": "npm run build -w documentation",
     "docs:preview": "npm run preview -w documentation",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint:backend": "npm run lint -w backend",
+    "lint:frontend": "npm run lint -w frontend",
+    "lint:website": "npm run lint -w website",
+    "lint:fix:backend": "npm run lint:fix -w backend",
+    "lint:fix:frontend": "npm run lint:fix -w frontend",
+    "lint:fix:website": "npm run lint:fix -w website",
+    "lint:fix:all": "npm run lint:fix:backend && npm run lint:fix:frontend && npm run lint:fix:website",
     "format": "npm run format --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "prepare": "husky && husky install"
   },
   "keywords": [
     "intern-management",
@@ -41,5 +48,8 @@
   },
   "dependencies": {
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "husky": "^8.0.0"
   }
 }

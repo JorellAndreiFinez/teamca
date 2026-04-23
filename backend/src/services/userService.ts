@@ -201,13 +201,15 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
 
     user.email = nextEmail;
   }
-  if (payload.password_hash !== undefined)
+  if (payload.password_hash !== undefined) {
     user.password_hash = payload.password_hash;
+  }
   if (payload.global_role !== undefined) user.global_role = payload.global_role;
   if (payload.is_active !== undefined) user.is_active = payload.is_active;
 
-  if (payload.required_hours !== undefined)
+  if (payload.required_hours !== undefined) {
     user.required_hours = payload.required_hours;
+  }
 
   // ✅ working_hours
   if (payload.working_hours) {
@@ -292,15 +294,21 @@ export const upsertUserInternProfile = async (
       actual_end_date: payload.actual_end_date ?? null,
     });
   } else {
-    if (payload.school_university !== undefined) existingProfile.school_university = payload.school_university;
-    if (payload.required_hours !== undefined)
+    if (payload.school_university !== undefined) {
+      existingProfile.school_university = payload.school_university;
+    }
+    if (payload.required_hours !== undefined) {
       existingProfile.required_hours = payload.required_hours;
-    if (payload.rendered_hours_total !== undefined)
+    }
+    if (payload.rendered_hours_total !== undefined) {
       existingProfile.rendered_hours_total = payload.rendered_hours_total;
-    if (payload.expected_end_date !== undefined)
+    }
+    if (payload.expected_end_date !== undefined) {
       existingProfile.expected_end_date = payload.expected_end_date;
-    if (payload.actual_end_date !== undefined)
+    }
+    if (payload.actual_end_date !== undefined) {
       existingProfile.actual_end_date = payload.actual_end_date;
+    }
 
     await existingProfile.save();
   }
@@ -312,10 +320,6 @@ export const deleteUser = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found.");
 
-<<<<<<< Updated upstream
-  // prevent deletion of Superadmin users
-=======
->>>>>>> Stashed changes
   if (user.global_role === "Superadmin") {
     throw new Error("Cannot delete a Superadmin user.");
   }

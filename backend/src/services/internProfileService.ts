@@ -1,5 +1,5 @@
-import InternProfile from '../models/InternProfile';
-import User from '../models/User';
+import InternProfile from "../models/InternProfile";
+import User from "../models/User";
 
 export type InternProfilePayload = {
   user_id: string;
@@ -17,12 +17,12 @@ export const getInternProfileByUserId = async (userId: string) => {
 export const createInternProfile = async (payload: InternProfilePayload) => {
   const user = await User.findById(payload.user_id);
   if (!user) {
-    throw new Error('User not found.');
+    throw new Error("User not found.");
   }
 
   const existing = await InternProfile.findOne({ user_id: payload.user_id });
   if (existing) {
-    throw new Error('Intern profile already exists.');
+    throw new Error("Intern profile already exists.");
   }
 
   return InternProfile.create({
@@ -37,26 +37,26 @@ export const createInternProfile = async (payload: InternProfilePayload) => {
 
 export const updateInternProfileByUserId = async (
   userId: string,
-  payload: Partial<Omit<InternProfilePayload, 'user_id'>>
+  payload: Partial<Omit<InternProfilePayload, "user_id">>,
 ) => {
   const profile = await InternProfile.findOne({ user_id: userId });
   if (!profile) {
-    throw new Error('Intern profile not found.');
+    throw new Error("Intern profile not found.");
   }
 
-  if (typeof payload.school_university !== 'undefined') {
+  if (typeof payload.school_university !== "undefined") {
     profile.school_university = payload.school_university;
   }
-  if (typeof payload.required_hours !== 'undefined') {
+  if (typeof payload.required_hours !== "undefined") {
     profile.required_hours = payload.required_hours;
   }
-  if (typeof payload.rendered_hours_total !== 'undefined') {
+  if (typeof payload.rendered_hours_total !== "undefined") {
     profile.rendered_hours_total = payload.rendered_hours_total;
   }
-  if (typeof payload.expected_end_date !== 'undefined') {
+  if (typeof payload.expected_end_date !== "undefined") {
     profile.expected_end_date = payload.expected_end_date;
   }
-  if (typeof payload.actual_end_date !== 'undefined') {
+  if (typeof payload.actual_end_date !== "undefined") {
     profile.actual_end_date = payload.actual_end_date;
   }
 

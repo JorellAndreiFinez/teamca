@@ -22,4 +22,3 @@ router.use("/dtr", dtrRoutes);
 router.use("/leave", leaveRoutes);
 
 export default router;
-

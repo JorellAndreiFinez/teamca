@@ -2,7 +2,11 @@ import { Request, Response, NextFunction } from "express";
 import { logActivity } from "../services/activityService";
 
 // capture request/response details for activity logging
-export const activityLogger = (req: Request, res: Response, next: NextFunction) => {
+export const activityLogger = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const originalSend = res.send;
   const originalJson = res.json;
   let hasLogged = false; // flag to prevent duplicate logging
@@ -18,7 +22,10 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
 
     // for login/signup endpoints, user info may not be available yet
     if (!user_id) {
-      if (req.body?.email && (req.path.includes("/login") || req.path.includes("/complete-setup"))) {
+      if (
+        req.body?.email &&
+        (req.path.includes("/login") || req.path.includes("/complete-setup"))
+      ) {
         user_name = req.body.email;
         if (res.statusCode < 400 && res.statusCode !== 403) {
           user_id = "system"; // placeholder
@@ -117,7 +124,10 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
         user: "Logged out",
       },
     };
-    const description = actionDescMap[actionType]?.[resourceType] || `${actionType} ${resourceType}`.charAt(0).toUpperCase() + `${actionType} ${resourceType}`.slice(1);
+    const description =
+      actionDescMap[actionType]?.[resourceType] ||
+      `${actionType} ${resourceType}`.charAt(0).toUpperCase() +
+        `${actionType} ${resourceType}`.slice(1);
 
     const changes: { [key: string]: any } = {};
     if (req.body) {
@@ -142,15 +152,15 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
       }
     }
 
-
-
     let resource_id: string | undefined;
-    const getParamAsString = (param: string | string[] | undefined): string | undefined => {
+    const getParamAsString = (
+      param: string | string[] | undefined,
+    ): string | undefined => {
       if (!param) return undefined;
       return Array.isArray(param) ? param[0] : param;
     };
-    
-    resource_id = 
+
+    resource_id =
       getParamAsString(req.params?.userId) ||
       getParamAsString(req.params?.taskId) ||
       getParamAsString(req.params?.departmentId) ||

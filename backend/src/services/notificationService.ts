@@ -1,5 +1,8 @@
 import { Types } from "mongoose";
-import Notification, { type INotification, type NotificationEventType } from "../models/Notification";
+import Notification, {
+  type INotification,
+  type NotificationEventType,
+} from "../models/Notification";
 
 type NotificationEntityType = "task" | "user";
 
@@ -56,11 +59,11 @@ export const createNotificationsForRecipients = async (
   recipientIds: string[],
   input: Omit<CreateNotificationInput, "recipientId">,
 ) => {
-  const uniqueRecipientIds = [...new Set(
-    recipientIds
-      .map((id) => id.trim())
-      .filter((id) => id.length > 0),
-  )];
+  const uniqueRecipientIds = [
+    ...new Set(
+      recipientIds.map((id) => id.trim()).filter((id) => id.length > 0),
+    ),
+  ];
 
   if (uniqueRecipientIds.length === 0) {
     return [] as ReturnType<typeof normalizeNotification>[];
@@ -90,7 +93,10 @@ export const createNotificationsForRecipients = async (
   return docs.map((doc) => normalizeNotification(doc));
 };
 
-export const listNotifications = async (userId: string, input: ListNotificationsInput) => {
+export const listNotifications = async (
+  userId: string,
+  input: ListNotificationsInput,
+) => {
   const query = {
     recipient_id: toObjectId(userId),
     ...(input.unreadOnly ? { is_read: false } : {}),
@@ -105,7 +111,10 @@ export const listNotifications = async (userId: string, input: ListNotifications
       .limit(input.limit)
       .lean(),
     Notification.countDocuments(query),
-    Notification.countDocuments({ recipient_id: toObjectId(userId), is_read: false }),
+    Notification.countDocuments({
+      recipient_id: toObjectId(userId),
+      is_read: false,
+    }),
   ]);
 
   return {
@@ -131,7 +140,10 @@ export const listNotifications = async (userId: string, input: ListNotifications
   };
 };
 
-export const markNotificationAsRead = async (userId: string, notificationId: string) => {
+export const markNotificationAsRead = async (
+  userId: string,
+  notificationId: string,
+) => {
   const updated = await Notification.findOneAndUpdate(
     {
       _id: toObjectId(notificationId),

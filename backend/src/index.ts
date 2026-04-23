@@ -87,33 +87,7 @@ const apiLimiter = rateLimit({
 // ── MongoDB connection
 connectDB().then(() => console.log("MongoDB ready"));
 
-<<<<<<< Updated upstream
-// ── Activity logging middleware
-import { activityLogger } from "./middlewares/activityLogger";
-app.use(activityLogger);
-
-// ── Routes
-import authRoutes from "./routes/authRoutes";
-import departmentRoutes from "./routes/departmentRoutes";
-import userRoutes from "./routes/userRoutes";
-import internProfileRoutes from "./routes/internProfileRoutes";
-// import dtrRoutes from "./routes/dtrRoutes";
-import taskRoutes from "./routes/taskRoutes";
-import notificationRoutes from "./routes/notificationRoutes";
-import activityRoutes from "./routes/activityRoutes";
-
-app.use(apiLimiter);
-app.use("/auth", authLimiter, authRoutes);
-app.use("/departments", departmentRoutes);
-app.use("/users", userRoutes);
-app.use("/intern-profiles", internProfileRoutes);
-// app.use("/dtr", apiLimiter, dtrRoutes);
-app.use("/tasks", apiLimiter, taskRoutes);
-app.use("/notifications", apiLimiter, notificationRoutes);
-app.use("/activity-logs", activityRoutes);
-=======
 app.use("/api", routes);
->>>>>>> Stashed changes
 
 // ── Health check
 app.get("/health", (_req, res) =>

@@ -1,6 +1,10 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type TaskStatus = "Not Started" | "In Progress" | "Under Review" | "Completed";
+export type TaskStatus =
+  | "Not Started"
+  | "In Progress"
+  | "Under Review"
+  | "Completed";
 export type TaskPriority = "Low" | "Medium" | "High";
 
 export interface ITask extends Document {

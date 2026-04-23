@@ -1,4 +1,9 @@
-import ActivityLog, { IActivityLog, ActionType, ResourceType, LogStatus } from "../models/ActivityLog";
+import ActivityLog, {
+  IActivityLog,
+  ActionType,
+  ResourceType,
+  LogStatus,
+} from "../models/ActivityLog";
 
 export interface LogActivityInput {
   user_id: string;
@@ -39,7 +44,7 @@ export const getActivityLogs = async (
   limit: number = 20,
   skip: number = 0,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): Promise<{ logs: IActivityLog[]; total: number }> => {
   try {
     const filter: Record<string, any> = {};
@@ -51,17 +56,26 @@ export const getActivityLogs = async (
     }
 
     const [logs, total] = await Promise.all([
-      ActivityLog.find(filter).lean().sort({ timestamp: -1 }).limit(limit).skip(skip),
+      ActivityLog.find(filter)
+        .lean()
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .skip(skip),
       ActivityLog.countDocuments(filter),
     ]);
 
     return { logs: logs as IActivityLog[], total };
   } catch (err) {
-    throw new Error(`Failed to fetch activity logs: ${err instanceof Error ? err.message : "unknown error"}`);
+    throw new Error(
+      `Failed to fetch activity logs: ${err instanceof Error ? err.message : "unknown error"}`,
+    );
   }
 };
 
-export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date): Promise<string> => {
+export const exportActivityLogsToCSV = async (
+  startDate?: Date,
+  endDate?: Date,
+): Promise<string> => {
   try {
     const filter: Record<string, any> = {};
 
@@ -93,7 +107,11 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
     };
 
     const formatChanges = (changes?: Record<string, any>): string => {
-      if (!changes || typeof changes !== "object" || Object.keys(changes).length === 0) {
+      if (
+        !changes ||
+        typeof changes !== "object" ||
+        Object.keys(changes).length === 0
+      ) {
         return "-";
       }
 
@@ -105,7 +123,9 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
             !Array.isArray(value) &&
             ("from" in value || "to" in value)
           ) {
-            const fromValue = formatValue((value as Record<string, unknown>).from);
+            const fromValue = formatValue(
+              (value as Record<string, unknown>).from,
+            );
             const toValue = formatValue((value as Record<string, unknown>).to);
             return `${field}: ${fromValue} -> ${toValue}`;
           }
@@ -120,7 +140,9 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
         .replace(/[_-]+/g, " ")
         .split(" ")
         .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .map(
+          (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
+        )
         .join(" ");
 
     // csv header
@@ -153,6 +175,8 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
 
     return rows.join("\n");
   } catch (err) {
-    throw new Error(`Failed to export activity logs: ${err instanceof Error ? err.message : "unknown error"}`);
+    throw new Error(
+      `Failed to export activity logs: ${err instanceof Error ? err.message : "unknown error"}`,
+    );
   }
 };
