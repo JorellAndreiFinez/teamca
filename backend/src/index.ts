@@ -66,8 +66,7 @@ app.use(
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
-// ── Rate limiters
-const authLimiter = rateLimit({
+const _authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50,
   standardHeaders: "draft-8",
@@ -75,7 +74,7 @@ const authLimiter = rateLimit({
   message: { message: "Too many auth requests. Please try again shortly." },
 });
 
-const apiLimiter = rateLimit({
+const _apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: "draft-8",
@@ -84,8 +83,7 @@ const apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-// ── MongoDB connection
-connectDB().then(() => console.log("MongoDB ready"));
+connectDB().then(() => console.warn("MongoDB ready"));
 
 app.use("/api", routes);
 
@@ -98,5 +96,5 @@ const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
 server.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`),
+  console.warn(`Server running at http://localhost:${PORT}`),
 );

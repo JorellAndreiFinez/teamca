@@ -9,7 +9,7 @@ export const activityLogService = {
     limit: number = 20,
     skip: number = 0,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<ActivityLogsResponse> => {
     const params: Record<string, any> = { limit, skip };
     if (startDate) params.startDate = startDate;
@@ -27,10 +27,10 @@ export const activityLogService = {
     const response = await api.post(
       `${ENDPOINT}/export`,
       { startDate, endDate },
-      { 
+      {
         responseType: "blob",
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
     return response.data as Blob;
   },

@@ -41,7 +41,8 @@ export const userService = {
       await api.delete(`/users/${userId}`);
       console.log(`[deleteUser] User ${userId} deleted successfully`);
     } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || "Failed to delete user";
+      const message =
+        err?.response?.data?.message || err?.message || "Failed to delete user";
       console.error(`[deleteUser] Failed to delete user ${userId}:`, message);
       const error = new Error(message);
       throw error;
@@ -64,9 +65,15 @@ export const userService = {
     }
   },
 
-  activateWhitelistedUser: async (userId: string, payload: any): Promise<User> => {
+  activateWhitelistedUser: async (
+    userId: string,
+    payload: any,
+  ): Promise<User> => {
     try {
-      const { data } = await api.post<User>(`/users/${userId}/activate-whitelist`, payload);
+      const { data } = await api.post<User>(
+        `/users/${userId}/activate-whitelist`,
+        payload,
+      );
       console.log("[activateWhitelistedUser] success:", data);
       return data;
     } catch (err) {
@@ -75,4 +82,3 @@ export const userService = {
     }
   },
 };
-

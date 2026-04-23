@@ -1,4 +1,4 @@
-import type { DepartmentRole, GlobalRole, User } from '../types/user';
+import type { DepartmentRole, GlobalRole, User } from "../types/user";
 
 type RoleAccessOptions = {
   allowedGlobalRoles?: GlobalRole[];
@@ -7,13 +7,16 @@ type RoleAccessOptions = {
 
 export function getDashboardRouteForUser(user: User | null): string {
   if (!user) {
-    return '/login';
+    return "/login";
   }
 
-  return '/dashboard';
+  return "/dashboard";
 }
 
-export function hasRoleAccess(user: User | null, options?: RoleAccessOptions): boolean {
+export function hasRoleAccess(
+  user: User | null,
+  options?: RoleAccessOptions,
+): boolean {
   if (!user) {
     return false;
   }
@@ -26,8 +29,10 @@ export function hasRoleAccess(user: User | null, options?: RoleAccessOptions): b
   }
 
   const departmentRole = user.departments?.[0]?.department_role;
-  const hasAllowedGlobalRole = !!user.global_role && globalRoles.includes(user.global_role);
-  const hasAllowedDepartmentRole = !!departmentRole && departmentRoles.includes(departmentRole);
+  const hasAllowedGlobalRole =
+    !!user.global_role && globalRoles.includes(user.global_role);
+  const hasAllowedDepartmentRole =
+    !!departmentRole && departmentRoles.includes(departmentRole);
 
   return hasAllowedGlobalRole || hasAllowedDepartmentRole;
 }

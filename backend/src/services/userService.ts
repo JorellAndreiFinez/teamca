@@ -330,6 +330,5 @@ export const deleteUser = async (userId: string) => {
   // delete user
   await user.deleteOne();
 
-  console.log(`[deleteUser] User deleted: ${user._id} (${user.email})`);
   return { message: "User successfully deleted" };
 };

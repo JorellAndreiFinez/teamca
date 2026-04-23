@@ -25,7 +25,7 @@ export interface IActivityLog {
   resource_type: ResourceType;
   resource_id?: string;
   description: string;
-  changes?: Record<string, any>;
+  changes?: Record<string, unknown>;
   status: LogStatus;
   createdAt: Date;
 }

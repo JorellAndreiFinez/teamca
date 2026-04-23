@@ -538,28 +538,28 @@ const getTaskAssigneeIdsMap = async (taskIds: string[]) => {
   return map;
 };
 
-const getTaskLinksCountMap = async (taskIds: string[]) => {
-  if (taskIds.length === 0) {
-    return new Map<string, number>();
-  }
+// const getTaskLinksCountMap = async (taskIds: string[]) => {
+//   if (taskIds.length === 0) {
+//     return new Map<string, number>();
+//   }
 
-  const rows = await TaskWorkLink.aggregate<{
-    _id: Types.ObjectId;
-    count: number;
-  }>([
-    {
-      $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } },
-    },
-    { $group: { _id: "$task_id", count: { $sum: 1 } } },
-  ]);
+//   const rows = await TaskWorkLink.aggregate<{
+//     _id: Types.ObjectId;
+//     count: number;
+//   }>([
+//     {
+//       $match: { task_id: { $in: taskIds.map((id) => new Types.ObjectId(id)) } },
+//     },
+//     { $group: { _id: "$task_id", count: { $sum: 1 } } },
+//   ]);
 
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    map.set(String(row._id), row.count);
-  }
+//   const map = new Map<string, number>();
+//   for (const row of rows) {
+//     map.set(String(row._id), row.count);
+//   }
 
-  return map;
-};
+//   return map;
+// };
 
 const getTaskCommentsCountMap = async (taskIds: string[]) => {
   if (taskIds.length === 0) {

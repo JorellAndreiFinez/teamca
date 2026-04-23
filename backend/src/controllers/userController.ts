@@ -129,7 +129,6 @@ export const getUsers = async (req: Request, res: Response) => {
         .json({ message: "Insufficient role permissions." });
     }
 
-    console.log("[getUsers] users fetched:", users);
     res.json(users);
   } catch (err) {
     console.error(err);
@@ -142,22 +141,30 @@ export const getUsers = async (req: Request, res: Response) => {
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
-    let userId = req.params.userId;
+    let userId: string = String(req.params.userId);
 
     // Handle "me" to return the authenticated user's data
     if (userId === "me") {
-      userId = (req as any).user?._id;
-      if (!userId) {
+      const authUser = req.user;
+
+      if (!authUser?.user_id) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+
+      userId = String(authUser.user_id);
     }
 
     const user = await User.findById(userId, "-password_hash");
-    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     res.json(user);
-  } catch (err) {
-    console.error(err);
+  } catch (err: unknown) {
+    const error = err as Error;
+
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -182,11 +189,6 @@ export const createUser = async (req: Request, res: Response) => {
       working_days,
     } = req.body;
 
-    const departments =
-      department_id && department_role
-        ? [{ department_id, department_role }]
-        : undefined;
-
     if (!first_name || !last_name || !email || !password_hash || !global_role) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -206,16 +208,12 @@ export const createUser = async (req: Request, res: Response) => {
       departments: department_id ? [{ department_id, department_role }] : [],
     });
 
-    if (newUser) {
-      console.log(
-        `[createUser] User created: ${newUser.first_name} ${newUser.last_name} (${newUser.email})`,
-      );
-    }
-
     res.status(201).json(newUser);
-  } catch (err: any) {
-    console.error("[createUser] error:", err);
-    res.status(400).json({ message: err.message || "Failed to create user" });
+  } catch (err: unknown) {
+    const error = err as Error;
+
+    console.error("[createUser] error:", error);
+    res.status(400).json({ message: error.message || "Failed to create user" });
   }
 };
 
@@ -240,16 +238,14 @@ export const createWhitelistedUserHandler = async (
 
     const newUser = await createWhitelistedUser({ email });
 
-    // Audit log: whitelist operation
-    console.log(
-      `[createWhitelistedUser] Email whitelisted: ${email} by user ${req.user?.user_id}`,
-    );
     res.status(201).json(newUser);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[createWhitelistedUser] error:", err);
-    res
-      .status(400)
-      .json({ message: err.message || "Failed to whitelist email" });
+
+    const errorMessage =
+      err instanceof Error ? err.message : "Failed to whitelist email";
+
+    res.status(400).json({ message: errorMessage });
   }
 };
 
@@ -259,29 +255,36 @@ export const activateWhitelistedUserHandler = async (
 ) => {
   try {
     const userId = getUserIdParam(req);
+
     const first_name = String(req.body?.first_name ?? "").trim();
     const last_name = String(req.body?.last_name ?? "").trim();
     const password_hash = String(req.body?.password_hash ?? "");
+
     const global_role = req.body?.global_role || "Standard_User";
-    const department_id = req.body?.department_id;
+    const department_id = req.body?.department_id
+      ? String(req.body.department_id)
+      : undefined;
+
     const department_role = req.body?.department_role || "Intern";
 
     if (!first_name || !last_name || !password_hash) {
-      return res
-        .status(400)
-        .json({ message: "First name, last name, and password are required" });
+      return res.status(400).json({
+        message: "First name, last name, and password are required",
+      });
     }
 
     // Validate name length
     if (first_name.length < 2 || last_name.length < 2) {
-      return res
-        .status(400)
-        .json({ message: "Names must be at least 2 characters" });
+      return res.status(400).json({
+        message: "Names must be at least 2 characters",
+      });
     }
 
-    // Validate password hash format (should be bcrypt hash)
+    // Validate password hash format (bcrypt check)
     if (!password_hash.startsWith("$2")) {
-      return res.status(400).json({ message: "Invalid password format" });
+      return res.status(400).json({
+        message: "Invalid password format",
+      });
     }
 
     const user = await activateWhitelistedUser(userId, {
@@ -293,16 +296,15 @@ export const activateWhitelistedUserHandler = async (
       department_role: department_role as "Head" | "Supervisor" | "Intern",
     });
 
-    // Audit log: activation operation
-    console.log(
-      `[activateWhitelistedUser] User activated: ${first_name} ${last_name} (${userId}) by ${req.user?.user_id}`,
-    );
-    res.json(user);
-  } catch (err: any) {
-    console.error("[activateWhitelistedUser] error:", err);
-    res
-      .status(400)
-      .json({ message: err.message || "Failed to activate whitelisted user" });
+    return res.json(user);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    console.error("[activateWhitelistedUser] error:", error);
+
+    return res.status(400).json({
+      message: error.message || "Failed to activate whitelisted user",
+    });
   }
 };
 
@@ -317,6 +319,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const userId = getUserIdParam(req);
     const payload = req.body || {};
+
     const previousUser = await User.findById(userId)
       .select("global_role is_active departments")
       .lean();
@@ -343,13 +346,15 @@ export const updateUser = async (req: Request, res: Response) => {
         "is_active",
         "password_hash",
       ];
+
       const includesRestrictedField = disallowedSelfFields.some(
-        (field) => payload[field] !== undefined,
+        (field) => payload?.[field] !== undefined,
       );
+
       if (includesRestrictedField) {
-        return res
-          .status(403)
-          .json({ message: "You can only edit your basic profile fields." });
+        return res.status(403).json({
+          message: "You can only edit your basic profile fields.",
+        });
       }
     } else if (actorIsHead) {
       if (!sharesAtLeastOneDepartment(actor, previousUser)) {
@@ -364,13 +369,15 @@ export const updateUser = async (req: Request, res: Response) => {
         "is_active",
         "password_hash",
       ];
+
       const includesRestrictedField = disallowedHeadFields.some(
-        (field) => payload[field] !== undefined,
+        (field) => payload?.[field] !== undefined,
       );
+
       if (includesRestrictedField) {
-        return res
-          .status(403)
-          .json({ message: "Heads can only edit basic profile fields." });
+        return res.status(403).json({
+          message: "Heads can only edit basic profile fields.",
+        });
       }
     }
 
@@ -381,7 +388,7 @@ export const updateUser = async (req: Request, res: Response) => {
         });
       }
 
-      if (payload.global_role === "Superadmin") {
+      if (payload?.global_role === "Superadmin") {
         return res.status(403).json({
           message: "Only Superadmins can assign the Superadmin role.",
         });
@@ -390,22 +397,25 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const sanitizedPayload = actorIsSelf
       ? {
-          first_name: payload.first_name,
-          last_name: payload.last_name,
-          email: payload.email,
+          first_name: payload?.first_name,
+          last_name: payload?.last_name,
+          email: payload?.email,
         }
       : actorIsHead
         ? {
-            first_name: payload.first_name,
-            last_name: payload.last_name,
+            first_name: payload?.first_name,
+            last_name: payload?.last_name,
           }
         : payload;
 
-    const hasAnyFieldToUpdate = Object.values(sanitizedPayload).some(
+    const hasAnyFieldToUpdate = Object.values(sanitizedPayload ?? {}).some(
       (value) => value !== undefined,
     );
+
     if (!hasAnyFieldToUpdate) {
-      return res.status(400).json({ message: "No editable fields provided." });
+      return res.status(400).json({
+        message: "No editable fields provided.",
+      });
     }
 
     const updatedUser = await updateUserService(userId, sanitizedPayload);
@@ -414,18 +424,17 @@ export const updateUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log(
-      `[updateUser] User updated: ${updatedUser.first_name} ${updatedUser.last_name} (${updatedUser.email})`,
-    );
-
     const [recipientIds, directorySubscribers] = await Promise.all([
       getActiveSuperadminIds(),
       getActiveUserDirectorySubscriberIds(),
     ]);
+
     const actorId = req.user ? String(req.user.user_id) : undefined;
+
     const updatedFields = Object.keys(payload || {}).filter(
       (key) => payload?.[key] !== undefined,
     );
+
     const updatedEntityId = String(updatedUser._id || userId);
 
     const profileNotificationRecipients = [
@@ -439,8 +448,9 @@ export const updateUser = async (req: Request, res: Response) => {
         eventType: "user_profile_updated",
         title: "User profile updated",
         message:
-          `${updatedUser.first_name || "User"} ${updatedUser.last_name || ""}`.trim() +
-          " updated their profile information.",
+          `${updatedUser.first_name || "User"} ${
+            updatedUser.last_name || ""
+          }`.trim() + " updated their profile information.",
         entityType: "user",
         entityId: updatedEntityId,
         metadata: {
@@ -456,13 +466,16 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const previousDepartmentRole =
       previousUser.departments?.[0]?.department_role;
+
     const updatedDepartmentRole = updatedUser.departments?.[0]?.department_role;
+
     const roleChanged =
       previousUser.global_role !== updatedUser.global_role ||
       previousDepartmentRole !== updatedDepartmentRole;
 
     if (roleChanged) {
       const roleRecipientIds = [...new Set([...recipientIds, updatedEntityId])];
+
       const roleNotifications = await createNotificationsForRecipients(
         roleRecipientIds,
         {
@@ -470,8 +483,9 @@ export const updateUser = async (req: Request, res: Response) => {
           eventType: "user_role_changed",
           title: "User role updated",
           message:
-            `${updatedUser.first_name || "User"} ${updatedUser.last_name || ""}`.trim() +
-            " role assignment was updated.",
+            `${updatedUser.first_name || "User"} ${
+              updatedUser.last_name || ""
+            }`.trim() + " role assignment was updated.",
           entityType: "user",
           entityId: updatedEntityId,
           metadata: {
@@ -493,6 +507,7 @@ export const updateUser = async (req: Request, res: Response) => {
       const activationRecipientIds = [
         ...new Set([...recipientIds, updatedEntityId]),
       ];
+
       const activationNotifications = await createNotificationsForRecipients(
         activationRecipientIds,
         {
@@ -500,7 +515,9 @@ export const updateUser = async (req: Request, res: Response) => {
           eventType: "user_activation_changed",
           title: "User activation status changed",
           message:
-            `${updatedUser.first_name || "User"} ${updatedUser.last_name || ""}`.trim() +
+            `${updatedUser.first_name || "User"} ${
+              updatedUser.last_name || ""
+            }`.trim() +
             ` was ${updatedUser.is_active ? "activated" : "deactivated"}.`,
           entityType: "user",
           entityId: updatedEntityId,
@@ -525,10 +542,15 @@ export const updateUser = async (req: Request, res: Response) => {
       updated_at: new Date().toISOString(),
     });
 
-    res.json(updatedUser);
-  } catch (err: any) {
-    console.error("[updateUser] error:", err);
-    res.status(400).json({ message: err.message || "Failed to update user" });
+    return res.json(updatedUser);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    console.error("[updateUser] error:", error);
+
+    return res.status(400).json({
+      message: error.message || "Failed to update user",
+    });
   }
 };
 
@@ -561,20 +583,27 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Authentication required." });
+      return res.status(401).json({
+        message: "Authentication required.",
+      });
     }
 
     const userId = getUserIdParam(req);
+
     const userToDelete = await User.findById(userId)
       .select("first_name last_name email global_role")
       .lean();
 
     if (!userToDelete) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({
+        message: "User not found.",
+      });
     }
 
     const actor = req.user;
+
     const actorCanDelete = isSuperadmin(actor) || isSupervisorAdmin(actor);
+
     if (!actorCanDelete) {
       return res.status(403).json({
         message: "Only Supervisor(Admin) or Superadmin can delete users.",
@@ -583,9 +612,9 @@ export const deleteUser = async (req: Request, res: Response) => {
 
     if (!isSuperadmin(actor)) {
       if (userToDelete.global_role !== "Standard_User") {
-        return res
-          .status(403)
-          .json({ message: "Supervisors can only delete Standard Users." });
+        return res.status(403).json({
+          message: "Supervisors can only delete Standard Users.",
+        });
       }
     }
 
@@ -595,6 +624,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       getActiveSuperadminIds(),
       getActiveUserDirectorySubscriberIds(),
     ]);
+
     const actorId = req.user ? String(req.user.user_id) : undefined;
 
     const notifications = await createNotificationsForRecipients(recipientIds, {
@@ -602,8 +632,9 @@ export const deleteUser = async (req: Request, res: Response) => {
       eventType: "user_deleted",
       title: "User deleted",
       message:
-        `${userToDelete.first_name || "User"} ${userToDelete.last_name || ""}`.trim() +
-        " was deleted by an admin.",
+        `${userToDelete.first_name || "User"} ${
+          userToDelete.last_name || ""
+        }`.trim() + " was deleted by an admin.",
       entityType: "user",
       entityId: userId,
       metadata: {
@@ -623,9 +654,14 @@ export const deleteUser = async (req: Request, res: Response) => {
       updated_at: new Date().toISOString(),
     });
 
-    res.json(result);
-  } catch (err: any) {
-    console.error("[deleteUser] error:", err);
-    res.status(400).json({ message: err.message || "Failed to delete user" });
+    return res.json(result);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    console.error("[deleteUser] error:", error);
+
+    return res.status(400).json({
+      message: error.message || "Failed to delete user",
+    });
   }
 };

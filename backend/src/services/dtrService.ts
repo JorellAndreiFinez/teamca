@@ -154,8 +154,6 @@ export const timeOut = async (userId: string, remarks: string) => {
 
   await dtr.save();
 
-  console.log("TIME-OUT RECORDED:", lastClock);
-
   return lastClock;
 };
 

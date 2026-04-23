@@ -1,5 +1,5 @@
-import api from './api';
-import type { InternProfile } from '../types/user';
+import api from "./api";
+import type { InternProfile } from "../types/user";
 
 export interface InternProfilePayload {
   user_id: string;
@@ -11,7 +11,9 @@ export interface InternProfilePayload {
 }
 
 export const internProfileService = {
-  getInternProfileByUserId: async (userId: string): Promise<InternProfile | null> => {
+  getInternProfileByUserId: async (
+    userId: string,
+  ): Promise<InternProfile | null> => {
     return api
       .get<InternProfile>(`/intern-profiles/user/${userId}`)
       .then((response) => response.data)
@@ -21,22 +23,29 @@ export const internProfileService = {
         if (status === 404 || status === 304) {
           return null;
         }
-        console.debug('[internProfileService] Could not load profile:', { status, userId });
+        console.debug("[internProfileService] Could not load profile:", {
+          status,
+          userId,
+        });
         return null;
       });
   },
 
-  createInternProfile: async (payload: InternProfilePayload): Promise<InternProfile> => {
-    const { data } = await api.post<InternProfile>('/intern-profiles', payload);
+  createInternProfile: async (
+    payload: InternProfilePayload,
+  ): Promise<InternProfile> => {
+    const { data } = await api.post<InternProfile>("/intern-profiles", payload);
     return data;
   },
 
   updateInternProfile: async (
     userId: string,
-    payload: Partial<InternProfilePayload>
+    payload: Partial<InternProfilePayload>,
   ): Promise<InternProfile> => {
-    const { data } = await api.put<InternProfile>(`/intern-profiles/user/${userId}`, payload);
+    const { data } = await api.put<InternProfile>(
+      `/intern-profiles/user/${userId}`,
+      payload,
+    );
     return data;
   },
 };
-

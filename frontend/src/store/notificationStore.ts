@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { notificationService } from '../services/notificationService';
-import type { NotificationItem } from '../types/notification';
+import { create } from "zustand";
+import { notificationService } from "../services/notificationService";
+import type { NotificationItem } from "../types/notification";
 
 interface NotificationState {
   items: NotificationItem[];
@@ -29,7 +29,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchLatest: async () => {
     set({ loading: true });
     try {
-      const data = await notificationService.listNotifications({ page: 1, limit: 20 });
+      const data = await notificationService.listNotifications({
+        page: 1,
+        limit: 20,
+      });
       set({
         items: data.items,
         unreadCount: data.unread_count,
@@ -58,7 +61,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   prependNotification: (item) => {
     const state = get();
-    const exists = state.items.some((row) => row.notification_id === item.notification_id);
+    const exists = state.items.some(
+      (row) => row.notification_id === item.notification_id,
+    );
     if (exists) {
       return;
     }
@@ -71,7 +76,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   markAsRead: async (notificationId) => {
     const state = get();
-    const target = state.items.find((item) => item.notification_id === notificationId);
+    const target = state.items.find(
+      (item) => item.notification_id === notificationId,
+    );
     if (!target || target.is_read) {
       return;
     }
