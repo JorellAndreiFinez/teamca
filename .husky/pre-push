@@ -3,4 +3,4 @@
 
 echo "Running lint before push..."
 
-pnpm lint -r
+pnpm -r lint
