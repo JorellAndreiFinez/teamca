@@ -42,7 +42,8 @@ export default function ProfilePageContent() {
     const loadProfile = async () => {
       setIsLoading(true);
       try {
-        const data = await userService.getProfile(user.user_id);
+        if (!user.user_id && !user._id) return;
+        const data = await userService.getProfile(user.user_id || user._id || '');
         setProfile(data);
 
         const departmentId = data.departments?.[0]?.department_id ?? user.departments?.[0]?.department_id;

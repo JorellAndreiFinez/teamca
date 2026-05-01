@@ -104,7 +104,7 @@ export default function DTRAnalyticsWidget({
 
           if (!workingHours?.start || !workingHours?.end) return true;
 
-          return isValidClockInTime(c.timeIn, workingHours.start, 30);
+          return isValidClockInTime(c.timeIn?.toString() || String(c.timeIn), workingHours.start, 30);
         });
       }).length
     : 0;

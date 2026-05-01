@@ -13,6 +13,11 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("Missing JWT_SECRET in production environment. Exiting.");
+  process.exit(1);
+}
+
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
@@ -83,9 +88,10 @@ const _apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-connectDB().then(() => console.warn("MongoDB ready"));
+void connectDB();
 
-app.use("/api", routes);
+app.use("/api/auth", _authLimiter);
+app.use("/api", _apiLimiter, routes);
 
 // ── Health check
 app.get("/health", (_req, res) =>
@@ -95,6 +101,4 @@ app.get("/health", (_req, res) =>
 const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
-server.listen(PORT, () =>
-  console.warn(`Server running at http://localhost:${PORT}`),
-);
+server.listen(PORT);

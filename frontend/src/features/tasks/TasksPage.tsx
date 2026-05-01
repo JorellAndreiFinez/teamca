@@ -245,8 +245,8 @@ export default function TasksPage() {
     });
 
     return [...uniqueUsers].sort((a, b) => {
-      const aName = `${a.first_name} ${a.last_name}`.trim() || a.email;
-      const bName = `${b.first_name} ${b.last_name}`.trim() || b.email;
+      const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || a.email || '';
+      const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim() || b.email || '';
       return aName.localeCompare(bName);
     });
   }, [allUsers, currentUser, isAdmin, isHeadOrSupervisor, isIntern, isSelfOnlyAssignee, isSuperadmin, resolvedCurrentUserId]);

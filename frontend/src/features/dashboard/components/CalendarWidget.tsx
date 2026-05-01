@@ -70,7 +70,7 @@ export default function CalendarWidget({ records }: CalendarWidgetProps) {
     let status: string | null = null;
     const record = recordMap[date.toDateString()];
     if (record) {
-      status = record.status.toLowerCase();
+      status = record.status?.toLowerCase() || null;
     } else {
       status = getMockStatus(date);
     }
@@ -95,7 +95,7 @@ export default function CalendarWidget({ records }: CalendarWidgetProps) {
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d);
     const record = recordMap[date.toDateString()];
-    const status = record ? record.status.toLowerCase() : getMockStatus(date);
+    const status = record ? (record.status?.toLowerCase() || null) : getMockStatus(date);
     if (status === 'present') presentCount++;
     else if (status === 'absent') absentCount++;
     else if (status === 'leave') leaveCount++;

@@ -241,7 +241,7 @@ export default function NotificationsPage() {
         </button>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-3">
+      <section className="rounded-xl p-3">
         {loading ? <p className="p-3 text-sm text-slate-500">Loading notifications...</p> : null}
 
         {!loading && items.length === 0 ? <p className="p-3 text-sm text-slate-500">No notifications yet.</p> : null}

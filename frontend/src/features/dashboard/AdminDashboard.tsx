@@ -202,15 +202,12 @@ export default function AdminDashboard() {
       {/* Content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task overview */}
-        <Card title="Task Brief" subtitle="Current task status summary">
+        <Card title="Task Brief">
           <TaskBriefWidget tasks={tasks} isLoading={taskLoading} />
         </Card>
 
         {/* Attendance overview */}
-        <Card
-          title="Attendance Overview"
-          subtitle="Department attendance this week"
-        >
+        <Card title="Attendance Overview">
           <div className="space-y-3">
             {[
               { dept: "Engineering", present: 8, total: 10 },

@@ -131,7 +131,6 @@ export const getUsers = async (req: Request, res: Response) => {
 
     res.json(users);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -164,7 +163,6 @@ export const getUserById = async (req: Request, res: Response) => {
   } catch (err: unknown) {
     const error = err as Error;
 
-    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -183,8 +181,6 @@ export const createUser = async (req: Request, res: Response) => {
       department_id,
       department_role,
       is_active,
-
-      required_hours,
       working_hours,
       working_days,
     } = req.body;
@@ -200,8 +196,6 @@ export const createUser = async (req: Request, res: Response) => {
       password_hash,
       global_role,
       is_active,
-
-      required_hours,
       working_hours,
       working_days,
 
@@ -212,7 +206,6 @@ export const createUser = async (req: Request, res: Response) => {
   } catch (err: unknown) {
     const error = err as Error;
 
-    console.error("[createUser] error:", error);
     res.status(400).json({ message: error.message || "Failed to create user" });
   }
 };
@@ -240,7 +233,6 @@ export const createWhitelistedUserHandler = async (
 
     res.status(201).json(newUser);
   } catch (err: unknown) {
-    console.error("[createWhitelistedUser] error:", err);
 
     const errorMessage =
       err instanceof Error ? err.message : "Failed to whitelist email";
@@ -299,8 +291,6 @@ export const activateWhitelistedUserHandler = async (
     return res.json(user);
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
-
-    console.error("[activateWhitelistedUser] error:", error);
 
     return res.status(400).json({
       message: error.message || "Failed to activate whitelisted user",
@@ -546,8 +536,6 @@ export const updateUser = async (req: Request, res: Response) => {
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
 
-    console.error("[updateUser] error:", error);
-
     return res.status(400).json({
       message: error.message || "Failed to update user",
     });
@@ -572,7 +560,6 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
 
     res.json(whitelistedUsers);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -657,8 +644,6 @@ export const deleteUser = async (req: Request, res: Response) => {
     return res.json(result);
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
-
-    console.error("[deleteUser] error:", error);
 
     return res.status(400).json({
       message: error.message || "Failed to delete user",

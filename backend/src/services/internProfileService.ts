@@ -6,7 +6,6 @@ export type InternProfilePayload = {
   school_university: string;
   required_hours: number;
   rendered_hours_total?: number;
-  expected_end_date: Date;
   actual_end_date?: Date | null;
 };
 
@@ -30,7 +29,6 @@ export const createInternProfile = async (payload: InternProfilePayload) => {
     school_university: payload.school_university,
     required_hours: payload.required_hours,
     rendered_hours_total: payload.rendered_hours_total ?? 0,
-    expected_end_date: payload.expected_end_date,
     actual_end_date: payload.actual_end_date ?? null,
   });
 };
@@ -52,9 +50,6 @@ export const updateInternProfileByUserId = async (
   }
   if (typeof payload.rendered_hours_total !== "undefined") {
     profile.rendered_hours_total = payload.rendered_hours_total;
-  }
-  if (typeof payload.expected_end_date !== "undefined") {
-    profile.expected_end_date = payload.expected_end_date;
   }
   if (typeof payload.actual_end_date !== "undefined") {
     profile.actual_end_date = payload.actual_end_date;

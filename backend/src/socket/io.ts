@@ -162,3 +162,11 @@ export const emitUsersDirectoryUpdated = (
     ioInstance.to(`user:${userId}`).emit("user:directory-updated", payload);
   }
 };
+
+export const emitUserDTRUpdated = (userId: string, payload: unknown) => {
+  if (!ioInstance) {
+    return;
+  }
+
+  ioInstance.to(`user:${userId}`).emit("dtr:updated", payload);
+};

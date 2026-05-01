@@ -86,7 +86,7 @@ export default function UpdateUserModal({
         const data = await departmentService.getAllDepartments();
         setDepartments(data);
       } catch (err) {
-        console.error("Failed to fetch departments", err);
+        // Keep UI responsive even if departments fail to load.
       }
     };
 
@@ -137,6 +137,7 @@ export default function UpdateUserModal({
       if (scope === "full") {
         payload.global_role = form.global_role;
         payload.is_active = form.is_active;
+      }
 
       // only update password if provided
       if (form.password) {

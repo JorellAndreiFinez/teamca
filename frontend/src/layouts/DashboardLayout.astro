@@ -1,6 +1,7 @@
 ---
 import "../styles/globals.css";
 import Sidebar from "../components/common/Sidebar";
+import SocketInitializer from "../components/SocketInitializer";
 ---
 
 <html lang="en">
@@ -28,6 +29,9 @@ import Sidebar from "../components/common/Sidebar";
     </script>
   </head>
   <body class="bg-gray-50 min-h-screen">
+    <!-- Socket Initializer -->
+    <SocketInitializer client:load />
+
     <!-- Sidebar -->
     <Sidebar client:load />
 

@@ -39,7 +39,6 @@ export const getActivityLogsHandler = async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (err) {
-    console.error("[getActivityLogs] error:", err);
     res.status(500).json({ message: "failed to fetch activity logs" });
   }
 };
@@ -74,7 +73,6 @@ export const exportActivityLogsHandler = async (
     );
     res.send(csv);
   } catch (err) {
-    console.error("[exportActivityLogs] error:", err);
     res.status(500).json({ message: "failed to export activity logs" });
   }
 };

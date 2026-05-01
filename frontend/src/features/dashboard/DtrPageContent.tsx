@@ -24,7 +24,7 @@ export default function DtrPageContent() {
     const loadRecords = async () => {
       setIsLoading(true);
       try {
-        const data = await dtrService.getDTRRecords(user.user_id);
+        const data = await dtrService.getDTRRecords();
         setRecords(data);
       } catch {
         setRecords([]);
@@ -71,12 +71,12 @@ export default function DtrPageContent() {
 
           {!isLoading && recentRecords.length > 0 ? (
             <ul className="space-y-2">
-              {recentRecords.map((record) => (
-                <li key={record.dtr_id} className="rounded-md border border-slate-200 p-3">
+              {recentRecords.map((record, index) => (
+                <li key={record._id || index} className="rounded-md border border-slate-200 p-3">
                   <p className="text-sm font-medium text-slate-900">
                     {new Date(record.date).toLocaleDateString()} • {record.status}
                   </p>
-                  <p className="text-xs text-slate-500">Hours rendered: {record.hours_rendered ?? 0}</p>
+                  <p className="text-xs text-slate-500">Hours rendered: {record.totalHours ?? 0}</p>
                 </li>
               ))}
             </ul>

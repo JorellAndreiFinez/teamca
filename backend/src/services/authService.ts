@@ -119,8 +119,6 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
 
   if (payload.school_university && payload.required_hours) {
     const existingProfile = await InternProfile.findOne({ user_id: user._id });
-    const expectedEndDate = new Date();
-    expectedEndDate.setDate(expectedEndDate.getDate() + 90);
 
     if (!existingProfile) {
       await InternProfile.create({
@@ -128,7 +126,6 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
         school_university: payload.school_university,
         required_hours: payload.required_hours,
         rendered_hours_total: 0,
-        expected_end_date: expectedEndDate,
       });
     }
   }

@@ -26,10 +26,6 @@ const internProfileSchema = new Schema(
       default: 0,
       min: 0,
     },
-    expected_end_date: {
-      type: Date,
-      required: true,
-    },
     actual_end_date: {
       type: Date,
       default: null,

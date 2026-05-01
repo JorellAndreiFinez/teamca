@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createDepartmentHandler,
+  deleteDepartmentHandler,
   getDepartment,
   listDepartments,
   updateDepartmentHandler,
@@ -18,11 +19,17 @@ router.post(
   requireGlobalRole("Superadmin", "Admin"),
   createDepartmentHandler,
 );
-router.put(
+router.patch(
   "/:departmentId",
   authenticateJWT,
   requireGlobalRole("Superadmin", "Admin"),
   updateDepartmentHandler,
+);
+router.delete(
+  "/:departmentId",
+  authenticateJWT,
+  requireGlobalRole("Superadmin", "Admin"),
+  deleteDepartmentHandler,
 );
 
 export default router;

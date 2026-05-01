@@ -6,6 +6,9 @@ import type { InternProfile } from '../../types/user';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import { useDtrStore } from '../../store/dtrStore';
+import { useDtrSocket } from '../dtr/hooks/useDtrSocket';
+import type { DailyTimeRecord } from '../../types/dtr';
 
 const HOURS_PER_DAY = 9;
 
@@ -15,7 +18,6 @@ type ProfileFormState = {
   email: string;
   school_university: string;
   required_hours: string;
-  expected_end_date: string;
 };
 
 const buildFormState = (user: any, profile: InternProfile | null): ProfileFormState => ({
@@ -24,7 +26,6 @@ const buildFormState = (user: any, profile: InternProfile | null): ProfileFormSt
   email: user?.email ?? '',
   school_university: profile?.school_university ?? '',
   required_hours: profile ? String(profile.required_hours ?? '') : '',
-  expected_end_date: profile?.expected_end_date ? toDateInputValue(profile.expected_end_date) : '',
 });
 
 const toDateInputValue = (value?: string | Date | null) => {
@@ -43,16 +44,29 @@ const toDateInputValue = (value?: string | Date | null) => {
   return `${year}-${month}-${day}`;
 };
 
-const calculateExpectedEndDateFromHours = (hoursValue: string) => {
-  const hours = Number(hoursValue);
-  if (!Number.isFinite(hours) || hours <= 0) {
-    return '';
+const calculateExpectedEndDateFromRemaining = (remainingHours: number) => {
+  if (!Number.isFinite(remainingHours) || remainingHours <= 0) {
+    return null;
   }
 
-  const daysNeeded = Math.max(1, Math.ceil(hours / HOURS_PER_DAY));
+  const daysNeeded = Math.max(1, Math.ceil(remainingHours / HOURS_PER_DAY));
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + daysNeeded - 1);
-  return toDateInputValue(endDate);
+  return endDate;
+};
+
+const getRenderedHoursFromRecords = (records: DailyTimeRecord[]) => {
+  return records.reduce((sum, record) => {
+    const clockHours = record.clocks?.reduce((acc, clock) => {
+      const hours = Number(clock.totalHours ?? 0);
+      return acc + (Number.isFinite(hours) ? hours : 0);
+    }, 0) ?? 0;
+
+    const recordTotal = Number(record.totalHours ?? clockHours);
+    const baseHours = Number.isFinite(recordTotal) ? recordTotal : clockHours;
+
+    return sum + baseHours;
+  }, 0);
 };
 
 const formatDate = (value?: string | Date | null) => {
@@ -99,6 +113,8 @@ export default function ProfilePage() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const setUser = useAuthStore((state) => state.setUser);
+  const dtrRecords = useDtrStore((state) => state.records);
+  const refreshRecords = useDtrStore((state) => state.refreshRecords);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,6 +126,14 @@ export default function ProfilePage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    refreshRecords().catch(() => {});
+  }, [isAuthenticated, refreshRecords]);
 
   useEffect(() => {
     if (!user?._id) {
@@ -132,6 +156,15 @@ export default function ProfilePage() {
       setFormData(buildFormState(user, internProfile));
     }
   }, [user, internProfile, editing]);
+
+  const handleDtrSocketUpdate = React.useCallback(async () => {
+    try {
+      await refreshRecords();
+    } catch {}
+  }, [refreshRecords]);
+
+  useDtrSocket(handleDtrSocketUpdate);
+
   const initials = getInitials(user?.first_name, user?.last_name);
   const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || 'Unnamed User';
   const jobTitleLabel = String((user as any)?.job_title || (user as any)?.job_role || 'Front End Developer');
@@ -140,12 +173,21 @@ export default function ProfilePage() {
 
   const hasAnyInternInput = Boolean(
     formData.school_university.trim() ||
-      formData.required_hours.trim() ||
-      formData.expected_end_date.trim(),
+      formData.required_hours.trim(),
   );
 
   const requiredHoursValue = Number(formData.required_hours || internProfile?.required_hours || 0);
-  const renderedHoursValue = Number(internProfile?.rendered_hours_total ?? 0);
+  const renderedHoursValue = React.useMemo(
+    () => getRenderedHoursFromRecords(dtrRecords),
+    [dtrRecords],
+  );
+  const remainingHoursValue = Math.max(0, requiredHoursValue - renderedHoursValue);
+  const expectedEndDate = calculateExpectedEndDateFromRemaining(remainingHoursValue);
+  const expectedEndDateLabel = requiredHoursValue <= 0
+    ? 'Not provided'
+    : remainingHoursValue <= 0
+      ? 'Completed'
+      : formatDate(expectedEndDate);
   const progressPercentage =
     requiredHoursValue > 0
       ? Math.min(100, Math.round((renderedHoursValue / requiredHoursValue) * 100))
@@ -171,12 +213,9 @@ export default function ProfilePage() {
   };
 
   const handleRequiredHoursChange = (value: string) => {
-    const nextExpectedEndDate = calculateExpectedEndDateFromHours(value);
-
     setFormData((prev) => ({
       ...prev,
       required_hours: value,
-      expected_end_date: nextExpectedEndDate,
     }));
   };
 
@@ -230,17 +269,15 @@ export default function ProfilePage() {
     if (shouldPersistInternProfile) {
       const nextSchool = formData.school_university.trim();
       const nextRequiredHours = Number(formData.required_hours);
-      const nextExpectedEndDate = calculateExpectedEndDateFromHours(formData.required_hours) || formData.expected_end_date.trim();
 
-      if (!nextSchool || !nextExpectedEndDate || !Number.isFinite(nextRequiredHours) || nextRequiredHours <= 0) {
-        setError('School/University, required hours, and expected end date are required for the internship profile.');
+      if (!nextSchool || !Number.isFinite(nextRequiredHours) || nextRequiredHours <= 0) {
+        setError('School/University and required hours are required for the internship profile.');
         return;
       }
 
       const internPayload = {
         school_university: nextSchool,
         required_hours: nextRequiredHours,
-        expected_end_date: nextExpectedEndDate,
         actual_end_date: toDateInputValue(internProfile?.actual_end_date ?? null) || null,
       };
       const nextEmail = formData.email.trim().toLowerCase();
@@ -460,19 +497,25 @@ export default function ProfilePage() {
                     )}
                   </DetailField>
 
+                  <DetailField label="Rendered Hours">
+                    <p className="text-base font-medium text-slate-900">
+                      {requiredHoursValue > 0 ? `${renderedHoursValue.toFixed(2)} hours` : 'Not provided'}
+                    </p>
+                  </DetailField>
+
+                  <DetailField label="Hours Remaining">
+                    <p className="text-base font-medium text-slate-900">
+                      {requiredHoursValue > 0 ? `${remainingHoursValue.toFixed(2)} hours` : 'Not provided'}
+                    </p>
+                  </DetailField>
+
                   <DetailField label="Expected End Date">
-                    {editing ? (
-                      <Input
-                        type="date"
-                        value={formData.expected_end_date}
-                        disabled
-                        helperText="Auto-calculated from internship hours at 9 hours per day."
-                      />
-                    ) : (
-                      <p className="text-base font-medium text-slate-900">
-                        {internProfile?.expected_end_date ? formatDate(internProfile.expected_end_date) : 'Not provided'}
-                      </p>
-                    )}
+                    <p className="text-base font-medium text-slate-900">
+                      {expectedEndDateLabel}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Based on {HOURS_PER_DAY} hours per day and DTR totals.
+                    </p>
                   </DetailField>
 
                 </div>

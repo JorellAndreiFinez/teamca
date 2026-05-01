@@ -6,7 +6,6 @@ export interface InternProfilePayload {
   school_university: string;
   required_hours: number;
   rendered_hours_total?: number;
-  expected_end_date: string;
   actual_end_date?: string | null;
 }
 
@@ -31,11 +30,6 @@ export const internProfileService = {
         if (status === 404 || status === 304) {
           return null;
         }
-
-        console.warn("[internProfileService] Could not load profile:", {
-          status,
-          userId,
-        });
 
         return null;
       });

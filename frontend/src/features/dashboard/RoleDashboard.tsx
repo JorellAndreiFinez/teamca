@@ -35,7 +35,7 @@ export default function RoleDashboard() {
 
       const [tasksResult, dtrResult, usersResult] = await Promise.allSettled([
         taskService.getTasks(),
-        dtrService.getDTRRecords(user.user_id),
+        dtrService.getDTRRecords(),
         canViewAllDepartments() || canManageOwnDepartment() ? userService.getAllUsers() : Promise.resolve([]),
       ]);
 

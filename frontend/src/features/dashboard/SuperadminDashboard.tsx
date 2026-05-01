@@ -126,7 +126,7 @@ export default function SuperadminDashboard() {
     setWhitelistLoading(true);
 
     try {
-      await userService.whitelistEmail(newEmail.trim());
+      await userService.createWhitelistedUser(newEmail.trim());
       setWhitelist((prev) => [
         ...prev,
         {
@@ -190,7 +190,7 @@ export default function SuperadminDashboard() {
 
       {/* Whitelist Manager */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Email Whitelist" subtitle="Grant access to new users">
+        <Card title="Email Whitelist">
           <form onSubmit={handleWhitelist} className="flex gap-2 mb-4">
             <Input
               placeholder="user@example.com"
@@ -237,7 +237,7 @@ export default function SuperadminDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <Card title="Quick Actions" subtitle="System management shortcuts">
+        <Card title="Quick Actions">
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: 'Manage Users', href: '/users', desc: 'View & edit user accounts', color: 'border-blue-200 hover:bg-blue-50' },

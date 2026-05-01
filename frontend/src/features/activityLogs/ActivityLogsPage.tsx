@@ -68,7 +68,7 @@ export const ActivityLogsPage: React.FC = () => {
           limit,
         });
       } catch (error) {
-        console.error("Failed to fetch activity logs:", error);
+        // error handled by loading state
       } finally {
         setLoading(false);
       }
@@ -103,7 +103,7 @@ export const ActivityLogsPage: React.FC = () => {
       const filename = `activity-logs-${new Date().toISOString().split("T")[0]}.csv`;
       activityLogService.downloadCSV(blob, filename);
     } catch (error) {
-      console.error("Failed to export logs:", error);
+      // export error handled by UI state
     } finally {
       setExporting(false);
     }

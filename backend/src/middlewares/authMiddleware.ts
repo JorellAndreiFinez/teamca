@@ -44,7 +44,6 @@ export const authMiddleware = async (
 
     next();
   } catch (err) {
-    console.error("[authMiddleware] JWT error:", err);
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };

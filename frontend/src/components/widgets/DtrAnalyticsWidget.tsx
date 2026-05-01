@@ -11,11 +11,11 @@ export default function DtrAnalyticsWidget({
   isLoading = false,
 }: DtrAnalyticsWidgetProps) {
   const totalHours = records.reduce(
-    (sum, record) => sum + (record.hours_rendered ?? 0),
+    (sum, record) => sum + (record.totalHours ?? 0),
     0,
   );
   const presentDays = records.filter(
-    (record) => record.status === "Present",
+    (record) => record.attendanceStatus === "present" || record.status === "approved",
   ).length;
 
   return (
