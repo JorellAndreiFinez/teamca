@@ -10,44 +10,40 @@ export const exportService = {
     userId: string,
     startDate: Date,
     endDate: Date,
-    format: "csv" | "json",
+    _format: "csv" | "json",
   ) {
-    try {
-      const records = await DTR.find({
-        userId,
-        date: { $gte: startDate, $lte: endDate },
-      }).sort({ date: 1 });
+    const records = await DTR.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate },
+    }).sort({ date: 1 });
 
-      const user = await User.findById(userId);
+    const user = await User.findById(userId);
 
-      if (!records.length) {
-        return {
-          headers: ["Date", "Time In", "Time Out", "Total Hours", "Status", "Remarks"],
-          rows: [],
-          user: user?.first_name + " " + user?.last_name,
-        };
-      }
-
-      const rows = records.map((record: any) => {
-        const clock = record.clocks?.[0];
-        return [
-          record.date.toISOString().split("T")[0],
-          clock?.timeIn?.toLocaleTimeString() || "-",
-          clock?.timeOut?.toLocaleTimeString() || "-",
-          record.totalHours || 0,
-          record.attendanceStatus || "pending",
-          record.remarks || "-",
-        ];
-      });
-
+    if (!records.length) {
       return {
         headers: ["Date", "Time In", "Time Out", "Total Hours", "Status", "Remarks"],
-        rows,
+        rows: [],
         user: user?.first_name + " " + user?.last_name,
       };
-    } catch (error) {
-      throw error;
     }
+
+    const rows = records.map((record: any) => {
+      const clock = record.clocks?.[0];
+      return [
+        record.date.toISOString().split("T")[0],
+        clock?.timeIn?.toLocaleTimeString() || "-",
+        clock?.timeOut?.toLocaleTimeString() || "-",
+        record.totalHours || 0,
+        record.attendanceStatus || "pending",
+        record.remarks || "-",
+      ];
+    });
+
+    return {
+      headers: ["Date", "Time In", "Time Out", "Total Hours", "Status", "Remarks"],
+      rows,
+      user: user?.first_name + " " + user?.last_name,
+    };
   },
 
   async generateSummaryExport(
@@ -55,51 +51,47 @@ export const exportService = {
     period: "week" | "month",
     dateInPeriod: Date,
   ) {
-    try {
-      let startDate: Date;
-      let endDate: Date;
+    let startDate: Date;
+    let endDate: Date;
 
-      if (period === "week") {
-        const dayOfWeek = dateInPeriod.getDay();
-        const diff = dateInPeriod.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        startDate = new Date(dateInPeriod.setDate(diff));
-        endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 6);
-      } else {
-        startDate = new Date(dateInPeriod.getFullYear(), dateInPeriod.getMonth(), 1);
-        endDate = new Date(dateInPeriod.getFullYear(), dateInPeriod.getMonth() + 1, 0);
-      }
-
-      const summary = await DTRSummary.findOne({
-        userId,
-        period,
-        startDate: { $lte: startDate },
-        endDate: { $gte: endDate },
-      });
-
-      const user = await User.findById(userId);
-
-      return {
-        user: user?.first_name + " " + user?.last_name,
-        period: `${period} of ${startDate.toISOString().split("T")[0]}`,
-        startDate: startDate.toISOString().split("T")[0],
-        endDate: endDate.toISOString().split("T")[0],
-        data: {
-          totalHours: summary?.totalHours || 0,
-          requiredHours: summary?.requiredHours || 0,
-          overtimeHours: summary?.overtimeHours || 0,
-          undertimeHours: summary?.undertimeHours || 0,
-          daysPresent: summary?.daysPresent || 0,
-          daysLate: summary?.daysLate || 0,
-          daysAbsent: summary?.daysAbsent || 0,
-          daysOnLeave: summary?.daysOnLeave || 0,
-          lateCount: summary?.lateCount || 0,
-          undertimeDays: summary?.undertimeDays || 0,
-        },
-      };
-    } catch (error) {
-      throw error;
+    if (period === "week") {
+      const dayOfWeek = dateInPeriod.getDay();
+      const diff = dateInPeriod.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      startDate = new Date(dateInPeriod.setDate(diff));
+      endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+    } else {
+      startDate = new Date(dateInPeriod.getFullYear(), dateInPeriod.getMonth(), 1);
+      endDate = new Date(dateInPeriod.getFullYear(), dateInPeriod.getMonth() + 1, 0);
     }
+
+    const summary = await DTRSummary.findOne({
+      userId,
+      period,
+      startDate: { $lte: startDate },
+      endDate: { $gte: endDate },
+    });
+
+    const user = await User.findById(userId);
+
+    return {
+      user: user?.first_name + " " + user?.last_name,
+      period: `${period} of ${startDate.toISOString().split("T")[0]}`,
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
+      data: {
+        totalHours: summary?.totalHours || 0,
+        requiredHours: summary?.requiredHours || 0,
+        overtimeHours: summary?.overtimeHours || 0,
+        undertimeHours: summary?.undertimeHours || 0,
+        daysPresent: summary?.daysPresent || 0,
+        daysLate: summary?.daysLate || 0,
+        daysAbsent: summary?.daysAbsent || 0,
+        daysOnLeave: summary?.daysOnLeave || 0,
+        lateCount: summary?.lateCount || 0,
+        undertimeDays: summary?.undertimeDays || 0,
+      },
+    };
   },
 
   async generateDetailedReport(
@@ -107,54 +99,48 @@ export const exportService = {
     startDate: Date,
     endDate: Date,
   ) {
-    try {
-      const records = await DTR.find({
-        userId,
-        date: { $gte: startDate, $lte: endDate },
-      }).sort({ date: 1 });
+    const records = await DTR.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate },
+    }).sort({ date: 1 });
 
-      const user = await User.findById(userId);
+    const user = await User.findById(userId);
 
-      const detailed = records.map((record: any) => {
-        const clock = record.clocks?.[0];
-        const breaks = clock?.breaks || [];
-
-        return {
-          date: record.date.toISOString().split("T")[0],
-          timeIn: clock?.timeIn?.toLocaleTimeString() || "-",
-          timeOut: clock?.timeOut?.toLocaleTimeString() || "-",
-          totalHours: record.totalHours || 0,
-          breaks: breaks.map((b: any) => ({
-            type: b.type,
-            start: b.breakStart?.toLocaleTimeString() || "-",
-            end: b.breakEnd?.toLocaleTimeString() || "-",
-            duration: b.duration || 0,
-          })),
-          totalBreakTime: record.totalBreakTime || 0,
-          status: record.attendanceStatus || "pending",
-          remarks: record.remarks || "-",
-        };
-      });
+    const detailed = records.map((record: any) => {
+      const clock = record.clocks?.[0];
+      const breaks = clock?.breaks || [];
 
       return {
-        user: user?.first_name + " " + user?.last_name,
-        dateRange: {
-          start: startDate.toISOString().split("T")[0],
-          end: endDate.toISOString().split("T")[0],
-        },
-        records: detailed,
-        summary: {
-          totalRecords: detailed.length,
-          totalHoursRendered: detailed.reduce((sum, d) => sum + (d.totalHours || 0), 0),
-          totalBreakTime: detailed.reduce((sum, d) => sum + (d.totalBreakTime || 0), 0),
-        },
+        date: record.date.toISOString().split("T")[0],
+        timeIn: clock?.timeIn?.toLocaleTimeString() || "-",
+        timeOut: clock?.timeOut?.toLocaleTimeString() || "-",
+        totalHours: record.totalHours || 0,
+        breaks: breaks.map((b: any) => ({
+          type: b.type,
+          start: b.breakStart?.toLocaleTimeString() || "-",
+          end: b.breakEnd?.toLocaleTimeString() || "-",
+          duration: b.duration || 0,
+        })),
+        totalBreakTime: record.totalBreakTime || 0,
+        status: record.attendanceStatus || "pending",
+        remarks: record.remarks || "-",
       };
-    } catch (error) {
-      throw error;
-    }
-  },
+    });
 
-  toCSV(headers: string[], rows: any[][]): string {
+    return {
+      user: user?.first_name + " " + user?.last_name,
+      dateRange: {
+        start: startDate.toISOString().split("T")[0],
+        end: endDate.toISOString().split("T")[0],
+      },
+      records: detailed,
+      summary: {
+        totalRecords: detailed.length,
+        totalHoursRendered: detailed.reduce((sum, d) => sum + (d.totalHours || 0), 0),
+        totalBreakTime: detailed.reduce((sum, d) => sum + (d.totalBreakTime || 0), 0),
+      },
+      };
+
     const csvHeaders = headers.map((h) => `"${h}"`).join(",");
     const csvRows = rows
       .map((row) => row.map((cell) => `"${cell}"`).join(","))

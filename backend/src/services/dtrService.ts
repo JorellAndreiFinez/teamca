@@ -118,7 +118,9 @@ export const timeIn = async (userId: string) => {
       clocks: dtr.clocks,
       attendanceStatus: dtr.attendanceStatus,
     });
-  } catch {}
+  } catch (_err) {
+    // Silently ignore socket emit errors
+  }
 
   return dtr;
 };
@@ -189,7 +191,9 @@ export const timeOut = async (userId: string, remarks: string) => {
       lastClock: lastClock,
       totalHours: dtr.totalHours,
     });
-  } catch {}
+  } catch (_err) {
+    // Silently ignore socket emit errors
+  }
 
   return lastClock;
 };
@@ -244,7 +248,9 @@ export const startBreak = async (userId: string, breakType: "lunch" | "rest" | "
       dtrId: dtr._id,
       clocks: dtr.clocks,
     });
-  } catch {}
+  } catch (_err) {
+    // Silently ignore socket emit errors
+  }
 
   return dtr;
 };
@@ -290,7 +296,9 @@ export const endBreak = async (userId: string) => {
       dtrId: dtr._id,
       clocks: dtr.clocks,
     });
-  } catch {}
+  } catch (_err) {
+    // Silently ignore socket emit errors
+  }
 
   return dtr;
 };
@@ -344,7 +352,9 @@ export const updateDTRTotals = async (dtrId: string) => {
       totalHours: dtr.totalHours,
       undertimeHours: dtr.undertimeHours,
     });
-  } catch {}
+  } catch (_err) {
+    // Silently ignore socket emit errors
+  }
 
   return dtr;
 };

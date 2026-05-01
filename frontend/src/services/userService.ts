@@ -28,21 +28,13 @@ export const userService = {
   },
 
   createUser: async (payload: CreateUserPayload): Promise<User> => {
-    try {
-      const { data } = await api.post<User>("/users", payload);
-      return data;
-    } catch (err: unknown) {
-      throw err;
-    }
+    const { data } = await api.post<User>("/users", payload);
+    return data;
   },
 
   updateUser: async (userId: string, payload: Partial<User>): Promise<User> => {
-    try {
-      const { data } = await api.put<User>(`/users/${userId}`, payload);
-      return data;
-    } catch (err: unknown) {
-      throw err;
-    }
+    const { data } = await api.put<User>(`/users/${userId}`, payload);
+    return data;
   },
 
   deleteUser: async (userId: string): Promise<void> => {
@@ -64,26 +56,18 @@ export const userService = {
   },
 
   createWhitelistedUser: async (email: string): Promise<User> => {
-    try {
-      const { data } = await api.post<User>("/users/whitelist", { email });
-      return data;
-    } catch (err: unknown) {
-      throw err;
-    }
+    const { data } = await api.post<User>("/users/whitelist", { email });
+    return data;
   },
 
   activateWhitelistedUser: async (
     userId: string,
     payload: ActivateWhitelistPayload,
   ): Promise<User> => {
-    try {
-      const { data } = await api.post<User>(
-        `/users/${userId}/activate-whitelist`,
-        payload,
-      );
-      return data;
-    } catch (err: unknown) {
-      throw err;
-    }
+    const { data } = await api.post<User>(
+      `/users/${userId}/activate-whitelist`,
+      payload,
+    );
+    return data;
   },
 };
