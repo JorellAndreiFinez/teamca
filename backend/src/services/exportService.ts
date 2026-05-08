@@ -4,17 +4,50 @@ import User from "../models/User";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
+const PH_TIMEZONE = "Asia/Manila";
+
+const buildDateRangeExpr = (startDate: string, endDate: string) => ({
+  $expr: {
+    $and: [
+      {
+        $gte: [
+          {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$date",
+              timezone: PH_TIMEZONE,
+            },
+          },
+          startDate,
+        ],
+      },
+      {
+        $lte: [
+          {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$date",
+              timezone: PH_TIMEZONE,
+            },
+          },
+          endDate,
+        ],
+      },
+    ],
+  },
+});
+
 // PDF generation (could use pdfkit or html2pdf libraries)
 export const exportService = {
   async generateExcelData(
     userId: string,
-    startDate: Date,
-    endDate: Date,
+    startDate: string,
+    endDate: string,
     _format: "csv" | "json",
   ) {
     const records = await DTR.find({
       userId,
-      date: { $gte: startDate, $lte: endDate },
+      ...buildDateRangeExpr(startDate, endDate),
     }).sort({ date: 1 });
 
     const user = await User.findById(userId);
@@ -96,12 +129,12 @@ export const exportService = {
 
   async generateDetailedReport(
     userId: string,
-    startDate: Date,
-    endDate: Date,
+    startDate: string,
+    endDate: string,
   ) {
     const records = await DTR.find({
       userId,
-      date: { $gte: startDate, $lte: endDate },
+      ...buildDateRangeExpr(startDate, endDate),
     }).sort({ date: 1 });
 
     const user = await User.findById(userId);
@@ -130,8 +163,8 @@ export const exportService = {
     return {
       user: user?.first_name + " " + user?.last_name,
       dateRange: {
-        start: startDate.toISOString().split("T")[0],
-        end: endDate.toISOString().split("T")[0],
+        start: startDate,
+        end: endDate,
       },
       records: detailed,
       summary: {
@@ -301,11 +334,26 @@ export const exportService = {
     const chunks: Buffer[] = [];
 
     const writeMeta = (items: Array<[string, string]>) => {
+      const startX = doc.page.margins.left;
+      const boxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const boxY = doc.y;
+      const lineHeight = 14;
+      const boxHeight = items.length * lineHeight + 16;
+
+      doc.save();
+      doc.fillColor("#F8FAFC").rect(startX, boxY, boxWidth, boxHeight).fill();
+      doc.strokeColor("#E2E8F0").rect(startX, boxY, boxWidth, boxHeight).stroke();
+      doc.restore();
+
+      let cursorY = boxY + 8;
       items.forEach(([label, value]) => {
-        doc.font("Helvetica-Bold").text(`${label}: `, { continued: true });
-        doc.font("Helvetica").text(value);
+        doc.font("Helvetica-Bold").fillColor("#334155").text(`${label}: `, startX + 8, cursorY, {
+          continued: true,
+        });
+        doc.font("Helvetica").fillColor("#0F172A").text(value);
+        cursorY += lineHeight;
       });
-      doc.moveDown(0.5);
+      doc.y = boxY + boxHeight + 10;
     };
 
     const ensureSpace = (height: number) => {
@@ -315,29 +363,54 @@ export const exportService = {
       }
     };
 
-    const writeTable = (headers: string[], rows: string[][], columnWidths: number[]) => {
-      const rowHeight = 14;
+    const getColumnWidths = (headers: string[]) => {
+      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const weights = headers.map((header) => {
+        const key = header.toLowerCase();
+        if (key.includes("remarks") || key.includes("break")) return 2.2;
+        if (key.includes("date")) return 1.4;
+        return 1;
+      });
+      const total = weights.reduce((sum, w) => sum + w, 0);
+      return weights.map((w) => Math.round((pageWidth * w) / total));
+    };
+
+    const writeTable = (headers: string[], rows: string[][]) => {
+      const rowHeight = 18;
+      const startX = doc.page.margins.left;
+      const widths = getColumnWidths(headers);
+      const tableWidth = widths.reduce((sum, w) => sum + w, 0);
+
       ensureSpace(rowHeight * 2);
 
-      doc.font("Helvetica-Bold");
-      headers.forEach((header, i) => {
-        doc.text(header, doc.x + columnWidths.slice(0, i).reduce((a, b) => a + b, 0), doc.y, {
-          width: columnWidths[i],
-          continued: i !== headers.length - 1,
-        });
-      });
-      doc.moveDown();
+      const headerY = doc.y;
+      doc.save();
+      doc.fillColor("#E2E8F0").rect(startX, headerY, tableWidth, rowHeight).fill();
+      doc.restore();
+      doc.strokeColor("#CBD5E1").rect(startX, headerY, tableWidth, rowHeight).stroke();
 
-      doc.font("Helvetica");
-      rows.forEach((row) => {
+      doc.font("Helvetica-Bold").fillColor("#0F172A");
+      headers.forEach((header, i) => {
+        const x = startX + widths.slice(0, i).reduce((a, b) => a + b, 0);
+        doc.text(header, x + 6, headerY + 4, { width: widths[i] - 12 });
+      });
+      doc.y = headerY + rowHeight;
+
+      doc.font("Helvetica").fillColor("#111827");
+      rows.forEach((row, rowIndex) => {
         ensureSpace(rowHeight * 2);
+        const rowY = doc.y;
+        if (rowIndex % 2 === 0) {
+          doc.save();
+          doc.fillColor("#F8FAFC").rect(startX, rowY, tableWidth, rowHeight).fill();
+          doc.restore();
+        }
+        doc.strokeColor("#E2E8F0").rect(startX, rowY, tableWidth, rowHeight).stroke();
         row.forEach((cell, i) => {
-          doc.text(cell, doc.x + columnWidths.slice(0, i).reduce((a, b) => a + b, 0), doc.y, {
-            width: columnWidths[i],
-            continued: i !== row.length - 1,
-          });
+          const x = startX + widths.slice(0, i).reduce((a, b) => a + b, 0);
+          doc.text(cell, x + 6, rowY + 4, { width: widths[i] - 12 });
         });
-        doc.moveDown();
+        doc.y = rowY + rowHeight;
       });
     };
 
@@ -346,8 +419,16 @@ export const exportService = {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      doc.font("Helvetica-Bold").fontSize(16).text("DTR Export", { align: "center" });
-      doc.moveDown(0.5);
+      doc.fillColor("#0F172A").font("Helvetica-Bold").fontSize(18).text("DTR Export", {
+        align: "left",
+      });
+      doc.moveDown(0.2);
+      const accentY = doc.y;
+      doc.save();
+      doc.strokeColor("#2563EB").lineWidth(2).moveTo(doc.page.margins.left, accentY)
+        .lineTo(doc.page.margins.left + 120, accentY).stroke();
+      doc.restore();
+      doc.moveDown(0.6);
 
       const meta: Array<[string, string]> = [];
       if (data?.user) meta.push(["User", data.user]);
@@ -364,8 +445,7 @@ export const exportService = {
         doc.fontSize(9);
         const headers = data.headers.map((h: any) => String(h));
         const rows = data.rows.map((row: any[]) => row.map((cell) => String(cell ?? "-")));
-        const widths = [70, 70, 70, 60, 60, 100];
-        writeTable(headers, rows, widths);
+        writeTable(headers, rows);
       } else if (data?.records) {
         doc.fontSize(9);
         const headers = [
@@ -389,12 +469,11 @@ export const exportService = {
             record.status ?? "-",
           ];
         });
-        const widths = [65, 55, 55, 40, 200, 60];
-        writeTable(headers, rows, widths);
+        writeTable(headers, rows);
       } else if (data?.data) {
         doc.fontSize(10);
         const rows = Object.entries(data.data).map(([k, v]) => [String(k), String(v)]);
-        writeTable(["Metric", "Value"], rows, [160, 300]);
+        writeTable(["Metric", "Value"], rows);
       } else {
         doc.fontSize(9).text(this.toJSON(data));
       }

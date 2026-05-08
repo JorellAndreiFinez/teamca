@@ -65,3 +65,16 @@ export const DialogTitle = React.forwardRef<
   />
 ));
 DialogTitle.displayName = "DialogTitle";
+
+// Description
+export const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof RadixDialog.Description>,
+  React.ComponentPropsWithoutRef<typeof RadixDialog.Description>
+>(({ className, ...props }, ref) => (
+  <RadixDialog.Description
+    ref={ref}
+    className={cn("text-sm text-gray-500", className)}
+    {...props}
+  />
+));
+DialogDescription.displayName = "DialogDescription";

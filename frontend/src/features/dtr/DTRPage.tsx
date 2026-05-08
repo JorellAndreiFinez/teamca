@@ -15,6 +15,7 @@ import { TimeAdjustmentReview } from "../../components/TimeAdjustmentReview";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/Dialog";

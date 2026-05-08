@@ -4,12 +4,25 @@ import { exportService } from "../services/exportService";
 import { IUser } from "../models/User";
 
 // Zod validation schema
-const exportQuerySchema = z.object({
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
-  format: z.enum(["csv", "json", "xlsx", "pdf"]).default("csv"),
-  type: z.enum(["records", "summary", "detailed"]).default("records"),
-});
+const exportQuerySchema = z
+  .object({
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid startDate format (YYYY-MM-DD)"),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid endDate format (YYYY-MM-DD)"),
+    format: z.enum(["csv", "json", "xlsx", "pdf"]).default("csv"),
+    type: z.enum(["records", "summary", "detailed"]).default("records"),
+  })
+  .refine((data) => data.startDate <= data.endDate, {
+    message: "startDate must be before or equal to endDate",
+    path: ["endDate"],
+  });
+
+const toPHDate = (date: string) => {
+  return new Date(`${date}T00:00:00.000+08:00`);
+};
 
 export const exportController = {
   /**
@@ -30,25 +43,26 @@ export const exportController = {
         type: req.query.type || "records",
       });
 
+
       let exportData: any;
 
       if (type === "summary") {
         exportData = await exportService.generateSummaryExport(
           String(userId),
           "week",
-          new Date(startDate),
+          toPHDate(startDate),
         );
       } else if (type === "detailed") {
         exportData = await exportService.generateDetailedReport(
           String(userId),
-          new Date(startDate),
-          new Date(endDate),
+          startDate,
+          endDate,
         );
       } else {
         exportData = await exportService.generateExcelData(
           String(userId),
-          new Date(startDate),
-          new Date(endDate),
+          startDate,
+          endDate,
           format as "csv" | "json",
         );
       }
@@ -93,7 +107,11 @@ export const exportController = {
       }
     } catch (error: any) {
       if (error instanceof ZodError) {
-        res.status(400).json({ success: false, message: "Validation error" });
+        res.status(400).json({
+          success: false,
+          message: "Validation error",
+          issues: error.issues,
+        });
       } else {
         res
           .status(500)
@@ -119,25 +137,26 @@ export const exportController = {
         type: req.query.type || "records",
       });
 
+
       let exportData: any;
 
       if (type === "summary") {
         exportData = await exportService.generateSummaryExport(
           String(userId),
           "week",
-          new Date(startDate),
+          toPHDate(startDate),
         );
       } else if (type === "detailed") {
         exportData = await exportService.generateDetailedReport(
           String(userId),
-          new Date(startDate),
-          new Date(endDate),
+          startDate,
+          endDate,
         );
       } else {
         exportData = await exportService.generateExcelData(
           String(userId),
-          new Date(startDate),
-          new Date(endDate),
+          startDate,
+          endDate,
           "json",
         );
       }
@@ -145,7 +164,11 @@ export const exportController = {
       res.status(200).json({ success: true, data: exportData });
     } catch (error: any) {
       if (error instanceof ZodError) {
-        res.status(400).json({ success: false, message: "Validation error" });
+        res.status(400).json({
+          success: false,
+          message: "Validation error",
+          issues: error.issues,
+        });
       } else {
         res
           .status(500)
