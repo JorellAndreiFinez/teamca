@@ -146,6 +146,14 @@ export const exportService = {
     return JSON.stringify(data, null, 2);
   },
 
+  toCSV(headers: string[], rows: any[][]): string {
+    const csvHeaders = headers.map((h) => `"${h}"`).join(",");
+    const csvRows = rows
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+    return `${csvHeaders}\n${csvRows}`;
+  },
+
   async toXlsxBuffer(data: any): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("DTR Export");

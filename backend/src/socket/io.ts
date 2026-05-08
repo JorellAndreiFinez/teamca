@@ -1,7 +1,7 @@
 import { Server as HttpServer } from "http";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { Server, type Socket } from "socket.io";
-import User from "../models/User";
+import User from "../models/User.js";
 
 type TokenPayload = JwtPayload & {
   sub?: string;

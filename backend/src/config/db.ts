@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // Prefer local MongoDB for development, fallback to Atlas if configured
@@ -21,4 +23,3 @@ export const connectDB = async () => {
     process.exit(1);
   }
 };
-

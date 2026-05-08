@@ -2,13 +2,15 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 import http from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { connectDB } from "./config/db";
-import { initTaskSocket } from "./socket/io";
-import routes from "./routes/index";
+import { connectDB } from "./config/db.js";
+import { initTaskSocket } from "./socket/io.js";
+import routes from "./routes/index.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const PORT = process.env.PORT || 3000;
