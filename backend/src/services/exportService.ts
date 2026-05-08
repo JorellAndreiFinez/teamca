@@ -139,14 +139,7 @@ export const exportService = {
         totalHoursRendered: detailed.reduce((sum, d) => sum + (d.totalHours || 0), 0),
         totalBreakTime: detailed.reduce((sum, d) => sum + (d.totalBreakTime || 0), 0),
       },
-      };
-
-    const csvHeaders = headers.map((h) => `"${h}"`).join(",");
-    const csvRows = rows
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    return `${csvHeaders}\n${csvRows}`;
+    };
   },
 
   toJSON(data: any): string {
