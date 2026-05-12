@@ -4,6 +4,7 @@ import { userService } from '../../services/userService';
 import { departmentService } from '../../services/departmentService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
 import type { UserProfileResponse } from '../../services/userService';
+import { FormInputSkeleton, WidgetSkeleton } from '../../components/ui/Skeleton';
 
 const formatDepartmentRole = (role?: string) => {
   if (!role) return '';
@@ -42,7 +43,8 @@ export default function ProfilePageContent() {
     const loadProfile = async () => {
       setIsLoading(true);
       try {
-        const data = await userService.getProfile(user.user_id);
+        if (!user.user_id && !user._id) return;
+        const data = await userService.getProfile(user.user_id || user._id || '');
         setProfile(data);
 
         const departmentId = data.departments?.[0]?.department_id ?? user.departments?.[0]?.department_id;
@@ -79,7 +81,15 @@ export default function ProfilePageContent() {
           <CardTitle className="text-lg">Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
+          {isLoading ? (
+            <div className="space-y-4">
+              <WidgetSkeleton lines={3} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormInputSkeleton />
+                <FormInputSkeleton />
+              </div>
+            </div>
+          ) : null}
 
           {!isLoading && !profile ? (
             <p className="text-sm text-slate-500">Unable to load profile details right now.</p>
@@ -114,7 +124,13 @@ export default function ProfilePageContent() {
           <CardDescription>Visible when intern profile data is available.</CardDescription>
         </CardHeader>
         <CardContent>
-          {!isLoading && !profile?.intern_profile ? (
+          {isLoading ? (
+            <div className="space-y-3">
+              <FormInputSkeleton />
+              <FormInputSkeleton />
+              <FormInputSkeleton />
+            </div>
+          ) : !profile?.intern_profile ? (
             <p className="text-sm text-slate-500">No internship profile details found yet.</p>
           ) : null}
 

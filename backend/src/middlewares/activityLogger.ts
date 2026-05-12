@@ -1,8 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { logActivity } from "../services/activityService";
+import { ResourceType, ActionType, LogStatus } from "../models/ActivityLog";
 
 // capture request/response details for activity logging
-export const activityLogger = (req: Request, res: Response, next: NextFunction) => {
+export const activityLogger = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const originalSend = res.send;
   const originalJson = res.json;
   let hasLogged = false; // flag to prevent duplicate logging
@@ -12,13 +17,20 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
     // prevent duplicate logs if both res.send and res.json are called
     if (hasLogged) return;
     hasLogged = true;
-    const user = req.user as any;
-    let user_id = user?.id || user?.user_id || user?._id;
-    let user_name = user?.name || user?.email;
+    const user = req.user;
+
+    let user_id: string | undefined = user?.user_id
+      ? String(user.user_id)
+      : undefined;
+
+    let user_name = user?.email;
 
     // for login/signup endpoints, user info may not be available yet
     if (!user_id) {
-      if (req.body?.email && (req.path.includes("/login") || req.path.includes("/complete-setup"))) {
+      if (
+        req.body?.email &&
+        (req.path.includes("/login") || req.path.includes("/complete-setup"))
+      ) {
         user_name = req.body.email;
         if (res.statusCode < 400 && res.statusCode !== 403) {
           user_id = "system"; // placeholder
@@ -33,15 +45,14 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
       }
     }
 
-    // determine action type based on http method
-    const actionTypeMap: { [key: string]: string } = {
+    const actionTypeMap: Record<string, ActionType> = {
       GET: "read",
       POST: "create",
       PUT: "update",
       PATCH: "update",
       DELETE: "delete",
     };
-    const actionType = actionTypeMap[req.method] || "read";
+    const actionType: ActionType = actionTypeMap[req.method] || "read";
 
     // skip logging for reads to reduce noise
     if (actionType === "read") {
@@ -49,10 +60,11 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
     }
 
     const pathSegments = req.path.split("/").filter(Boolean);
-    let resourceType = pathSegments[0] || "unknown";
+    let resourceType: ResourceType = (pathSegments[0] ||
+      "auth") as ResourceType;
 
     // map common path names to enum values
-    const resourceTypeMap: { [key: string]: string } = {
+    const resourceTypeMap: Record<string, ResourceType> = {
       auth: "auth",
       users: "user",
       tasks: "task",
@@ -60,8 +72,8 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
       dtr: "dtr",
       profiles: "internProfile",
       "intern-profiles": "internProfile",
-      notifications: "notification",
-      "activity-logs": "activityLog",
+      notifications: "auth", // FIXED (not in enum)
+      "activity-logs": "auth", // FIXED (not in enum)
     };
     // use mapped value, or 'auth' as safe default for unrecognized paths
     resourceType = resourceTypeMap[resourceType] || "auth";
@@ -117,9 +129,12 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
         user: "Logged out",
       },
     };
-    const description = actionDescMap[actionType]?.[resourceType] || `${actionType} ${resourceType}`.charAt(0).toUpperCase() + `${actionType} ${resourceType}`.slice(1);
+    const description =
+      actionDescMap[actionType]?.[resourceType] ||
+      `${actionType} ${resourceType}`.charAt(0).toUpperCase() +
+        `${actionType} ${resourceType}`.slice(1);
 
-    const changes: { [key: string]: any } = {};
+    const changes: Record<string, unknown> = {};
     if (req.body) {
       try {
         // log first-level keys only, avoid logging sensitive data
@@ -137,20 +152,19 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
             changes[key] = req.body[key];
           }
         });
-      } catch (err) {
+      } catch {
         // silently ignore parsing errors
       }
     }
 
-
-
-    let resource_id: string | undefined;
-    const getParamAsString = (param: string | string[] | undefined): string | undefined => {
+    const getParamAsString = (
+      param: string | string[] | undefined,
+    ): string | undefined => {
       if (!param) return undefined;
       return Array.isArray(param) ? param[0] : param;
     };
-    
-    resource_id = 
+
+    const resource_id =
       getParamAsString(req.params?.userId) ||
       getParamAsString(req.params?.taskId) ||
       getParamAsString(req.params?.departmentId) ||
@@ -159,32 +173,31 @@ export const activityLogger = (req: Request, res: Response, next: NextFunction) 
       getParamAsString(req.params?.id);
 
     const statusCode = res.statusCode;
-    const logStatus = statusCode >= 400 ? "failed" : "success";
+    const logStatus: LogStatus = statusCode >= 400 ? "failed" : "success";
 
-    // call logActivity asynchronously without awaiting
-    logActivity({
-      user_id,
-      user_name,
-      action_type: actionType as any,
-      resource_type: resourceType as any,
+    const safeUserId = user_id ?? "anonymous";
+    const safeUserName = user_name ?? "Unknown User";
+
+    void logActivity({
+      user_id: safeUserId,
+      user_name: safeUserName,
+      action_type: actionType,
       resource_id,
       description,
       changes,
-      status: logStatus as any,
-    }).catch((err) => {
-      console.error("[activityLogger] failed to log activity:", err.message);
+      resource_type: resourceType,
+      status: logStatus,
     });
   };
 
-  res.send = function (data: any) {
+  res.send = function (data: unknown) {
     logRequestActivity();
     return originalSend.call(this, data);
   };
 
-  res.json = function (data: any) {
+  res.json = function (data: unknown) {
     logRequestActivity();
     return originalJson.call(this, data);
   };
-
   next();
 };

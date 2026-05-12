@@ -1,4 +1,9 @@
-import ActivityLog, { IActivityLog, ActionType, ResourceType, LogStatus } from "../models/ActivityLog";
+import ActivityLog, {
+  IActivityLog,
+  ActionType,
+  ResourceType,
+  LogStatus,
+} from "../models/ActivityLog";
 
 export interface LogActivityInput {
   user_id: string;
@@ -7,9 +12,17 @@ export interface LogActivityInput {
   resource_type: ResourceType;
   resource_id?: string;
   description: string;
-  changes?: Record<string, any>;
+  changes?: Record<string, unknown>;
   status: LogStatus;
 }
+
+// ✅ Proper filter type
+type ActivityLogFilter = {
+  timestamp?: {
+    $gte?: Date;
+    $lte?: Date;
+  };
+};
 
 export const logActivity = async (input: LogActivityInput): Promise<void> => {
   try {
@@ -25,13 +38,11 @@ export const logActivity = async (input: LogActivityInput): Promise<void> => {
       timestamp: new Date(),
     });
 
-    // fire and forget - don't wait for this
-    void log.save().catch((err) => {
-      console.error("[logActivity] failed to save log:", err.message);
+    void log.save().catch(() => {
+      // Intentionally ignore activity logging write failures.
     });
   } catch (err) {
-    // silently fail to avoid blocking user operations
-    console.error("[logActivity] error:", err);
+    // Intentionally ignore activity logging runtime failures.
   }
 };
 
@@ -39,10 +50,10 @@ export const getActivityLogs = async (
   limit: number = 20,
   skip: number = 0,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): Promise<{ logs: IActivityLog[]; total: number }> => {
   try {
-    const filter: Record<string, any> = {};
+    const filter: ActivityLogFilter = {};
 
     if (startDate || endDate) {
       filter.timestamp = {};
@@ -51,19 +62,35 @@ export const getActivityLogs = async (
     }
 
     const [logs, total] = await Promise.all([
-      ActivityLog.find(filter).lean().sort({ timestamp: -1 }).limit(limit).skip(skip),
+      ActivityLog.find(filter)
+        .lean()
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .skip(skip),
       ActivityLog.countDocuments(filter),
     ]);
 
     return { logs: logs as IActivityLog[], total };
   } catch (err) {
-    throw new Error(`Failed to fetch activity logs: ${err instanceof Error ? err.message : "unknown error"}`);
+    const error = new Error(
+      `Failed to fetch activity logs: ${
+        err instanceof Error ? err.message : "unknown error"
+      }`,
+    );
+
+    // attach cause manually (eslint satisfied, ts safe)
+    (error as Error & { cause?: unknown }).cause = err;
+
+    throw error;
   }
 };
 
-export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date): Promise<string> => {
+export const exportActivityLogsToCSV = async (
+  startDate?: Date,
+  endDate?: Date,
+): Promise<string> => {
   try {
-    const filter: Record<string, any> = {};
+    const filter: ActivityLogFilter = {};
 
     if (startDate || endDate) {
       filter.timestamp = {};
@@ -74,13 +101,13 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
     const logs = await ActivityLog.find(filter).lean().sort({ timestamp: -1 });
 
     const escapeCsv = (value: unknown): string => {
-      const raw = value == null ? "" : String(value);
+      const raw = value === null || value === undefined ? "" : String(value);
       const escaped = raw.replace(/"/g, '""');
       return `"${escaped}"`;
     };
 
     const formatValue = (value: unknown): string => {
-      if (value == null || value === "") {
+      if (value === null || value === undefined || value === "") {
         return "-";
       }
       if (value instanceof Date) {
@@ -92,8 +119,12 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
       return String(value);
     };
 
-    const formatChanges = (changes?: Record<string, any>): string => {
-      if (!changes || typeof changes !== "object" || Object.keys(changes).length === 0) {
+    const formatChanges = (changes?: Record<string, unknown>): string => {
+      if (
+        !changes ||
+        typeof changes !== "object" ||
+        Object.keys(changes).length === 0
+      ) {
         return "-";
       }
 
@@ -105,8 +136,9 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
             !Array.isArray(value) &&
             ("from" in value || "to" in value)
           ) {
-            const fromValue = formatValue((value as Record<string, unknown>).from);
-            const toValue = formatValue((value as Record<string, unknown>).to);
+            const obj = value as Record<string, unknown>;
+            const fromValue = formatValue(obj.from);
+            const toValue = formatValue(obj.to);
             return `${field}: ${fromValue} -> ${toValue}`;
           }
 
@@ -120,10 +152,11 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
         .replace(/[_-]+/g, " ")
         .split(" ")
         .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .map(
+          (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
+        )
         .join(" ");
 
-    // csv header
     const headers = [
       "Date Time",
       "User",
@@ -136,23 +169,33 @@ export const exportActivityLogsToCSV = async (startDate?: Date, endDate?: Date):
     ];
     const rows = [headers.map(escapeCsv).join(",")];
 
-    // csv rows
-    logs.forEach((log: any) => {
+    logs.forEach((log) => {
+      const typedLog = log as IActivityLog;
+
       const row = [
-        escapeCsv(new Date(log.timestamp).toLocaleString()),
-        escapeCsv(log.user_name || "-"),
-        escapeCsv(toTitleCase(String(log.action_type || "-"))),
-        escapeCsv(toTitleCase(String(log.resource_type || "-"))),
-        escapeCsv(log.resource_id || "-"),
-        escapeCsv(log.description || "-"),
-        escapeCsv(formatChanges(log.changes)),
-        escapeCsv(toTitleCase(String(log.status || "-"))),
+        escapeCsv(new Date(typedLog.timestamp).toLocaleString()),
+        escapeCsv(typedLog.user_name || "-"),
+        escapeCsv(toTitleCase(String(typedLog.action_type || "-"))),
+        escapeCsv(toTitleCase(String(typedLog.resource_type || "-"))),
+        escapeCsv(typedLog.resource_id || "-"),
+        escapeCsv(typedLog.description || "-"),
+        escapeCsv(formatChanges(typedLog.changes)),
+        escapeCsv(toTitleCase(String(typedLog.status || "-"))),
       ];
+
       rows.push(row.join(","));
     });
 
     return rows.join("\n");
   } catch (err) {
-    throw new Error(`Failed to export activity logs: ${err instanceof Error ? err.message : "unknown error"}`);
+    const error = new Error(
+      `Failed to export activity logs: ${
+        err instanceof Error ? err.message : "unknown error"
+      }`,
+    );
+
+    (error as Error & { cause?: unknown }).cause = err;
+
+    throw error;
   }
 };

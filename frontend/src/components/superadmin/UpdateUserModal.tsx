@@ -1,3 +1,5 @@
+// frontend/src/components/superadmin/UpdateUserModal.tsx
+
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
@@ -6,6 +8,9 @@ import { userService } from "@/services/userService";
 import { departmentService } from "@/services/departmentService";
 import { useAuthStore } from "@/store/authStore";
 import type { Department, User } from "@/types/user";
+
+import { NumberInput } from "@/components/ui/input/NumberInput";
+import { TimeRangeInput } from "@/components/ui/input/TimeRangeInput";
 
 interface Props {
   open: boolean;
@@ -36,13 +41,20 @@ export default function UpdateUserModal({
     is_active: true,
     department_id: "",
     department_role: "",
+
+    required_hours: 0,
+    working_hours: {
+      start: "",
+      end: "",
+    },
+    working_days: [] as string[],
   });
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔥 Prefill form when editing
+  // ✅ Prefill user data
   useEffect(() => {
     if (!user) return;
 
@@ -55,6 +67,14 @@ export default function UpdateUserModal({
       is_active: user.is_active ?? true,
       department_id: user.departments?.[0]?.department_id || "",
       department_role: user.departments?.[0]?.department_role || "",
+
+      // ✅ new fields (safe fallback)
+      required_hours: (user as any).required_hours || 0,
+      working_hours: {
+        start: (user as any).working_hours?.start || "",
+        end: (user as any).working_hours?.end || "",
+      },
+      working_days: (user as any).working_days || [],
     });
   }, [user]);
 
@@ -66,7 +86,7 @@ export default function UpdateUserModal({
         const data = await departmentService.getAllDepartments();
         setDepartments(data);
       } catch (err) {
-        console.error("Failed to fetch departments", err);
+        // Keep UI responsive even if departments fail to load.
       }
     };
 
@@ -81,11 +101,22 @@ export default function UpdateUserModal({
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    // convert is_active to boolean, leave others as string
     setForm((prev) => ({
       ...prev,
       [name]: name === "is_active" ? value === "true" : value,
     }));
+  };
+
+  const toggleWorkingDay = (day: string) => {
+    setForm((prev) => {
+      const exists = prev.working_days.includes(day);
+      return {
+        ...prev,
+        working_days: exists
+          ? prev.working_days.filter((d) => d !== day)
+          : [...prev.working_days, day],
+      };
+    });
   };
 
   const handleSubmit = async () => {
@@ -99,28 +130,30 @@ export default function UpdateUserModal({
       const payload: any = {
         first_name: form.first_name,
         last_name: form.last_name,
+        global_role: form.global_role,
+        is_active: form.is_active,
       };
 
       if (scope === "full") {
         payload.global_role = form.global_role;
         payload.is_active = form.is_active;
+      }
 
-        // only update password if provided
-        if (form.password) {
-          payload.password_hash = form.password;
-        }
+      // only update password if provided
+      if (form.password) {
+        payload.password_hash = form.password;
+      }
 
-        // departments handling
-        if (form.department_id) {
-          payload.departments = [
-            {
-              department_id: form.department_id,
-              department_role: form.department_role,
-            },
-          ];
-        } else {
-          payload.departments = [];
-        }
+      // departments handling
+      if (form.department_id) {
+        payload.departments = [
+          {
+            department_id: form.department_id,
+            department_role: form.department_role,
+          },
+        ];
+      } else {
+        payload.departments = [];
       }
 
       const updated = await userService.updateUser(user._id, payload);
@@ -164,19 +197,19 @@ export default function UpdateUserModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               name="first_name"
-              placeholder="First Name"
               value={form.first_name}
               onChange={handleInputChange}
+              placeholder="First Name"
             />
             <Input
               name="last_name"
-              placeholder="Last Name"
               value={form.last_name}
               onChange={handleInputChange}
+              placeholder="Last Name"
             />
           </div>
 
-          {/* Email (readonly) */}
+          {/* Email */}
           <Input name="email" value={form.email} disabled />
 
           {/* Password */}
@@ -189,7 +222,7 @@ export default function UpdateUserModal({
             disabled={scope === "limited"}
           />
 
-          {/* Role & Status */}
+          {/* Role + Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <select
               name="global_role"
@@ -241,9 +274,57 @@ export default function UpdateUserModal({
             >
               <option value="">Select role</option>
               {departmentRoles.map((role) => (
-                <option key={role}>{role}</option>
+                <option key={role} value={role}>
+                  {role}
+                </option>
               ))}
             </select>
+          </div>
+
+          {/* Schedule Section */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-lg font-semibold">Schedule</h3>
+
+            {/* Required Hours */}
+            <NumberInput
+              label="Required Hours"
+              value={form.required_hours}
+              min={0}
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, required_hours: val }))
+              }
+            />
+
+            {/* Working Hours */}
+            <TimeRangeInput
+              label="Working Hours"
+              value={form.working_hours}
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, working_hours: val }))
+              }
+              required
+            />
+
+            {/* Working Days */}
+            <div>
+              <label className="text-sm font-medium">Working Days</label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {["M", "T", "W", "Th", "F", "Sat", "Sun"].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleWorkingDay(day)}
+                    className={`px-3 py-1 rounded-full text-sm border ${
+                      form.working_days.includes(day)
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

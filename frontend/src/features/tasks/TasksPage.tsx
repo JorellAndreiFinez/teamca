@@ -23,6 +23,7 @@ import TaskModal from './components/TaskModal';
 import TaskPagination from './components/TaskPagination';
 import TaskTable from './components/TaskTable';
 import { useTaskSocket } from './hooks/useTaskSocket';
+import { TableHeaderSkeleton, TableRowSkeleton } from '../../components/ui/Skeleton';
 
 type CreatedDateFilter = 'all' | 'today' | '7d' | '30d';
 type SortBy = 'created_desc' | 'created_asc' | 'priority_desc' | 'priority_asc' | 'deadline_asc' | 'deadline_desc' | 'title_asc';
@@ -245,8 +246,8 @@ export default function TasksPage() {
     });
 
     return [...uniqueUsers].sort((a, b) => {
-      const aName = `${a.first_name} ${a.last_name}`.trim() || a.email;
-      const bName = `${b.first_name} ${b.last_name}`.trim() || b.email;
+      const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || a.email || '';
+      const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim() || b.email || '';
       return aName.localeCompare(bName);
     });
   }, [allUsers, currentUser, isAdmin, isHeadOrSupervisor, isIntern, isSelfOnlyAssignee, isSuperadmin, resolvedCurrentUserId]);
@@ -975,15 +976,26 @@ export default function TasksPage() {
         </div>
       ) : null}
 
-      <TaskTable
-        tasks={orderedTasks}
-        isLoading={isLoading}
-        onRowClick={setSelectedTaskId}
-        selectionMode={isDeleteMode}
-        selectedTaskIds={selectedTaskIds}
-        canSelectTask={canDeleteTask}
-        onToggleTaskSelection={handleToggleTaskSelection}
-      />
+      {isLoading ? (
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+          <TableHeaderSkeleton columnCount={7} />
+          <div className="divide-y divide-slate-200">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <TableRowSkeleton key={index} columnCount={7} withCheckbox={isDeleteMode} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <TaskTable
+          tasks={orderedTasks}
+          isLoading={isLoading}
+          onRowClick={setSelectedTaskId}
+          selectionMode={isDeleteMode}
+          selectedTaskIds={selectedTaskIds}
+          canSelectTask={canDeleteTask}
+          onToggleTaskSelection={handleToggleTaskSelection}
+        />
+      )}
 
       <TaskPagination
         page={page}
@@ -1286,7 +1298,7 @@ export default function TasksPage() {
           {modalToasts.map((toast) => (
             <div
               key={toast.id}
-              className={`${toast.exiting ? 'task-toast-out' : 'task-toast'} w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-white/95 px-3.5 py-2.5 text-sm text-slate-800 shadow-lg backdrop-blur`}
+              className={`${toast.exiting ? 'task-toast-out' : 'task-toast'} w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-lg`}
             >
               {toast.message}
             </div>

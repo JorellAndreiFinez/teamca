@@ -27,7 +27,9 @@ const issueToken = (userId: string) => {
     throw new Error("JWT secret is not configured.");
   }
 
-  return jwt.sign({ sub: userId, user_id: userId }, secret, { expiresIn: "1d" });
+  return jwt.sign({ sub: userId, user_id: userId }, secret, {
+    expiresIn: "1d",
+  });
 };
 
 export const checkEmail = async (email: string) => {
@@ -56,7 +58,10 @@ export const login = async (payload: LoginInput) => {
     throw new Error("Invalid credentials.");
   }
 
-  const isValidPassword = await bcrypt.compare(payload.password, user.password_hash);
+  const isValidPassword = await bcrypt.compare(
+    payload.password,
+    user.password_hash,
+  );
   if (!isValidPassword) {
     throw new Error("Invalid credentials.");
   }
@@ -102,18 +107,18 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   user.is_active = true;
 
   if (payload.department_id) {
-    user.departments = [{
-      department_id: new mongoose.Types.ObjectId(payload.department_id),
-      department_role: "Intern",
-    }];
+    user.departments = [
+      {
+        department_id: new mongoose.Types.ObjectId(payload.department_id),
+        department_role: "Intern",
+      },
+    ];
   }
 
   await user.save();
 
   if (payload.school_university && payload.required_hours) {
     const existingProfile = await InternProfile.findOne({ user_id: user._id });
-    const expectedEndDate = new Date();
-    expectedEndDate.setDate(expectedEndDate.getDate() + 90);
 
     if (!existingProfile) {
       await InternProfile.create({
@@ -121,7 +126,6 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
         school_university: payload.school_university,
         required_hours: payload.required_hours,
         rendered_hours_total: 0,
-        expected_end_date: expectedEndDate,
       });
     }
   }

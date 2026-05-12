@@ -1,3 +1,5 @@
+// backend\src\middlewares\auth.ts
+
 import type { NextFunction, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import User from "../models/User";
@@ -70,7 +72,9 @@ export const authenticateJWT = async (
       email: user.email,
       global_role: user.global_role,
       department_role: primaryDepartment?.department_role,
-      department_id: primaryDepartment ? String(primaryDepartment.department_id) : undefined,
+      department_id: primaryDepartment
+        ? String(primaryDepartment.department_id)
+        : undefined,
       is_active: user.is_active,
     };
 

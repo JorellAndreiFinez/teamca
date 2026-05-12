@@ -22,9 +22,7 @@ import {
 import Task from "../models/Task";
 import TaskAssignment from "../models/TaskAssignment";
 import User from "../models/User";
-import {
-  createNotificationsForRecipients,
-} from "../services/notificationService";
+import { createNotificationsForRecipients } from "../services/notificationService";
 import {
   emitTaskCommentCreated,
   emitTaskStatusUpdated,
@@ -32,23 +30,41 @@ import {
 } from "../socket/io";
 
 const createTaskSchema = z.object({
-  title: z.string().trim().min(3, "Title must be at least 3 characters.").max(120, "Title must be 120 characters or fewer."),
-  description: z.string().trim().max(1000, "Description must be 1000 characters or fewer.").optional(),
+  title: z
+    .string()
+    .trim()
+    .min(3, "Title must be at least 3 characters.")
+    .max(120, "Title must be 120 characters or fewer."),
+  description: z
+    .string()
+    .trim()
+    .max(1000, "Description must be 1000 characters or fewer.")
+    .optional(),
   priority: z.enum(["Low", "Medium", "High"]).optional(),
-  deadline: z.coerce.date().optional().refine((value) => {
-    if (!value) {
-      return true;
-    }
+  deadline: z.coerce
+    .date()
+    .optional()
+    .refine((value) => {
+      if (!value) {
+        return true;
+      }
 
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const startOfDeadline = new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
-    return startOfDeadline >= startOfToday;
-  }, "deadline cannot be in the past."),
-  assigned_to: z.union([
-    z.string().trim().min(1),
-    z.array(z.string().trim().min(1)).min(1),
-  ]).optional(),
+      const today = new Date();
+      const startOfToday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+      ).getTime();
+      const startOfDeadline = new Date(
+        value.getFullYear(),
+        value.getMonth(),
+        value.getDate(),
+      ).getTime();
+      return startOfDeadline >= startOfToday;
+    }, "deadline cannot be in the past."),
+  assigned_to: z
+    .union([z.string().trim().min(1), z.array(z.string().trim().min(1)).min(1)])
+    .optional(),
 });
 
 const assignTaskSchema = z.object({
@@ -60,43 +76,87 @@ const assignTaskSchema = z.object({
 
 const updateTaskStatusSchema = z.object({
   status: z.enum(["Not Started", "In Progress", "Under Review", "Completed"]),
-  update_notes: z.string().trim().max(500, "update_notes must be 500 characters or fewer.").optional(),
+  update_notes: z
+    .string()
+    .trim()
+    .max(500, "update_notes must be 500 characters or fewer.")
+    .optional(),
 });
 
 const addTaskFeedbackSchema = z.object({
-  comments: z.string().trim().min(3, "comments must be at least 3 characters.").max(2000, "comments must be 2000 characters or fewer."),
+  comments: z
+    .string()
+    .trim()
+    .min(3, "comments must be at least 3 characters.")
+    .max(2000, "comments must be 2000 characters or fewer."),
 });
 
 const addTaskCommentSchema = z.object({
-  message: z.string().trim().min(1, "message is required.").max(2000, "message must be 2000 characters or fewer."),
+  message: z
+    .string()
+    .trim()
+    .min(1, "message is required.")
+    .max(2000, "message must be 2000 characters or fewer."),
 });
 
-const updateTaskDetailsSchema = z.object({
-  title: z.string().trim().min(1, "Title is required.").max(120, "Title must be 120 characters or fewer.").optional(),
-  description: z.string().trim().max(1000, "Description must be 1000 characters or fewer.").optional(),
-  deadline: z.union([z.coerce.date(), z.null()]).optional(),
-}).refine(
-  (value) => value.title !== undefined || value.description !== undefined || value.deadline !== undefined,
-  { message: "At least one field must be provided." },
-);
+const updateTaskDetailsSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, "Title is required.")
+      .max(120, "Title must be 120 characters or fewer.")
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(1000, "Description must be 1000 characters or fewer.")
+      .optional(),
+    deadline: z.union([z.coerce.date(), z.null()]).optional(),
+  })
+  .refine(
+    (value) =>
+      value.title !== undefined ||
+      value.description !== undefined ||
+      value.deadline !== undefined,
+    { message: "At least one field must be provided." },
+  );
 
 const deleteTasksSchema = z.object({
-  task_ids: z.array(z.string().trim().min(1)).min(1, "Select at least one task."),
+  task_ids: z
+    .array(z.string().trim().min(1))
+    .min(1, "Select at least one task."),
 });
 
 const addTaskWorkLinkSchema = z.object({
   url: z.string().trim().url("url must be a valid URL."),
-  label: z.string().trim().max(120, "label must be 120 characters or fewer.").optional(),
+  label: z
+    .string()
+    .trim()
+    .max(120, "label must be 120 characters or fewer.")
+    .optional(),
 });
 
 const listTasksQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
-  status: z.enum(["Not Started", "In Progress", "Under Review", "Completed"]).optional(),
+  status: z
+    .enum(["Not Started", "In Progress", "Under Review", "Completed"])
+    .optional(),
   priority: z.enum(["Low", "Medium", "High"]).optional(),
   search: z.string().trim().max(200).optional(),
   created_date: z.enum(["all", "today", "7d", "30d"]).default("all"),
-  sort_by: z.enum(["created_desc", "created_asc", "priority_desc", "priority_asc", "deadline_asc", "deadline_desc", "title_asc"]).default("created_desc"),
+  sort_by: z
+    .enum([
+      "created_desc",
+      "created_asc",
+      "priority_desc",
+      "priority_asc",
+      "deadline_asc",
+      "deadline_desc",
+      "title_asc",
+    ])
+    .default("created_desc"),
 });
 
 const parseTaskId = (req: Request, res: Response): string | null => {
@@ -129,12 +189,20 @@ const getTaskParticipantIds = async (taskId: string): Promise<string[]> => {
 };
 
 const getTaskAssigneeIds = async (taskId: string): Promise<string[]> => {
-  const assignments = await TaskAssignment.find({ task_id: taskId }).select("assigned_to").lean();
+  const assignments = await TaskAssignment.find({ task_id: taskId })
+    .select("assigned_to")
+    .lean();
   return [...new Set(assignments.map((item) => String(item.assigned_to)))];
 };
 
 const getTaskDeleteContexts = async (taskIds: string[]) => {
-  const normalizedTaskIds = [...new Set(taskIds.map((taskId) => taskId.trim()).filter((taskId) => taskId.length > 0))];
+  const normalizedTaskIds = [
+    ...new Set(
+      taskIds
+        .map((taskId) => taskId.trim())
+        .filter((taskId) => taskId.length > 0),
+    ),
+  ];
   if (normalizedTaskIds.length === 0) {
     return [] as Array<{
       task_id: string;
@@ -159,10 +227,9 @@ const getTaskDeleteContexts = async (taskIds: string[]) => {
       .filter((assignment) => String(assignment.task_id) === taskId)
       .map((assignment) => String(assignment.assigned_to));
 
-    const recipientIds = [...new Set([
-      String(task.created_by),
-      ...assigneeIds,
-    ])];
+    const recipientIds = [
+      ...new Set([String(task.created_by), ...assigneeIds]),
+    ];
 
     return {
       task_id: taskId,
@@ -179,7 +246,9 @@ const getUserFirstNameById = async (userId: string): Promise<string> => {
   return firstName && firstName.length > 0 ? firstName : "Someone";
 };
 
-const getDepartmentReviewerIdsForTask = async (taskId: string): Promise<string[]> => {
+const getDepartmentReviewerIdsForTask = async (
+  taskId: string,
+): Promise<string[]> => {
   const participantIds = await getTaskParticipantIds(taskId);
   if (participantIds.length === 0) {
     return [];
@@ -189,11 +258,15 @@ const getDepartmentReviewerIdsForTask = async (taskId: string): Promise<string[]
     .select("departments")
     .lean();
 
-  const departmentIds = [...new Set(
-    participantUsers.flatMap((user) =>
-      (user.departments ?? []).map((department) => String(department.department_id)),
+  const departmentIds = [
+    ...new Set(
+      participantUsers.flatMap((user) =>
+        (user.departments ?? []).map((department) =>
+          String(department.department_id),
+        ),
+      ),
     ),
-  )];
+  ];
 
   if (departmentIds.length === 0) {
     return [];
@@ -221,9 +294,8 @@ type DeadlineNotificationTask = {
   deadline?: string | Date;
 };
 
-const getStartOfDayTimestamp = (value: Date): number => (
-  new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
-);
+const getStartOfDayTimestamp = (value: Date): number =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
 
 const formatDateKey = (value: Date): string => {
   const year = value.getFullYear();
@@ -277,22 +349,25 @@ const emitDeadlineNotificationsForTask = async (
     });
 
     if (!alreadyNotified) {
-      const notifications = await createNotificationsForRecipients(recipientIds, {
-        actorId,
-        eventType: "task_due_today",
-        title: "Task due today",
-        message: `Make sure to submit your work on "${task.title}" for reviewing.`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          task_title: task.title,
-          task_status: task.status,
-          deadline: deadlineDate,
-          actor_first_name: actorFirstName,
-          alert_key: alertKey,
+      const notifications = await createNotificationsForRecipients(
+        recipientIds,
+        {
+          actorId,
+          eventType: "task_due_today",
+          title: "Task due today",
+          message: `Make sure to submit your work on "${task.title}" for reviewing.`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            task_title: task.title,
+            task_status: task.status,
+            deadline: deadlineDate,
+            actor_first_name: actorFirstName,
+            alert_key: alertKey,
+          },
         },
-      });
+      );
 
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -308,22 +383,25 @@ const emitDeadlineNotificationsForTask = async (
     });
 
     if (!alreadyNotified) {
-      const notifications = await createNotificationsForRecipients(recipientIds, {
-        actorId,
-        eventType: "task_overdue",
-        title: "Task overdue",
-        message: `Please accomplish "${task.title}" at your earliest convenience.`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          task_title: task.title,
-          task_status: task.status,
-          deadline: deadlineDate,
-          actor_first_name: actorFirstName,
-          alert_key: alertKey,
+      const notifications = await createNotificationsForRecipients(
+        recipientIds,
+        {
+          actorId,
+          eventType: "task_overdue",
+          title: "Task overdue",
+          message: `Please accomplish "${task.title}" at your earliest convenience.`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            task_title: task.title,
+            task_status: task.status,
+            deadline: deadlineDate,
+            actor_first_name: actorFirstName,
+            alert_key: alertKey,
+          },
         },
-      });
+      );
 
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -354,12 +432,18 @@ export const createTaskHandler = async (req: Request, res: Response) => {
 
     const actorId = String(req.user.user_id);
     const actorFirstName = await getUserFirstNameById(actorId);
-    await emitDeadlineNotificationsForTask(created.task, actorId, actorFirstName);
+    await emitDeadlineNotificationsForTask(
+      created.task,
+      actorId,
+      actorFirstName,
+    );
 
     return res.status(201).json(created);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -371,7 +455,10 @@ export const createTaskHandler = async (req: Request, res: Response) => {
         return res.status(403).json({ message: error.message });
       }
 
-      if (error.message.includes("inactive") || error.message.includes("does not exist")) {
+      if (
+        error.message.includes("inactive") ||
+        error.message.includes("does not exist")
+      ) {
         return res.status(404).json({ message: error.message });
       }
 
@@ -413,33 +500,44 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Task not found." });
     }
 
-    const previousAssigneeIds = [...new Set(previousAssignments.map((item) => String(item.assigned_to)))];
+    const previousAssigneeIds = [
+      ...new Set(previousAssignments.map((item) => String(item.assigned_to))),
+    ];
 
     const assignment = await assignTask(req.user, {
       taskId,
       assignedToUserIds: assignees,
     });
 
-    const currentAssigneeIds = [...new Set(assignment.map((item) => item.assigned_to))];
-    const addedAssigneeIds = currentAssigneeIds.filter((id) => !previousAssigneeIds.includes(id));
-    const removedAssigneeIds = previousAssigneeIds.filter((id) => !currentAssigneeIds.includes(id));
+    const currentAssigneeIds = [
+      ...new Set(assignment.map((item) => item.assigned_to)),
+    ];
+    const addedAssigneeIds = currentAssigneeIds.filter(
+      (id) => !previousAssigneeIds.includes(id),
+    );
+    const removedAssigneeIds = previousAssigneeIds.filter(
+      (id) => !currentAssigneeIds.includes(id),
+    );
     const actorId = String(req.user.user_id);
 
     if (addedAssigneeIds.length > 0) {
-      const notifications = await createNotificationsForRecipients(addedAssigneeIds, {
-        actorId,
-        eventType: "task_assignment_added",
-        title: "You were assigned a task",
-        message: `You were added to "${task.title}".`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          assignment_change: "added",
-          task_title: task.title,
-          task_status: task.status,
+      const notifications = await createNotificationsForRecipients(
+        addedAssigneeIds,
+        {
+          actorId,
+          eventType: "task_assignment_added",
+          title: "You were assigned a task",
+          message: `You were added to "${task.title}".`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            assignment_change: "added",
+            task_title: task.title,
+            task_status: task.status,
+          },
         },
-      });
+      );
 
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -447,40 +545,46 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
     }
 
     if (removedAssigneeIds.length > 0) {
-      const removedNotifications = await createNotificationsForRecipients(removedAssigneeIds, {
-        actorId,
-        eventType: "task_assignment_removed",
-        title: "You were unassigned from a task",
-        message: `You were removed from "${task.title}".`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          assignment_change: "removed",
-          task_title: task.title,
-          task_status: task.status,
+      const removedNotifications = await createNotificationsForRecipients(
+        removedAssigneeIds,
+        {
+          actorId,
+          eventType: "task_assignment_removed",
+          title: "You were unassigned from a task",
+          message: `You were removed from "${task.title}".`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            assignment_change: "removed",
+            task_title: task.title,
+            task_status: task.status,
+          },
         },
-      });
+      );
 
       for (const notification of removedNotifications) {
         emitUsersNotification([notification.recipient_id], notification);
       }
 
-      const remainingNotifications = await createNotificationsForRecipients(currentAssigneeIds, {
-        actorId,
-        eventType: "task_reassigned",
-        title: "Task assignees were updated",
-        message: `Assignees were updated for "${task.title}".`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          assignment_change: "reassigned",
-          removed_count: removedAssigneeIds.length,
-          task_title: task.title,
-          task_status: task.status,
+      const remainingNotifications = await createNotificationsForRecipients(
+        currentAssigneeIds,
+        {
+          actorId,
+          eventType: "task_reassigned",
+          title: "Task assignees were updated",
+          message: `Assignees were updated for "${task.title}".`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            assignment_change: "reassigned",
+            removed_count: removedAssigneeIds.length,
+            task_title: task.title,
+            task_status: task.status,
+          },
         },
-      });
+      );
 
       for (const notification of remainingNotifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -490,7 +594,9 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
     return res.status(200).json(assignment);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -506,7 +612,10 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
         return res.status(403).json({ message: error.message });
       }
 
-      if (error.message.includes("inactive") || error.message.includes("does not exist")) {
+      if (
+        error.message.includes("inactive") ||
+        error.message.includes("does not exist")
+      ) {
         return res.status(404).json({ message: error.message });
       }
 
@@ -556,7 +665,9 @@ export const listTasksHandler = async (req: Request, res: Response) => {
     return res.status(200).json(payload);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid query params.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid query params.", issues: error.issues });
     }
 
     return res.status(500).json({ message: "Failed to list tasks." });
@@ -618,39 +729,13 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
     const actorId = String(req.user.user_id);
     const actorFirstName = await getUserFirstNameById(actorId);
     const assigneeIds = await getTaskAssigneeIds(taskId);
-    const statusNotifications = await createNotificationsForRecipients(assigneeIds, {
-      actorId,
-      eventType: "task_status_changed",
-      title: "Task status updated",
-      message: `${actorFirstName} changed status of "${updated.task.title}" to ${payload.status}.`,
-      entityType: "task",
-      entityId: taskId,
-      metadata: {
-        task_id: taskId,
-        previous_status: updated.history.previous_status,
-        new_status: payload.status,
-        actor_first_name: actorFirstName,
-        task_title: updated.task.title,
-        task_status: payload.status,
-      },
-    });
-
-    for (const notification of statusNotifications) {
-      emitUsersNotification([notification.recipient_id], notification);
-    }
-
-    if (
-      updated.history.previous_status === "Under Review"
-      && payload.status === "In Progress"
-    ) {
-      const reviewerIds = await getDepartmentReviewerIdsForTask(taskId);
-      const movedBackRecipients = [...new Set([...assigneeIds, ...reviewerIds])];
-
-      const movedBackNotifications = await createNotificationsForRecipients(movedBackRecipients, {
+    const statusNotifications = await createNotificationsForRecipients(
+      assigneeIds,
+      {
         actorId,
-        eventType: "task_moved_back",
-        title: "Task was sent back",
-        message: `${actorFirstName} moved "${updated.task.title}" back from Under Review to In Progress.`,
+        eventType: "task_status_changed",
+        title: "Task status updated",
+        message: `${actorFirstName} changed status of "${updated.task.title}" to ${payload.status}.`,
         entityType: "task",
         entityId: taskId,
         metadata: {
@@ -661,7 +746,41 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
           task_title: updated.task.title,
           task_status: payload.status,
         },
-      });
+      },
+    );
+
+    for (const notification of statusNotifications) {
+      emitUsersNotification([notification.recipient_id], notification);
+    }
+
+    if (
+      updated.history.previous_status === "Under Review" &&
+      payload.status === "In Progress"
+    ) {
+      const reviewerIds = await getDepartmentReviewerIdsForTask(taskId);
+      const movedBackRecipients = [
+        ...new Set([...assigneeIds, ...reviewerIds]),
+      ];
+
+      const movedBackNotifications = await createNotificationsForRecipients(
+        movedBackRecipients,
+        {
+          actorId,
+          eventType: "task_moved_back",
+          title: "Task was sent back",
+          message: `${actorFirstName} moved "${updated.task.title}" back from Under Review to In Progress.`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            previous_status: updated.history.previous_status,
+            new_status: payload.status,
+            actor_first_name: actorFirstName,
+            task_title: updated.task.title,
+            task_status: payload.status,
+          },
+        },
+      );
 
       for (const notification of movedBackNotifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -673,25 +792,32 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
       const reviewerIds = await getDepartmentReviewerIdsForTask(taskId);
       const recipientIds = [...new Set([...participantIds, ...reviewerIds])];
 
-      const eventType = payload.status === "Under Review"
-        ? "task_status_under_review"
-        : "task_status_completed";
+      const eventType =
+        payload.status === "Under Review"
+          ? "task_status_under_review"
+          : "task_status_completed";
 
-      const notifications = await createNotificationsForRecipients(recipientIds, {
-        actorId,
-        eventType,
-        title: payload.status === "Under Review" ? "Task sent for review" : "Task completed",
-        message: `${actorFirstName} changed status of "${updated.task.title}" to ${payload.status}.`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          new_status: payload.status,
-          actor_first_name: actorFirstName,
-          task_title: updated.task.title,
-          task_status: payload.status,
+      const notifications = await createNotificationsForRecipients(
+        recipientIds,
+        {
+          actorId,
+          eventType,
+          title:
+            payload.status === "Under Review"
+              ? "Task sent for review"
+              : "Task completed",
+          message: `${actorFirstName} changed status of "${updated.task.title}" to ${payload.status}.`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            new_status: payload.status,
+            actor_first_name: actorFirstName,
+            task_title: updated.task.title,
+            task_status: payload.status,
+          },
         },
-      });
+      );
 
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -701,7 +827,9 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
     return res.status(200).json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -740,7 +868,9 @@ export const updateTaskDetailsHandler = async (req: Request, res: Response) => {
 
     const payload = updateTaskDetailsSchema.parse(req.body);
     if (payload.deadline && payload.deadline.getTime() < Date.now()) {
-      return res.status(400).json({ message: "Deadline cannot be in the past." });
+      return res
+        .status(400)
+        .json({ message: "Deadline cannot be in the past." });
     }
 
     const existingTask = await Task.findById(taskId)
@@ -760,7 +890,11 @@ export const updateTaskDetailsHandler = async (req: Request, res: Response) => {
 
     const actorId = String(req.user.user_id);
     const actorFirstName = await getUserFirstNameById(actorId);
-    await emitDeadlineNotificationsForTask(updatedTask, actorId, actorFirstName);
+    await emitDeadlineNotificationsForTask(
+      updatedTask,
+      actorId,
+      actorFirstName,
+    );
 
     const changedFields: string[] = [];
     if (existingTask.title !== updatedTask.title) {
@@ -773,8 +907,12 @@ export const updateTaskDetailsHandler = async (req: Request, res: Response) => {
       changedFields.push("description");
     }
 
-    const previousDeadline = existingTask.deadline ? new Date(existingTask.deadline).getTime() : null;
-    const nextDeadline = updatedTask.deadline ? new Date(updatedTask.deadline).getTime() : null;
+    const previousDeadline = existingTask.deadline
+      ? new Date(existingTask.deadline).getTime()
+      : null;
+    const nextDeadline = updatedTask.deadline
+      ? new Date(updatedTask.deadline).getTime()
+      : null;
     if (previousDeadline !== nextDeadline) {
       changedFields.push("deadline");
     }
@@ -811,7 +949,9 @@ export const updateTaskDetailsHandler = async (req: Request, res: Response) => {
     return res.status(200).json(updatedTask);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -850,20 +990,23 @@ export const deleteTasksHandler = async (req: Request, res: Response) => {
         continue;
       }
 
-      const notifications = await createNotificationsForRecipients(context.recipient_ids, {
-        actorId,
-        eventType: "task_deleted",
-        title: "Task deleted",
-        message: `${actorFirstName} deleted "${context.title}".`,
-        entityType: "task",
-        entityId: deletedTaskId,
-        metadata: {
-          task_id: deletedTaskId,
-          task_title: context.title,
-          task_status: context.status,
-          actor_first_name: actorFirstName,
+      const notifications = await createNotificationsForRecipients(
+        context.recipient_ids,
+        {
+          actorId,
+          eventType: "task_deleted",
+          title: "Task deleted",
+          message: `${actorFirstName} deleted "${context.title}".`,
+          entityType: "task",
+          entityId: deletedTaskId,
+          metadata: {
+            task_id: deletedTaskId,
+            task_title: context.title,
+            task_status: context.status,
+            actor_first_name: actorFirstName,
+          },
         },
-      });
+      );
 
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -873,7 +1016,9 @@ export const deleteTasksHandler = async (req: Request, res: Response) => {
     return res.status(200).json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -919,18 +1064,21 @@ export const addTaskFeedbackHandler = async (req: Request, res: Response) => {
         recipientIds.push(creatorId);
       }
 
-      const notifications = await createNotificationsForRecipients(recipientIds, {
-        actorId: String(req.user.user_id),
-        eventType: "task_feedback_added",
-        title: "New task feedback",
-        message: `Kindly check the feedback sent to ${task.title}.`,
-        entityType: "task",
-        entityId: taskId,
-        metadata: {
-          task_id: taskId,
-          feedback_id: feedback.feedback_id,
+      const notifications = await createNotificationsForRecipients(
+        recipientIds,
+        {
+          actorId: String(req.user.user_id),
+          eventType: "task_feedback_added",
+          title: "New task feedback",
+          message: `Kindly check the feedback sent to ${task.title}.`,
+          entityType: "task",
+          entityId: taskId,
+          metadata: {
+            task_id: taskId,
+            feedback_id: feedback.feedback_id,
+          },
         },
-      });
+      );
 
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
@@ -940,7 +1088,9 @@ export const addTaskFeedbackHandler = async (req: Request, res: Response) => {
     return res.status(201).json(feedback);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -988,7 +1138,10 @@ export const listTaskFeedbackHandler = async (req: Request, res: Response) => {
   }
 };
 
-export const listTaskStatusHistoryHandler = async (req: Request, res: Response) => {
+export const listTaskStatusHistoryHandler = async (
+  req: Request,
+  res: Response,
+) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required." });
@@ -1012,7 +1165,9 @@ export const listTaskStatusHistoryHandler = async (req: Request, res: Response) 
       }
     }
 
-    return res.status(500).json({ message: "Failed to load task status history." });
+    return res
+      .status(500)
+      .json({ message: "Failed to load task status history." });
   }
 };
 
@@ -1037,7 +1192,9 @@ export const addTaskWorkLinkHandler = async (req: Request, res: Response) => {
     return res.status(201).json(workLink);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {
@@ -1086,7 +1243,10 @@ export const listTaskWorkLinksHandler = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteTaskWorkLinkHandler = async (req: Request, res: Response) => {
+export const deleteTaskWorkLinkHandler = async (
+  req: Request,
+  res: Response,
+) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required." });
@@ -1098,7 +1258,9 @@ export const deleteTaskWorkLinkHandler = async (req: Request, res: Response) => 
     }
 
     const rawWorkLinkId = req.params.workLinkId;
-    const workLinkId = Array.isArray(rawWorkLinkId) ? rawWorkLinkId[0] : rawWorkLinkId;
+    const workLinkId = Array.isArray(rawWorkLinkId)
+      ? rawWorkLinkId[0]
+      : rawWorkLinkId;
     if (!workLinkId) {
       return res.status(400).json({ message: "workLinkId is required." });
     }
@@ -1107,7 +1269,10 @@ export const deleteTaskWorkLinkHandler = async (req: Request, res: Response) => 
     return res.status(200).json(removed);
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "Task not found." || error.message === "Work link not found.") {
+      if (
+        error.message === "Task not found." ||
+        error.message === "Work link not found."
+      ) {
         return res.status(404).json({ message: error.message });
       }
 
@@ -1123,7 +1288,9 @@ export const deleteTaskWorkLinkHandler = async (req: Request, res: Response) => 
       }
     }
 
-    return res.status(500).json({ message: "Failed to remove task work link." });
+    return res
+      .status(500)
+      .json({ message: "Failed to remove task work link." });
   }
 };
 
@@ -1203,7 +1370,9 @@ export const addTaskCommentHandler = async (req: Request, res: Response) => {
     return res.status(201).json(comment);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request body.", issues: error.issues });
+      return res
+        .status(400)
+        .json({ message: "Invalid request body.", issues: error.issues });
     }
 
     if (error instanceof Error) {

@@ -27,11 +27,20 @@ export type UpdateUserInput = {
   email?: string;
   password_hash?: string;
   global_role?: GlobalRole;
+
   departments?: {
     department_id: string;
     department_role: DepartmentRole;
   }[];
+
   is_active?: boolean;
+
+  working_hours?: {
+    start?: string;
+    end?: string;
+  };
+
+  working_days?: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
 };
 
 export type CreateUserInput = {
@@ -41,21 +50,26 @@ export type CreateUserInput = {
   password_hash: string;
   global_role: GlobalRole;
   is_active?: boolean;
+
   departments?: {
     department_id: string;
     department_role: DepartmentRole;
   }[];
+
+  working_hours?: {
+    start: string;
+    end: string;
+  };
+
+  working_days?: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
 };
 
 export type UpsertInternProfileInput = {
   school_university?: string;
   required_hours?: number;
   rendered_hours_total?: number;
-  expected_end_date?: Date;
   actual_end_date?: Date | null;
 };
-
-// ------------------ USER SERVICES ------------------
 
 export const getAllUsers = async () => {
   return User.find().select(SAFE_USER_SELECT).sort({ createdAt: -1 }).lean();
@@ -140,6 +154,14 @@ export const createUser = async (payload: CreateUserInput) => {
     password_hash: payload.password_hash,
     global_role: payload.global_role,
     is_active: payload.is_active ?? true,
+
+    working_hours: {
+      start: payload.working_hours?.start || "",
+      end: payload.working_hours?.end || "",
+    },
+
+    working_days: payload.working_days || [],
+
     departments: (payload.departments || []).map((d) => ({
       department_id: new mongoose.Types.ObjectId(d.department_id),
       department_role: d.department_role,
@@ -147,7 +169,6 @@ export const createUser = async (payload: CreateUserInput) => {
   };
 
   const created = await User.create(userPayload);
-  console.log("[createUser] created:", created._id);
 
   return getUserById(String(created._id));
 };
@@ -156,7 +177,6 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // Basic fields
   if (payload.first_name !== undefined) user.first_name = payload.first_name;
   if (payload.last_name !== undefined) user.last_name = payload.last_name;
   if (payload.email !== undefined) {
@@ -175,12 +195,25 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
 
     user.email = nextEmail;
   }
-  if (payload.password_hash !== undefined)
+  if (payload.password_hash !== undefined) {
     user.password_hash = payload.password_hash;
+  }
   if (payload.global_role !== undefined) user.global_role = payload.global_role;
   if (payload.is_active !== undefined) user.is_active = payload.is_active;
 
-  // Departments array
+  // ✅ working_hours
+  if (payload.working_hours) {
+    user.working_hours = {
+      start: payload.working_hours.start ?? user.working_hours?.start ?? "",
+      end: payload.working_hours.end ?? user.working_hours?.end ?? "",
+    };
+  }
+
+  // ✅ working_days
+  if (Array.isArray(payload.working_days)) {
+    user.working_days = payload.working_days;
+  }
+
   if (Array.isArray(payload.departments)) {
     user.departments = payload.departments.map((d) => ({
       department_id: new mongoose.Types.ObjectId(d.department_id),
@@ -189,7 +222,6 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   }
 
   await user.save();
-  console.log("[updateUser] updated:", user._id);
 
   // lightweight update response without intern profile
   return user.toObject();
@@ -218,7 +250,6 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
 
     res.json(whitelistedUsers);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -235,11 +266,10 @@ export const upsertUserInternProfile = async (
   if (!existingProfile) {
     if (
       !payload.school_university ||
-      !payload.required_hours ||
-      !payload.expected_end_date
+      !payload.required_hours
     ) {
       throw new Error(
-        "school_university, required_hours, and expected_end_date are required for new intern profiles.",
+        "school_university and required_hours are required for new intern profiles.",
       );
     }
 
@@ -248,19 +278,21 @@ export const upsertUserInternProfile = async (
       school_university: payload.school_university,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total ?? 0,
-      expected_end_date: payload.expected_end_date,
       actual_end_date: payload.actual_end_date ?? null,
     });
   } else {
-    if (payload.school_university !== undefined) existingProfile.school_university = payload.school_university;
-    if (payload.required_hours !== undefined)
+    if (payload.school_university !== undefined) {
+      existingProfile.school_university = payload.school_university;
+    }
+    if (payload.required_hours !== undefined) {
       existingProfile.required_hours = payload.required_hours;
-    if (payload.rendered_hours_total !== undefined)
+    }
+    if (payload.rendered_hours_total !== undefined) {
       existingProfile.rendered_hours_total = payload.rendered_hours_total;
-    if (payload.expected_end_date !== undefined)
-      existingProfile.expected_end_date = payload.expected_end_date;
-    if (payload.actual_end_date !== undefined)
+    }
+    if (payload.actual_end_date !== undefined) {
       existingProfile.actual_end_date = payload.actual_end_date;
+    }
 
     await existingProfile.save();
   }
@@ -272,7 +304,6 @@ export const deleteUser = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found.");
 
-  // prevent deletion of Superadmin users
   if (user.global_role === "Superadmin") {
     throw new Error("Cannot delete a Superadmin user.");
   }
@@ -283,6 +314,5 @@ export const deleteUser = async (userId: string) => {
   // delete user
   await user.deleteOne();
 
-  console.log(`[deleteUser] User deleted: ${user._id} (${user.email})`);
   return { message: "User successfully deleted" };
 };

@@ -9,8 +9,18 @@ export interface ITaskWorkLink extends Document {
 }
 
 const taskWorkLinkSchema = new Schema<ITaskWorkLink>({
-  task_id: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true },
-  submitted_by: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  task_id: {
+    type: Schema.Types.ObjectId,
+    ref: "Task",
+    required: true,
+    index: true,
+  },
+  submitted_by: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  },
   url: { type: String, required: true, trim: true },
   label: { type: String, trim: true },
   created_at: { type: Date, default: Date.now },
@@ -18,4 +28,7 @@ const taskWorkLinkSchema = new Schema<ITaskWorkLink>({
 
 taskWorkLinkSchema.index({ task_id: 1, created_at: -1 });
 
-export default mongoose.model<ITaskWorkLink>("TaskWorkLink", taskWorkLinkSchema);
+export default mongoose.model<ITaskWorkLink>(
+  "TaskWorkLink",
+  taskWorkLinkSchema,
+);

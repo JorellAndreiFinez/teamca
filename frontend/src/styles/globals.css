@@ -1,4 +1,5 @@
 /* stylelint-disable */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,11 +10,20 @@
   box-sizing: border-box;
 }
 
+:root {
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-display: "Manrope", "Inter", "Segoe UI", sans-serif;
+}
+
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
 }
 
 @keyframes modal-backdrop-in {

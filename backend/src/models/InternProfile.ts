@@ -1,10 +1,10 @@
-import { Schema, model, type InferSchemaType } from 'mongoose';
+import { Schema, model, type InferSchemaType } from "mongoose";
 
 const internProfileSchema = new Schema(
   {
     user_id: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       unique: true,
       index: true,
@@ -26,10 +26,6 @@ const internProfileSchema = new Schema(
       default: 0,
       min: 0,
     },
-    expected_end_date: {
-      type: Date,
-      required: true,
-    },
     actual_end_date: {
       type: Date,
       default: null,
@@ -38,11 +34,14 @@ const internProfileSchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 export type InternProfileDocument = InferSchemaType<typeof internProfileSchema>;
 
-export const InternProfile = model<InternProfileDocument>('InternProfile', internProfileSchema);
+export const InternProfile = model<InternProfileDocument>(
+  "InternProfile",
+  internProfileSchema,
+);
 
 export default InternProfile;

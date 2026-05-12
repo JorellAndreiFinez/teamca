@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { userService } from "@/services/userService";
 import { departmentService } from "@/services/departmentService";
 import type { Department } from "@/types/user";
+import { NumberInput } from "@/components/ui/input/NumberInput";
+import { TimeRangeInput } from "@/components/ui/input/TimeRangeInput";
 
 interface Props {
   open: boolean;
@@ -24,7 +26,14 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
     global_role: "Standard_User",
     is_active: true,
     department_id: "",
-    department_role: isWhitelist ? "Intern" : "",
+    department_role: "",
+
+    required_hours: 0,
+    working_hours: {
+      start: "",
+      end: "",
+    },
+    working_days: [] as string[],
   });
 
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -39,7 +48,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
         const data = await departmentService.getAllDepartments();
         setDepartments(data);
       } catch (err) {
-        console.error("Failed to fetch departments", err);
+        // Keep UI responsive even if departments fail to load.
       }
     };
 
@@ -73,6 +82,18 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
     }));
   };
 
+  const toggleWorkingDay = (day: string) => {
+    setForm((prev) => {
+      const exists = prev.working_days.includes(day);
+      return {
+        ...prev,
+        working_days: exists
+          ? prev.working_days.filter((d) => d !== day)
+          : [...prev.working_days, day],
+      };
+    });
+  };
+
   const handleSubmit = async () => {
     setError("");
 
@@ -101,8 +122,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
           global_role: "Standard_User",
           is_active: true,
           department_id: "",
-          department_role: "Intern",
-        });
+          department_role: "Intern",          required_hours: 8,
+          working_hours: { start: "08:00", end: "17:00" },
+          working_days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],        });
         setIsWhitelist(false);
       } catch (err: any) {
         setError(err?.response?.data?.message || "Failed to whitelist email.");
@@ -127,6 +149,12 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
         password_hash: form.password,
         global_role: form.global_role,
         is_active: form.is_active,
+
+        required_hours: form.required_hours,
+
+        working_hours: form.working_hours,
+        working_days: form.working_days,
+
         departments: form.department_id
           ? [
               {
@@ -150,6 +178,10 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
         is_active: true,
         department_id: "",
         department_role: "",
+
+        required_hours: 0,
+        working_hours: { start: "", end: "" },
+        working_days: [],
       });
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to create user.");
@@ -185,7 +217,10 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
               onChange={handleWhitelistToggle}
               className="w-4 h-4 rounded border-slate-300"
             />
-            <label htmlFor="isWhitelist" className="text-sm font-medium text-slate-700">
+            <label
+              htmlFor="isWhitelist"
+              className="text-sm font-medium text-slate-700"
+            >
               Whitelist Email Only (No Password Required)
             </label>
           </div>
@@ -235,7 +270,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
           {!isWhitelist && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Access Role</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Access Role
+                </label>
                 <select
                   name="global_role"
                   value={form.global_role}
@@ -249,7 +286,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Status</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Status
+                </label>
                 <select
                   name="is_active"
                   value={String(form.is_active)}
@@ -266,7 +305,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
           {/* department fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Department</label>
+              <label className="text-sm font-medium text-slate-700">
+                Department
+              </label>
               <select
                 name="department_id"
                 value={form.department_id}
@@ -284,7 +325,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
 
             {!isWhitelist && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Department Role</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Department Role
+                </label>
                 <select
                   name="department_role"
                   value={form.department_role}
@@ -308,28 +351,77 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
 
             {isWhitelist && form.department_id && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Department Role</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Department Role
+                </label>
                 <div className="w-full h-10 rounded-lg border px-3 flex items-center text-slate-700 bg-slate-100">
                   Intern (Auto)
                 </div>
               </div>
             )}
           </div>
+
+          {/*  SCHEDULE SECTION */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-lg font-semibold text-gray-800">Schedule</h3>
+
+            {/* Required Hours */}
+            <div className="space-y-1">
+              <NumberInput
+                label="Required Hours"
+                value={form.required_hours}
+                min={0}
+                onChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    required_hours: val,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Working Hours */}
+            <TimeRangeInput
+              label="Working Hours"
+              value={form.working_hours}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  working_hours: val,
+                }))
+              }
+              required
+            />
+
+            {/* Working Days */}
+            <div>
+              <label className="text-sm font-medium">Working Days</label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {["M", "T", "W", "Th", "F", "Sat", "Sun"].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleWorkingDay(day)}
+                    className={`px-3 py-1 rounded-full text-sm border ${
+                      form.working_days.includes(day)
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* actions */}
         <div className="flex justify-end gap-3 pt-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={loading}
-          >
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-          >
+          <Button onClick={handleSubmit} disabled={loading}>
             {loading ? "Creating..." : "Create User"}
           </Button>
         </div>

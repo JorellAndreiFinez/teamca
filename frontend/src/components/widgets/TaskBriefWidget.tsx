@@ -1,5 +1,6 @@
 import type { Task } from '../../types/task';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { ActivityListItemSkeleton } from '../ui/Skeleton';
 
 type TaskBriefWidgetProps = {
   tasks: Task[];
@@ -13,7 +14,13 @@ export default function TaskBriefWidget({ tasks, isLoading = false }: TaskBriefW
         <CardTitle className="text-lg">Tasks To Do</CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading ? <p className="text-sm text-slate-500">Loading tasks...</p> : null}
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <ActivityListItemSkeleton key={index} />
+            ))}
+          </div>
+        ) : null}
 
         {!isLoading && tasks.length === 0 ? (
           <p className="text-sm text-slate-500">No tasks available yet.</p>

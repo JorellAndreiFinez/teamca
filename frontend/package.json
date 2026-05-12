@@ -1,5 +1,5 @@
 {
-  "name": "teamca-frontend",
+  "name": "frontend",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -7,7 +7,12 @@
     "start": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "lint": "eslint . --format stylish",
+    "lint:fix": "eslint . --format stylish --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json,md}\"",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/react": "^5.0.2",
@@ -17,19 +22,25 @@
     "axios": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jdenticon": "^3.3.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^3.4.0",
+    "xlsx": "^0.18.5",
     "zustand": "^4.4.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.2",
+    "@eslint/js": "^9.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^5.9.3"
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.0"
   },
   "overrides": {
     "esbuild": "^0.27.3"

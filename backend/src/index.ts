@@ -2,15 +2,23 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 import http from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { connectDB } from "./config/db";
-import { initTaskSocket } from "./socket/io";
+import { connectDB } from "./config/db.js";
+import { initTaskSocket } from "./socket/io.js";
+import routes from "./routes/index.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("Missing JWT_SECRET in production environment. Exiting.");
+  process.exit(1);
+}
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
@@ -48,7 +56,8 @@ const corsOptions: cors.CorsOptions = {
     }
     return callback(null, false);
   },
-  credentials: false,
+  // allow cookies / Authorization header in cross-origin requests from the app
+  credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -65,8 +74,7 @@ app.use(
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
-// ── Rate limiters
-const authLimiter = rateLimit({
+const _authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50,
   standardHeaders: "draft-8",
@@ -74,7 +82,7 @@ const authLimiter = rateLimit({
   message: { message: "Too many auth requests. Please try again shortly." },
 });
 
-const apiLimiter = rateLimit({
+const _apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: "draft-8",
@@ -83,32 +91,10 @@ const apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-// ── MongoDB connection
-connectDB().then(() => console.log("MongoDB ready"));
+void connectDB();
 
-// ── Activity logging middleware
-import { activityLogger } from "./middlewares/activityLogger";
-app.use(activityLogger);
-
-// ── Routes
-import authRoutes from "./routes/authRoutes";
-import departmentRoutes from "./routes/departmentRoutes";
-import userRoutes from "./routes/userRoutes";
-import internProfileRoutes from "./routes/internProfileRoutes";
-// import dtrRoutes from "./routes/dtrRoutes";
-import taskRoutes from "./routes/taskRoutes";
-import notificationRoutes from "./routes/notificationRoutes";
-import activityRoutes from "./routes/activityRoutes";
-
-app.use(apiLimiter);
-app.use("/auth", authLimiter, authRoutes);
-app.use("/departments", departmentRoutes);
-app.use("/users", userRoutes);
-app.use("/intern-profiles", internProfileRoutes);
-// app.use("/dtr", apiLimiter, dtrRoutes);
-app.use("/tasks", apiLimiter, taskRoutes);
-app.use("/notifications", apiLimiter, notificationRoutes);
-app.use("/activity-logs", activityRoutes);
+app.use("/api/auth", _authLimiter);
+app.use("/api", _apiLimiter, routes);
 
 // ── Health check
 app.get("/health", (_req, res) =>
@@ -118,6 +104,4 @@ app.get("/health", (_req, res) =>
 const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
-server.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`),
-);
+server.listen(PORT);
