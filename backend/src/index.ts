@@ -56,7 +56,8 @@ const corsOptions: cors.CorsOptions = {
     }
     return callback(null, false);
   },
-  credentials: false,
+  // allow cookies / Authorization header in cross-origin requests from the app
+  credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };

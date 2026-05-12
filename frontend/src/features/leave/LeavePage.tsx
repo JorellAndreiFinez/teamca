@@ -5,6 +5,7 @@ import LeaveRequestForm from './LeaveRequestForm';
 import LeaveListTable from './LeaveListTable';
 import { leaveService } from '../../services/leaveService';
 import type { ILeave, CreateLeavePayload } from '../../types/leave';
+import { StatCardSkeleton, ActivityListItemSkeleton } from '../../components/ui/Skeleton';
 
 export default function LeavePage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -104,23 +105,25 @@ export default function LeavePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">Pending</p>
-          <p className="mt-1.5 text-2xl font-bold text-amber-900 tabular-nums">{pendingCount}</p>
-        </div>
-        <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">Approved</p>
-          <p className="mt-1.5 text-2xl font-bold text-emerald-900 tabular-nums">{approvedCount}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Total Requests</p>
-          <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{leaves.length}</p>
-        </div>
-        <div className="rounded-2xl border border-blue-200/70 bg-blue-50/80 p-4 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-700">Status</p>
-          <p className="mt-2 text-sm font-semibold text-blue-900">Active</p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          <>
+            <div className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">Pending</p>
+              <p className="mt-1.5 text-2xl font-bold text-amber-900 tabular-nums">{pendingCount}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">Approved</p>
+              <p className="mt-1.5 text-2xl font-bold text-emerald-900 tabular-nums">{approvedCount}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Total Requests</p>
+              <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{leaves.length}</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Error Alert */}
@@ -166,11 +169,19 @@ export default function LeavePage() {
 
         {activeTab === 'history' && (
           <div>
-            <LeaveListTable
-              leaves={leaves}
-              isLoading={loading}
-              onCancel={handleCancelLeave}
-            />
+            {loading ? (
+              <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <ActivityListItemSkeleton key={i} />
+                ))}
+              </div>
+            ) : (
+              <LeaveListTable
+                leaves={leaves}
+                isLoading={loading}
+                onCancel={handleCancelLeave}
+              />
+            )}
           </div>
         )}
       </div>

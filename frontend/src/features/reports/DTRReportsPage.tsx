@@ -6,6 +6,7 @@ import { dtrService } from '../../services/dtrService';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
+import { StatCardSkeleton } from '../../components/ui/Skeleton';
 
 interface DTRStats {
   totalWorkingDays: number;
@@ -273,7 +274,7 @@ export default function DTRReportsPage() {
       {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-2xl bg-slate-100" />
+            <StatCardSkeleton key={i} />
           ))}
         </div>
       ) : stats ? (

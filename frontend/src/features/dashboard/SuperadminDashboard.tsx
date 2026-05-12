@@ -5,6 +5,7 @@ import DashboardStatCard from './components/DashboardStatCard';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { userService } from '../../services/userService';
+import { StatCardSkeleton, WidgetSkeleton } from "../../components/ui/Skeleton";
 import { taskService } from '../../services/taskService';
 import type { Task } from '../../types/task';
 
@@ -181,9 +182,11 @@ export default function SuperadminDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((s) => (
-          <DashboardStatCard key={s.label} {...s} />
-        ))}
+        {taskLoading
+          ? Array.from({ length: 4 }).map((_, index) => <StatCardSkeleton key={index} />)
+          : stats.map((s) => (
+              <DashboardStatCard key={s.label} {...s} />
+            ))}
       </div>
 
       {/* Whitelist Manager */}

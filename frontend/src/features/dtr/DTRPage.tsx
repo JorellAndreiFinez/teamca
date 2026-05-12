@@ -11,6 +11,13 @@ import { ReminderSettings } from "../../components/ReminderSettings";
 import { ExportOptions } from "../../components/ExportOptions";
 import { TimeAdjustmentForm } from "../../components/TimeAdjustmentForm";
 import { TimeAdjustmentReview } from "../../components/TimeAdjustmentReview";
+import {
+  ClockCardSkeleton,
+  ProgressBarSkeleton,
+  TableHeaderSkeleton,
+  TableRowSkeleton,
+  WidgetSkeleton,
+} from "../../components/ui/Skeleton";
 
 import {
   Dialog,
@@ -62,19 +69,16 @@ export default function DTRPage() {
     sort_by: 'date_desc',
   });
 
-  const TIMEZONE_OFFSET = 8 * 60 * 60 * 1000; // PH (UTC+8)
-  const toPHDateKey = (date: Date) => {
-    return new Date(date.getTime() + TIMEZONE_OFFSET).toISOString().split("T")[0];
-  };
-
   const activeClock = React.useMemo(() => {
-    const todayKey = toPHDateKey(new Date());
-    const todayRecord = records.find((record) => {
-      const recordDate = new Date(record.date as any);
-      return toPHDateKey(recordDate) === todayKey;
-    });
+    if (!records.length) return undefined;
 
-    return todayRecord?.clocks?.find((c) => c.timeIn && !c.timeOut);
+    // Only check the most recent (today's) DTR record for open clocks
+    // This prevents picking up stale unclosed entries from past days
+    const today = records.sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )[0];
+
+    return today?.clocks?.find((c) => c.timeIn && !c.timeOut);
   }, [records]);
 
   const clockInTime = activeClock?.timeIn ? new Date(activeClock.timeIn) : null;
@@ -190,6 +194,39 @@ export default function DTRPage() {
     return null;
   }
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+          <div className="flex-1 space-y-2">
+            <div className="h-8 w-72 animate-pulse rounded bg-slate-200" />
+            <div className="h-4 w-96 animate-pulse rounded bg-slate-200" />
+            <div className="h-10 w-64 animate-pulse rounded-xl bg-slate-200" />
+          </div>
+          <div className="w-full flex-shrink-0 lg:w-80">
+            <ClockCardSkeleton />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <WidgetSkeleton lines={4} />
+          <WidgetSkeleton lines={4} />
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="space-y-2">
+            <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
+            <ProgressBarSkeleton />
+          </div>
+          <TableHeaderSkeleton columnCount={6} />
+          {Array.from({ length: 6 }).map((_, index) => (
+            <TableRowSkeleton key={index} columnCount={6} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   /**
    * CLOCK IN
    */
@@ -197,6 +234,7 @@ export default function DTRPage() {
     try {
       setActionError(null);
       await clockIn();
+      window.location.reload();
     } catch (err) {
       const message = (err as any)?.response?.data?.message || "Failed to clock in";
       setActionError(message);
@@ -229,6 +267,7 @@ export default function DTRPage() {
       // reset
       setRemarks("");
       setOpen(false);
+      window.location.reload();
     } catch (err) {
       const message = (err as any)?.response?.data?.message || "Failed to clock out";
       setActionError(message);

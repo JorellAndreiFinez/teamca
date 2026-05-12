@@ -11,6 +11,7 @@ import CalendarWidget from '../../components/widgets/CalendarWidget';
 import DtrAnalyticsWidget from '../../components/widgets/DtrAnalyticsWidget';
 import TaskBriefWidget from '../../components/widgets/TaskBriefWidget';
 import MembersBriefWidget from '../../components/widgets/MembersBriefWidget';
+import { CalendarSkeleton, StatCardSkeleton } from '../../components/ui/Skeleton';
 
 export default function RoleDashboard() {
   const { user, isIntern, canManageOwnDepartment, canViewAllDepartments } = useAuthStore((state) => ({
@@ -94,10 +95,16 @@ export default function RoleDashboard() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Tasks" value={visibleTasks.length} />
-        <StatCard label="Open Tasks" value={totalOpenTasks} />
-        <StatCard label="Completed Tasks" value={completedTasks} />
-        <StatCard label="DTR Records" value={dtrRecords.length} />
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, index) => <StatCardSkeleton key={index} />)
+        ) : (
+          <>
+            <StatCard label="Total Tasks" value={visibleTasks.length} />
+            <StatCard label="Open Tasks" value={totalOpenTasks} />
+            <StatCard label="Completed Tasks" value={completedTasks} />
+            <StatCard label="DTR Records" value={dtrRecords.length} />
+          </>
+        )}
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[2fr,1fr]">
@@ -115,7 +122,7 @@ export default function RoleDashboard() {
         </div>
 
         <div>
-          <CalendarWidget />
+          {isLoading ? <CalendarSkeleton /> : <CalendarWidget />}
         </div>
       </section>
     </div>

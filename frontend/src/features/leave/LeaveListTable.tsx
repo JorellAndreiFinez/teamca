@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ILeave } from '../../types/leave';
+import { ActivityListItemSkeleton } from '../../components/ui/Skeleton';
 
 interface LeaveListTableProps {
   leaves: ILeave[];
@@ -43,9 +44,9 @@ export default function LeaveListTable({ leaves, isLoading = false, onCancel }: 
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-16 bg-slate-100 rounded-lg animate-pulse" />
+      <div className="space-y-2">
+        {[...Array(4)].map((_, i) => (
+          <ActivityListItemSkeleton key={i} />
         ))}
       </div>
     );

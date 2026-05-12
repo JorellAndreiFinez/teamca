@@ -2,20 +2,16 @@ import { create } from 'zustand';
 import type { DailyTimeRecord } from '../types/dtr';
 import { dtrService } from '../services/dtrService';
 
-const TIMEZONE_OFFSET = 8 * 60 * 60 * 1000; // PH (UTC+8)
-
-const toPHDateKey = (date: Date) => {
-  return new Date(date.getTime() + TIMEZONE_OFFSET).toISOString().split("T")[0];
-};
-
 const getActiveClock = (records: DailyTimeRecord[]) => {
-  const todayKey = toPHDateKey(new Date());
-  const todayRecord = records.find((record) => {
-    const recordDate = new Date(record.date as any);
-    return toPHDateKey(recordDate) === todayKey;
-  });
+  if (!records.length) return undefined;
 
-  return todayRecord?.clocks?.find((clock) => clock.timeIn && !clock.timeOut);
+  // Only check the most recent (today's) DTR record for open clocks
+  // This prevents picking up stale unclosed entries from past days
+  const today = records.sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  )[0];
+
+  return today?.clocks?.find((clock) => clock.timeIn && !clock.timeOut);
 };
 
 const syncFlagsFromRecords = (records: DailyTimeRecord[]) => {
@@ -31,6 +27,21 @@ const syncFlagsFromRecords = (records: DailyTimeRecord[]) => {
     clockedIn: Boolean(activeClock),
     isOnBreak: breakIsActive,
   };
+};
+
+const mergeRecordIntoState = (records: DailyTimeRecord[], nextRecord: DailyTimeRecord) => {
+  if (!nextRecord?._id) {
+    return records;
+  }
+
+  const index = records.findIndex((record) => record._id === nextRecord._id);
+  if (index === -1) {
+    return [nextRecord, ...records];
+  }
+
+  const merged = records.slice();
+  merged[index] = nextRecord;
+  return merged;
 };
 
 interface DtrState {
@@ -62,19 +73,63 @@ export const useDtrStore = create<DtrState>((set, get) => ({
   isOnBreak: false,
   setIsOnBreak: (v) => set({ isOnBreak: v }),
   clockIn: async () => {
-    await dtrService.clockIn();
+    try {
+      const updatedRecord = await dtrService.clockIn();
+      set((state) => {
+        const records = mergeRecordIntoState(state.records, updatedRecord);
+        return { records, ...syncFlagsFromRecords(records) };
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || '';
+      // If server says already clocked in, refresh records to sync state
+      if (typeof msg === 'string' && msg.toLowerCase().includes('already clocked in')) {
+        await get().refreshRecords();
+        return;
+      }
+      // rethrow for upstream handling
+      throw err;
+    }
+
     await get().refreshRecords();
   },
   clockOut: async (remarks: string) => {
-    await dtrService.clockOut(remarks);
+    try {
+      const updatedRecord = await dtrService.clockOut(remarks);
+      set((state) => {
+        const records = mergeRecordIntoState(state.records, updatedRecord);
+        return { records, ...syncFlagsFromRecords(records) };
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || '';
+      // If server says no clock-in found or last clock already timed out, refresh and sync
+      if (typeof msg === 'string' && (msg.toLowerCase().includes('no clock-in') || msg.toLowerCase().includes('already timed out') || msg.toLowerCase().includes('last clock-in already timed out'))) {
+        await get().refreshRecords();
+        // ensure local flag reflects no active clock
+        get().setClockedIn(false);
+        return;
+      }
+
+      throw err;
+    }
+
+    // on success ensure flags updated from the refreshed record list
+    get().setClockedIn(false);
     await get().refreshRecords();
   },
   startBreak: async (breakType = 'rest') => {
-    await dtrService.startBreak(breakType);
+    const updatedRecord = await dtrService.startBreak(breakType);
+    set((state) => {
+      const records = mergeRecordIntoState(state.records, updatedRecord);
+      return { records, ...syncFlagsFromRecords(records) };
+    });
     await get().refreshRecords();
   },
   endBreak: async () => {
-    await dtrService.endBreak();
+    const updatedRecord = await dtrService.endBreak();
+    set((state) => {
+      const records = mergeRecordIntoState(state.records, updatedRecord);
+      return { records, ...syncFlagsFromRecords(records) };
+    });
     await get().refreshRecords();
   },
 }));

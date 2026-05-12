@@ -6,6 +6,7 @@ import { taskService } from '../../services/taskService';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import type { TaskListItem } from '../../types/task';
+import { StatCardSkeleton } from '../../components/ui/Skeleton';
 
 interface TaskStats {
   totalTasks: number;
@@ -288,7 +289,7 @@ export default function TaskAnalyticsPage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-32 bg-slate-100 rounded-lg animate-pulse" />
+            <StatCardSkeleton key={i} />
           ))}
         </div>
       ) : stats ? (

@@ -8,6 +8,7 @@ import DashboardStatCard from "./components/DashboardStatCard";
 import Button from "../../components/ui/Button";
 import { taskService } from "../../services/taskService";
 import type { Task } from "../../types/task";
+import { StatCardSkeleton, WidgetSkeleton } from "../../components/ui/Skeleton";
 
 function UsersIcon() {
   return (
@@ -185,16 +186,18 @@ export default function AdminDashboard() {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((s) => (
-          <DashboardStatCard key={s.label} {...s} />
-        ))}
+        {taskLoading
+          ? Array.from({ length: 4 }).map((_, index) => <StatCardSkeleton key={index} />)
+          : stats.map((s) => (
+              <DashboardStatCard key={s.label} {...s} />
+            ))}
       </div>
 
       {/* Content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Task overview */}
         <Card title="Task Brief">
-          <TaskBriefWidget tasks={tasks} isLoading={taskLoading} />
+          {taskLoading ? <WidgetSkeleton lines={4} /> : <TaskBriefWidget tasks={tasks} isLoading={taskLoading} />}
         </Card>
 
         {/* Attendance overview */}

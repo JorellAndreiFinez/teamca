@@ -97,7 +97,8 @@ export const timeIn = async (userId: string) => {
   const lastClock = dtr.clocks[dtr.clocks.length - 1];
 
   if (lastClock && !lastClock.timeOut) {
-    throw new Error("You already clocked in and haven't clocked out yet");
+    // Already clocked in - return existing DTR to make this endpoint idempotent
+    return dtr;
   }
 
   dtr.attendanceStatus = attendanceStatus;
@@ -138,13 +139,15 @@ export const timeOut = async (userId: string, remarks: string) => {
   const dtr = await DTR.findOne({ userId, date: today });
 
   if (!dtr || dtr.clocks.length === 0) {
+    // No clock-in found - return a clear error but allow client to refresh safely
     throw new Error("No clock-in found for today");
   }
 
   const lastClock = dtr.clocks[dtr.clocks.length - 1];
 
   if (lastClock.timeOut) {
-    throw new Error("Last clock-in already timed out");
+    // Already timed out - return the last clock entry to keep the endpoint idempotent
+    return lastClock;
   }
 
   const now = new Date();
@@ -195,7 +198,7 @@ export const timeOut = async (userId: string, remarks: string) => {
     // Silently ignore socket emit errors
   }
 
-  return lastClock;
+  return dtr;
 };
 
 /**

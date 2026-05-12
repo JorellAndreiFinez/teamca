@@ -8,6 +8,7 @@ import ProperClockCard from '../../components/properClockCard';
 import { useDtrStore } from '../../store/dtrStore';
 import { useDtrSocket } from '../../features/dtr/hooks/useDtrSocket';
 import Button from '../../components/ui/Button';
+import { WidgetSkeleton, CalendarSkeleton } from '../../components/ui/Skeleton';
 
 export default function InternDashboard() {
   const user = useAuthStore((state) => state.user);
@@ -19,6 +20,12 @@ export default function InternDashboard() {
   const startBreak = useDtrStore((state) => state.startBreak);
   const endBreak = useDtrStore((state) => state.endBreak);
   const [dtrActionError, setDtrActionError] = React.useState<string | null>(null);
+  const [isLoadingWidgets, setIsLoadingWidgets] = React.useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoadingWidgets(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -96,6 +103,7 @@ export default function InternDashboard() {
             try {
                 setDtrActionError(null);
               await clockIn();
+              window.location.reload();
               } catch (err: any) {
                 setDtrActionError(err?.response?.data?.message || 'Failed to clock in');
               }
@@ -110,6 +118,7 @@ export default function InternDashboard() {
               }
                 setDtrActionError(null);
               await clockOut(remarks);
+              window.location.reload();
               } catch (err: any) {
                 setDtrActionError(err?.response?.data?.message || 'Failed to clock out');
               }
@@ -139,16 +148,16 @@ export default function InternDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card title="DTR Analytics">
-            <DTRAnalyticsWidget requiredHours={8} />
+            {isLoadingWidgets ? <WidgetSkeleton lines={5} /> : <DTRAnalyticsWidget requiredHours={8} />}
           </Card>
 
           <Card title="Task Brief">
-            <TaskBriefWidget />
+            {isLoadingWidgets ? <WidgetSkeleton lines={4} /> : <TaskBriefWidget />}
           </Card>
         </div>
 
         <Card title="Calendar">
-          <CalendarWidget />
+          {isLoadingWidgets ? <CalendarSkeleton /> : <CalendarWidget />}
         </Card>
       </div>
     </div>

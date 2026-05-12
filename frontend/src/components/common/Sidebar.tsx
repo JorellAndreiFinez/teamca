@@ -136,7 +136,6 @@ export default function Sidebar() {
   const canManageUsers = useAuthStore((state) => state.canManageUsers);
   const canWhitelistEmails = useAuthStore((state) => state.canWhitelistEmails);
   const getUserFullName = useAuthStore((state) => state.getUserFullName);
-  const isHydrated = useAuthStore((state) => state.isHydrated);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
@@ -232,25 +231,6 @@ export default function Sidebar() {
 
   const currentPath = mounted && typeof window !== 'undefined' ? window.location.pathname : '';
 
-  const storedUser = React.useMemo(() => {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    try {
-      const stored = localStorage.getItem('auth-storage');
-      const parsed = stored ? JSON.parse(stored) : null;
-      return parsed?.state?.user ?? null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const resolvedUser = isHydrated ? user : storedUser || user;
-  const resolvedFullName = resolvedUser
-    ? `${resolvedUser.first_name ?? ''} ${resolvedUser.last_name ?? ''}`.trim()
-    : '';
-
   const baseNavItems: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
     { label: 'DTR', href: '/dtr', icon: <ClockIcon /> },
@@ -282,22 +262,16 @@ export default function Sidebar() {
   };
 
   // Before mount, use placeholder values to match server render
-  const fullName = resolvedFullName || (mounted ? getUserFullName() : '');
-  const identiconValue = resolvedUser
-    ? String(
-        resolvedUser.user_id
-          || resolvedUser._id
-          || resolvedUser.email
-          || resolvedFullName
-          || 'user',
-      )
+  const fullName = mounted && user ? getUserFullName() : '';
+  const identiconValue = mounted && user
+    ? String(user.user_id || user._id || user.email || getUserFullName() || 'user')
     : 'user';
-  const roleLabel = resolvedUser
-    ? resolvedUser.global_role === 'Superadmin'
+  const roleLabel = mounted && user
+    ? user.global_role === 'Superadmin'
       ? 'Super Admin'
-      : resolvedUser.global_role === 'Admin'
+      : user.global_role === 'Admin'
       ? 'Admin'
-      : resolvedUser.departments?.[0]?.department_role || 'Intern'
+      : user.departments?.[0]?.department_role || 'Intern'
     : '';
 
   if (!sidebarOpen) {

@@ -8,6 +8,7 @@ import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import Card from '../../components/ui/Card';
 import type { Department, User } from '../../types/user';
+import { WidgetSkeleton } from '../../components/ui/Skeleton';
 
 interface DepartmentForm {
   department_name: string;
@@ -205,7 +206,7 @@ export default function DepartmentPage() {
       {loading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-slate-100 rounded-lg animate-pulse" />
+            <WidgetSkeleton key={i} lines={3} />
           ))}
         </div>
       ) : departments.length === 0 ? (

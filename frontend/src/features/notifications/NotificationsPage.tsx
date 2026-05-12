@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNotificationStore } from '../../store/notificationStore';
 import { formatNotificationTimestamp } from '../../utils/dateUtils';
+import { ActivityListItemSkeleton } from '../../components/ui/Skeleton';
 
 const resolveNotificationLink = (entityType?: string): string => {
   if (entityType === 'task') {
@@ -242,7 +243,13 @@ export default function NotificationsPage() {
       </div>
 
       <section className="rounded-xl p-3">
-        {loading ? <p className="p-3 text-sm text-slate-500">Loading notifications...</p> : null}
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <ActivityListItemSkeleton key={index} />
+            ))}
+          </div>
+        ) : null}
 
         {!loading && items.length === 0 ? <p className="p-3 text-sm text-slate-500">No notifications yet.</p> : null}
 

@@ -23,6 +23,7 @@ import TaskModal from './components/TaskModal';
 import TaskPagination from './components/TaskPagination';
 import TaskTable from './components/TaskTable';
 import { useTaskSocket } from './hooks/useTaskSocket';
+import { TableHeaderSkeleton, TableRowSkeleton } from '../../components/ui/Skeleton';
 
 type CreatedDateFilter = 'all' | 'today' | '7d' | '30d';
 type SortBy = 'created_desc' | 'created_asc' | 'priority_desc' | 'priority_asc' | 'deadline_asc' | 'deadline_desc' | 'title_asc';
@@ -975,15 +976,26 @@ export default function TasksPage() {
         </div>
       ) : null}
 
-      <TaskTable
-        tasks={orderedTasks}
-        isLoading={isLoading}
-        onRowClick={setSelectedTaskId}
-        selectionMode={isDeleteMode}
-        selectedTaskIds={selectedTaskIds}
-        canSelectTask={canDeleteTask}
-        onToggleTaskSelection={handleToggleTaskSelection}
-      />
+      {isLoading ? (
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+          <TableHeaderSkeleton columnCount={7} />
+          <div className="divide-y divide-slate-200">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <TableRowSkeleton key={index} columnCount={7} withCheckbox={isDeleteMode} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <TaskTable
+          tasks={orderedTasks}
+          isLoading={isLoading}
+          onRowClick={setSelectedTaskId}
+          selectionMode={isDeleteMode}
+          selectedTaskIds={selectedTaskIds}
+          canSelectTask={canDeleteTask}
+          onToggleTaskSelection={handleToggleTaskSelection}
+        />
+      )}
 
       <TaskPagination
         page={page}

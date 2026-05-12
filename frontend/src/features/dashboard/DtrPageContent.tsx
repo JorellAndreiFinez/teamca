@@ -4,6 +4,7 @@ import { dtrService } from '../../services/dtrService';
 import type { DailyTimeRecord } from '../../types/dtr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
 import DtrAnalyticsWidget from '../../components/widgets/DtrAnalyticsWidget';
+import { ActivityListItemSkeleton } from '../../components/ui/Skeleton';
 
 export default function DtrPageContent() {
   const { user, isIntern, canManageOwnDepartment, canViewAllDepartments } = useAuthStore((state) => ({
@@ -63,7 +64,13 @@ export default function DtrPageContent() {
           <CardTitle className="text-lg">Recent Records</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-slate-500">Loading records...</p> : null}
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <ActivityListItemSkeleton key={index} />
+              ))}
+            </div>
+          ) : null}
 
           {!isLoading && recentRecords.length === 0 ? (
             <p className="text-sm text-slate-500">No DTR records available yet.</p>
