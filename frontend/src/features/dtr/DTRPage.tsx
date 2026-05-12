@@ -303,34 +303,34 @@ export default function DTRPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* HEADER with Compact Clock */}
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-slate-900">Daily Time Record</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="mt-1 text-sm text-slate-500">
             Track your attendance, hours, and view full history
           </p>
           {actionError && (
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="mt-3 rounded-xl border border-red-200/80 bg-red-50 px-3 py-2 text-sm text-red-700">
               {actionError}
             </div>
           )}
         </div>
         
         {/* Simplified DTR Card on Right */}
-        <div className="w-72 flex-shrink-0">
-          <Card className="p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
+        <div className="w-full lg:w-80 flex-shrink-0">
+          <Card className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                   Hours Worked
                 </p>
-                <p className="text-2xl font-semibold text-slate-900">
+                <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">
                   {formatMinutes(totalMinutesWorked)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-500">Status</p>
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Status</p>
+                <p className="mt-1.5 text-sm font-semibold text-slate-700">
                   {isBreakActive
                     ? "On Break"
                     : isClockedIn
@@ -340,18 +340,19 @@ export default function DTRPage() {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="space-y-2">
               {!isClockedIn ? (
                 <Button
                   onClick={handleClockIn}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                  className="w-full"
                 >
                   Clock In
                 </Button>
               ) : (
                 <Button
                   onClick={handleOpenClockOut}
-                  className="w-full bg-red-600 text-white hover:bg-red-700"
+                  variant="danger"
+                  className="w-full"
                 >
                   Clock Out
                 </Button>
@@ -366,7 +367,8 @@ export default function DTRPage() {
                       handleStartBreak();
                     }
                   }}
-                  className="w-full bg-amber-500 text-white hover:bg-amber-600"
+                  variant="secondary"
+                  className="w-full"
                   disabled={breakLoading}
                 >
                   {isBreakActive ? "End Break" : "Take Break"}

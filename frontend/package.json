@@ -22,6 +22,7 @@
     "axios": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jdenticon": "^3.3.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.7.0",
     "react": "^18.2.0",

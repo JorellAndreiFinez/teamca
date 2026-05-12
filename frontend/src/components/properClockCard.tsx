@@ -13,16 +13,6 @@ interface ProperClockCardProps {
   compact?: boolean; // for DTRPage side display
 }
 
-/**
- * ProperClockCard - Status indicator with conditional controls
- * 
- * Colors:
- * - Gray: Clocked out (idle)
- * - Green: Clocked in (active)
- * - Yellow: On break (paused)
- * 
- * Shows current time, date with day, and appropriate action buttons
- */
 export default function ProperClockCard({
   clockedIn,
   isOnBreak = false,
@@ -45,9 +35,9 @@ export default function ProperClockCard({
   }, []);
 
   const getStatusColor = () => {
-    if (isOnBreak) return 'from-yellow-50 to-amber-50 border-yellow-300';
-    if (clockedIn) return 'from-green-50 to-emerald-50 border-green-300';
-    return 'from-slate-50 to-slate-100 border-slate-200';
+    if (isOnBreak) return 'bg-amber-50 border-amber-200';
+    if (clockedIn) return 'bg-emerald-50 border-emerald-200';
+    return 'bg-slate-50 border-slate-200';
   };
 
   const getStatusBadgeColor = () => {
@@ -87,7 +77,7 @@ export default function ProperClockCard({
     // Compact version for DTRPage side panel
     return (
       <div
-        className={`rounded-lg p-4 transition-all duration-300 border-2 bg-gradient-to-br ${getStatusColor()}`}
+        className={`rounded-lg p-4 transition-all duration-300 border ${getStatusColor()}`}
       >
         <div className="space-y-3">
           {/* Date with day */}
@@ -154,7 +144,7 @@ export default function ProperClockCard({
   // Full version for Dashboard
   return (
     <div
-      className={`rounded-xl p-6 transition-all duration-300 border-2 bg-gradient-to-br ${getStatusColor()}`}
+      className={`rounded-xl p-6 transition-all duration-300 border ${getStatusColor()}`}
     >
       <div className="space-y-5">
         {/* Header with Date and Status Badge */}

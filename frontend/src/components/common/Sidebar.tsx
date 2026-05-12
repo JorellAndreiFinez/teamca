@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import NotificationBell from './NotificationBell';
+import UserIdenticon from './UserIdenticon';
 import { userService } from '../../services/userService';
 import { config } from '../../config/env';
 import type { NotificationItem } from '../../types/notification';
@@ -135,11 +136,25 @@ export default function Sidebar() {
   const canManageUsers = useAuthStore((state) => state.canManageUsers);
   const canWhitelistEmails = useAuthStore((state) => state.canWhitelistEmails);
   const getUserFullName = useAuthStore((state) => state.getUserFullName);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
   const [mounted, setMounted] = React.useState(false);
+  const [shouldAnimate, setShouldAnimate] = React.useState(false);
+  const hasMounted = React.useRef(false);
   React.useEffect(() => { setMounted(true); }, []);
+
+  React.useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+
+    setShouldAnimate(true);
+    const timeout = window.setTimeout(() => setShouldAnimate(false), 520);
+    return () => window.clearTimeout(timeout);
+  }, [sidebarOpen]);
 
   const currentUserId = React.useMemo(
     () => user?.user_id || user?._id,
@@ -217,6 +232,25 @@ export default function Sidebar() {
 
   const currentPath = mounted && typeof window !== 'undefined' ? window.location.pathname : '';
 
+  const storedUser = React.useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const stored = localStorage.getItem('auth-storage');
+      const parsed = stored ? JSON.parse(stored) : null;
+      return parsed?.state?.user ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const resolvedUser = isHydrated ? user : storedUser || user;
+  const resolvedFullName = resolvedUser
+    ? `${resolvedUser.first_name ?? ''} ${resolvedUser.last_name ?? ''}`.trim()
+    : '';
+
   const baseNavItems: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
     { label: 'DTR', href: '/dtr', icon: <ClockIcon /> },
@@ -248,25 +282,33 @@ export default function Sidebar() {
   };
 
   // Before mount, use placeholder values to match server render
-  const fullName = mounted ? getUserFullName() : '';
-  const initials = mounted && user ? `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.trim() || 'U' : 'U';
-  const roleLabel = mounted
-    ? user?.global_role === 'Superadmin'
+  const fullName = resolvedFullName || (mounted ? getUserFullName() : '');
+  const identiconValue = resolvedUser
+    ? String(
+        resolvedUser.user_id
+          || resolvedUser._id
+          || resolvedUser.email
+          || resolvedFullName
+          || 'user',
+      )
+    : 'user';
+  const roleLabel = resolvedUser
+    ? resolvedUser.global_role === 'Superadmin'
       ? 'Super Admin'
-      : user?.global_role === 'Admin'
+      : resolvedUser.global_role === 'Admin'
       ? 'Admin'
-      : user?.departments?.[0]?.department_role || 'Intern'
+      : resolvedUser.departments?.[0]?.department_role || 'Intern'
     : '';
 
   if (!sidebarOpen) {
     return (
-      <div className="fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 w-16 shadow-xl transition-all duration-300 ease-in-out">
-        <div className="flex items-center justify-center h-16 border-b border-slate-700">
-          <button onClick={toggleSidebar} className="text-slate-400 hover:text-white transition-colors">
+      <div className="fixed top-0 left-0 z-30 flex h-full w-16 flex-col border-r border-slate-800/70 bg-slate-950 shadow-2xl shadow-slate-950/40 transition-all duration-300 ease-in-out">
+        <div className="flex h-16 items-center justify-center border-b border-slate-800/70">
+          <button onClick={toggleSidebar} className="text-slate-400 transition-colors hover:text-white">
             <MenuIcon />
           </button>
         </div>
-        <div className="flex items-center justify-center border-b border-slate-700 py-2">
+        <div className="flex items-center justify-center border-b border-slate-800/70 py-2">
           <NotificationBell compact />
         </div>
         <nav className="flex-1 py-4">
@@ -275,20 +317,23 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               title={item.label}
-              className={`flex items-center justify-center h-12 mx-2 rounded-lg transition-colors mb-1
+              className={`relative mx-2 mb-1 flex h-12 items-center justify-center rounded-xl transition-colors
                 ${currentPath === item.href
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                  ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
+                  : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
             >
+              {currentPath === item.href ? (
+                <span className="absolute left-1 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
+              ) : null}
               {item.icon}
             </a>
           ))}
         </nav>
-        <div className="p-2 border-t border-slate-700">
+        <div className="border-t border-slate-800/70 p-2">
           <button
             onClick={handleLogout}
             title="Logout"
-            className="flex items-center justify-center w-full h-10 rounded-lg text-slate-400 hover:bg-red-900 hover:text-red-300 transition-colors"
+            className="flex h-10 w-full items-center justify-center rounded-xl text-red-100 transition-colors hover:bg-red-900/70 hover:text-red-200"
           >
             <LogoutIcon />
           </button>
@@ -298,29 +343,38 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="fixed top-0 left-0 h-full z-30 flex flex-col bg-slate-900 w-64 shadow-xl transition-all duration-300 ease-in-out">
+    <div className="fixed top-0 left-0 z-30 flex h-full w-64 flex-col border-r border-slate-800/70 bg-slate-950 shadow-2xl shadow-slate-950/40 transition-all duration-300 ease-in-out">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-slate-700">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 flex-shrink-0">
-          <span className="text-white font-bold text-sm">TC</span>
+      <div className="flex h-16 items-center gap-3 border-b border-slate-800/70 px-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-slate-900 shadow-lg shadow-blue-900/30">
+          <span className="text-sm font-semibold text-white">TC</span>
         </div>
-        <span className="text-white font-semibold text-lg flex-1 opacity-0 animate-fade-in">TeamCA</span>
+        <div className={`flex-1 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}>
+          <p className="text-sm font-semibold text-white">TeamCA</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">Intern Hub</p>
+        </div>
         <NotificationBell />
-        <button onClick={toggleSidebar} className="text-slate-400 hover:text-white transition-colors">
-            <MenuIcon />
-          </button>
-        </div>
+        <button onClick={toggleSidebar} className="text-slate-400 transition-colors hover:text-white">
+          <MenuIcon />
+        </button>
+      </div>
 
       {/* User info */}
-      <div className="px-4 py-3 border-b border-slate-700 opacity-0 animate-fade-in" style={{ animationDelay: '60ms' }}>
+      <div
+        className={`border-b border-slate-800/70 px-4 py-3 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}
+        style={shouldAnimate ? { animationDelay: '60ms' } : undefined}
+      >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm font-semibold">
-              {initials}
-            </span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 shadow-inner">
+            <UserIdenticon
+              value={identiconValue}
+              size={36}
+              className="h-9 w-9"
+              title="User avatar"
+            />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">{fullName}</p>
+            <p className="truncate text-sm font-medium text-white">{fullName}</p>
             <p className="text-xs text-slate-400">{roleLabel}</p>
           </div>
         </div>
@@ -333,12 +387,15 @@ export default function Sidebar() {
           <a
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5 opacity-0 animate-fade-in
+            className={`relative mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}
               ${currentPath === item.href
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-            style={{ animationDelay: `${100 + idx * 40}ms` }}
+                ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
+                : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+            style={shouldAnimate ? { animationDelay: `${100 + idx * 40}ms` } : undefined}
           >
+            {currentPath === item.href ? (
+              <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
+            ) : null}
             {item.icon}
             <span className="text-sm font-medium">{item.label}</span>
           </a>
@@ -347,19 +404,25 @@ export default function Sidebar() {
         {/* superadmin section */}
         {(adminNavItems.length > 0 || superadminNavItems.length > 0) && (
           <>
-            <div className="px-4 py-3 mt-2 mb-1 opacity-0 animate-fade-in" style={{ animationDelay: '320ms' }}>
-              <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">superadmin</p>
+            <div
+              className={`mb-1 mt-2 px-4 py-3 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}
+              style={shouldAnimate ? { animationDelay: '320ms' } : undefined}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">Administration</p>
             </div>
             {adminNavItems.map((item, idx) => (
               <a
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5 opacity-0 animate-fade-in
+                className={`relative mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}
                   ${currentPath === item.href
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                style={{ animationDelay: `${360 + idx * 40}ms` }}
+                    ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
+                    : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                style={shouldAnimate ? { animationDelay: `${360 + idx * 40}ms` } : undefined}
               >
+                {currentPath === item.href ? (
+                  <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
+                ) : null}
                 {item.icon}
                 <span className="text-sm font-medium">{item.label}</span>
               </a>
@@ -368,12 +431,15 @@ export default function Sidebar() {
               <a
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5 opacity-0 animate-fade-in
+                className={`relative mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}
                   ${currentPath === item.href
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                style={{ animationDelay: `${400 + idx * 40}ms` }}
+                    ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
+                    : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                style={shouldAnimate ? { animationDelay: `${400 + idx * 40}ms` } : undefined}
               >
+                {currentPath === item.href ? (
+                  <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
+                ) : null}
                 {item.icon}
                 <span className="text-sm font-medium">{item.label}</span>
               </a>
@@ -383,10 +449,13 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="p-3 border-t border-slate-700 opacity-0 animate-fade-in" style={{ animationDelay: '500ms' }}>
+      <div
+        className={`border-t border-slate-800/70 p-3 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}
+        style={shouldAnimate ? { animationDelay: '500ms' } : undefined}
+      >
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-slate-400 hover:bg-red-900/50 hover:text-red-300 transition-colors"
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-red-100 transition-colors hover:bg-red-900/60 hover:text-red-200"
         >
           <LogoutIcon />
           <span className="text-sm font-medium">Log Out</span>

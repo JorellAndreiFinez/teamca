@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LeaveRequestForm from './LeaveRequestForm';
 import LeaveListTable from './LeaveListTable';
@@ -105,22 +104,22 @@ export default function LeavePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-xs text-slate-600 font-medium">Pending</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{pendingCount}</p>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">Pending</p>
+          <p className="mt-1.5 text-2xl font-bold text-amber-900 tabular-nums">{pendingCount}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-xs text-slate-600 font-medium">Approved</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{approvedCount}</p>
+        <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">Approved</p>
+          <p className="mt-1.5 text-2xl font-bold text-emerald-900 tabular-nums">{approvedCount}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-xs text-slate-600 font-medium">Total Requests</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{leaves.length}</p>
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Total Requests</p>
+          <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{leaves.length}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <p className="text-xs text-slate-600 font-medium">Status</p>
-          <p className="text-sm font-semibold text-slate-900 mt-1">Active</p>
+        <div className="rounded-2xl border border-blue-200/70 bg-blue-50/80 p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-700">Status</p>
+          <p className="mt-2 text-sm font-semibold text-blue-900">Active</p>
         </div>
       </div>
 
@@ -160,19 +159,19 @@ export default function LeavePage() {
       {/* Content */}
       <div className="space-y-6">
         {activeTab === 'request' && (
-          <Card>
+          <div>
             <LeaveRequestForm onSubmit={handleCreateLeave} loading={formLoading} />
-          </Card>
+          </div>
         )}
 
         {activeTab === 'history' && (
-          <Card>
+          <div>
             <LeaveListTable
               leaves={leaves}
               isLoading={loading}
               onCancel={handleCancelLeave}
             />
-          </Card>
+          </div>
         )}
       </div>
     </div>

@@ -78,51 +78,51 @@ export function CompactDTRSummary({
 
   const hoursStatus =
     summary.totalHours >= summary.requiredHours
-      ? 'text-green-600'
-      : 'text-red-600';
+      ? 'text-emerald-700'
+      : 'text-rose-700';
 
   const periodLabel = period === 'week' ? 'Week' : 'Month';
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold text-slate-600">{periodLabel} Summary</p>
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{periodLabel} Summary</p>
       <div className="grid grid-cols-2 gap-3">
         {/* Total Hours */}
-        <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-          <div className="text-xs text-slate-600 mb-1">Total Hours</div>
-          <div className={`text-lg font-bold ${hoursStatus}`}>
+        <div className="rounded-2xl border border-blue-200/70 bg-blue-50/80 p-3 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Total Hours</div>
+          <div className={`mt-1.5 text-lg font-bold tabular-nums ${hoursStatus}`}>
             {summary.totalHours.toFixed(1)}h
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">
+          <div className="mt-0.5 text-xs text-slate-500">
             / {summary.requiredHours.toFixed(1)}h required
           </div>
         </div>
 
         {/* Overtime */}
-        <div className="bg-green-50 rounded-lg p-3 border border-green-100">
-          <div className="text-xs text-slate-600 mb-1">Overtime</div>
-          <div className="text-lg font-bold text-green-700">
+        <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-3 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Overtime</div>
+          <div className="mt-1.5 text-lg font-bold tabular-nums text-emerald-700">
             +{summary.overtimeHours.toFixed(1)}h
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">bonus</div>
+          <div className="mt-0.5 text-xs text-slate-500">bonus</div>
         </div>
 
         {/* Undertime */}
-        <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
-          <div className="text-xs text-slate-600 mb-1">Undertime</div>
-          <div className="text-lg font-bold text-orange-700">
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-3 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Undertime</div>
+          <div className="mt-1.5 text-lg font-bold tabular-nums text-amber-700">
             -{summary.undertimeHours.toFixed(1)}h
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">deficit</div>
+          <div className="mt-0.5 text-xs text-slate-500">deficit</div>
         </div>
 
         {/* Late Count */}
-        <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-100">
-          <div className="text-xs text-slate-600 mb-1">Late Count</div>
-          <div className="text-lg font-bold text-yellow-700">
+        <div className="rounded-2xl border border-violet-200/70 bg-violet-50/80 p-3 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Late Count</div>
+          <div className="mt-1.5 text-lg font-bold tabular-nums text-violet-700">
             {summary.lateCount}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">
+          <div className="mt-0.5 text-xs text-slate-500">
             {summary.lateCount === 1 ? 'entry' : 'entries'}
           </div>
         </div>

@@ -6,6 +6,7 @@ import type { InternProfile } from '../../types/user';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import UserIdenticon from '../../components/common/UserIdenticon';
 import { useDtrStore } from '../../store/dtrStore';
 import { useDtrSocket } from '../dtr/hooks/useDtrSocket';
 import type { DailyTimeRecord } from '../../types/dtr';
@@ -86,11 +87,6 @@ const formatDate = (value?: string | Date | null) => {
   }).format(date);
 };
 
-const getInitials = (firstName?: string, lastName?: string) => {
-  const first = firstName?.trim()?.[0] ?? '';
-  const last = lastName?.trim()?.[0] ?? '';
-  return first || last ? `${first}${last}`.toUpperCase() : 'U';
-};
 
 function DetailField({
   label,
@@ -165,8 +161,8 @@ export default function ProfilePage() {
 
   useDtrSocket(handleDtrSocketUpdate);
 
-  const initials = getInitials(user?.first_name, user?.last_name);
   const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || 'Unnamed User';
+  const identiconValue = String(user?.user_id || user?._id || user?.email || fullName || 'user');
   const jobTitleLabel = String((user as any)?.job_title || (user as any)?.job_role || 'Front End Developer');
   const departmentRoleLabel = String(user?.departments?.[0]?.department_role || 'Intern');
   const profileRoleLine = `${jobTitleLabel} · ${departmentRoleLabel}`;
@@ -380,7 +376,12 @@ export default function ProfilePage() {
           <div className="relative grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-center">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 shadow-lg shadow-slate-950/20 backdrop-blur">
-                <span className="text-xl font-semibold tracking-wide text-white">{initials}</span>
+                <UserIdenticon
+                  value={identiconValue}
+                  size={64}
+                  className="h-16 w-16"
+                  title="User avatar"
+                />
               </div>
 
               <div>

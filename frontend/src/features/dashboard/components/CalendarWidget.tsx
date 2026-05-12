@@ -141,7 +141,7 @@ export default function CalendarWidget({ records }: CalendarWidgetProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 flex-wrap">
+      <div className="flex items-center gap-4 mt-3 flex-wrap">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-green-400 inline-block" />
           <span className="text-xs text-gray-500">Present ({presentCount})</span>

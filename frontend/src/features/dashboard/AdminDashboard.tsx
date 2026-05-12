@@ -12,7 +12,7 @@ import type { Task } from "../../types/task";
 function UsersIcon() {
   return (
     <svg
-      className="w-5 h-5 text-blue-600"
+      className="w-5 h-5 text-slate-700"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -30,7 +30,7 @@ function UsersIcon() {
 function TaskIcon() {
   return (
     <svg
-      className="w-5 h-5 text-green-600"
+      className="w-5 h-5 text-slate-700"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -48,7 +48,7 @@ function TaskIcon() {
 function ClockIcon() {
   return (
     <svg
-      className="w-5 h-5 text-orange-600"
+      className="w-5 h-5 text-slate-700"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -66,7 +66,7 @@ function ClockIcon() {
 function DeptIcon() {
   return (
     <svg
-      className="w-5 h-5 text-purple-600"
+      className="w-5 h-5 text-slate-700"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -119,40 +119,33 @@ export default function AdminDashboard() {
     [tasks],
   );
 
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  };
-
   const stats = [
     {
       label: "Total Interns",
       value: 24,
       icon: <UsersIcon />,
-      tone: "blue" as const,
+      tone: "slate" as const,
       hint: "+3 this month",
     },
     {
       label: "Active Tasks",
       value: taskLoading ? "..." : activeTaskCount,
       icon: <TaskIcon />,
-      tone: "green" as const,
+      tone: "slate" as const,
       hint: taskLoading ? "Syncing tasks" : `${tasks.length} total tasks`,
     },
     {
       label: "Avg. Hours Rendered",
       value: "312h",
       icon: <ClockIcon />,
-      tone: "amber" as const,
+      tone: "slate" as const,
       hint: "65% of required",
     },
     {
       label: "Departments",
       value: 4,
       icon: <DeptIcon />,
-      tone: "purple" as const,
+      tone: "slate" as const,
       hint: "All active",
     },
   ];
@@ -162,9 +155,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {greeting()}, {user?.first_name ?? "Admin"}! 👋
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
           <p className="text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString("en-US", {
               weekday: "long",

@@ -2,6 +2,7 @@
 import "../styles/globals.css";
 import Sidebar from "../components/common/Sidebar";
 import SocketInitializer from "../components/SocketInitializer";
+import { ViewTransitions } from "astro:transitions";
 ---
 
 <html lang="en">
@@ -9,6 +10,7 @@ import SocketInitializer from "../components/SocketInitializer";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TeamCA</title>
+    <ViewTransitions />
     <script>
       // Client-side auth guard
       const stored = localStorage.getItem("auth-storage");
@@ -28,7 +30,7 @@ import SocketInitializer from "../components/SocketInitializer";
       }
     </script>
   </head>
-  <body class="bg-gray-50 min-h-screen">
+  <body class="bg-slate-50 min-h-screen">
     <!-- Socket Initializer -->
     <SocketInitializer client:load />
 

@@ -1286,7 +1286,7 @@ export default function TasksPage() {
           {modalToasts.map((toast) => (
             <div
               key={toast.id}
-              className={`${toast.exiting ? 'task-toast-out' : 'task-toast'} w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-white/95 px-3.5 py-2.5 text-sm text-slate-800 shadow-lg backdrop-blur`}
+              className={`${toast.exiting ? 'task-toast-out' : 'task-toast'} w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-sky-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-lg`}
             >
               {toast.message}
             </div>

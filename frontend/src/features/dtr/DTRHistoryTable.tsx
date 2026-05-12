@@ -85,15 +85,15 @@ export default function DTRHistoryTable({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'present':
-        return 'bg-green-100 text-green-700';
+        return 'border-emerald-200/70 bg-emerald-50 text-emerald-700';
       case 'late':
-        return 'bg-yellow-100 text-yellow-700';
+        return 'border-amber-200/70 bg-amber-50 text-amber-700';
       case 'very_late':
-        return 'bg-orange-100 text-orange-700';
+        return 'border-orange-200/70 bg-orange-50 text-orange-700';
       case 'absent':
-        return 'bg-red-100 text-red-700';
+        return 'border-rose-200/70 bg-rose-50 text-rose-700';
       default:
-        return 'bg-slate-100 text-slate-700';
+        return 'border-slate-200/70 bg-slate-50 text-slate-700';
     }
   };
 
@@ -115,7 +115,7 @@ export default function DTRHistoryTable({
   return (
     <div className="space-y-4">
       {/* Controls - Filter/Sort/Download (Task page styling) */}
-      <div className="flex justify-end gap-2 px-4 pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-2 px-4 pt-4">
         {/* Filter Button */}
         <button
           type="button"
@@ -123,10 +123,10 @@ export default function DTRHistoryTable({
             setPendingStatusFilter(statusFilter);
             setShowFilterModal(true);
           }}
-          className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+          className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium shadow-sm shadow-slate-950/5 transition ${
             statusFilter !== 'all'
-              ? 'border-blue-300 bg-blue-50 text-blue-700'
-              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+              ? 'border-blue-200/70 bg-blue-50 text-blue-700'
+              : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
           }`}
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -142,7 +142,7 @@ export default function DTRHistoryTable({
             setPendingSortBy(sortBy);
             setShowSortModal(true);
           }}
-          className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm shadow-slate-950/5 transition hover:border-slate-300 hover:bg-slate-50"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M7 12h10M10 17h4" />
@@ -155,7 +155,7 @@ export default function DTRHistoryTable({
           <button
             type="button"
             onClick={onDownload}
-            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm shadow-slate-950/5 transition hover:border-slate-300 hover:bg-slate-50"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -169,7 +169,7 @@ export default function DTRHistoryTable({
           <button
             type="button"
             onClick={onRemind}
-            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm shadow-slate-950/5 transition hover:border-slate-300 hover:bg-slate-50"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5" />
@@ -196,7 +196,7 @@ export default function DTRHistoryTable({
             ].map((option) => (
               <label
                 key={option.value}
-                className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                className="flex items-center gap-3 rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-700"
               >
                 <input
                   type="radio"
@@ -210,16 +210,16 @@ export default function DTRHistoryTable({
             ))}
           </div>
           <div className="mt-4 flex gap-2">
-            <Button
-              type="button"
-              className="flex-1 bg-gray-200 text-slate-700 hover:bg-gray-300"
-              onClick={() => setShowFilterModal(false)}
-            >
+              <Button
+                type="button"
+                className="flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                onClick={() => setShowFilterModal(false)}
+              >
               Cancel
             </Button>
             <Button
               type="button"
-              className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
               onClick={() => {
                 handleStatusFilterChange(pendingStatusFilter);
                 setShowFilterModal(false);
@@ -246,7 +246,7 @@ export default function DTRHistoryTable({
             ].map((option) => (
               <label
                 key={option.value}
-                className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                className="flex items-center gap-3 rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-700"
               >
                 <input
                   type="radio"
@@ -260,11 +260,11 @@ export default function DTRHistoryTable({
             ))}
           </div>
           <div className="mt-4 flex gap-2">
-            <Button
-              type="button"
-              className="flex-1 bg-gray-200 text-slate-700 hover:bg-gray-300"
-              onClick={() => setShowSortModal(false)}
-            >
+              <Button
+                type="button"
+                className="flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                onClick={() => setShowSortModal(false)}
+              >
               Cancel
             </Button>
             <Button
@@ -282,17 +282,17 @@ export default function DTRHistoryTable({
       </Dialog>
 
       {/* Table */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50">
+            <thead className="border-b border-slate-200 bg-slate-100/70">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Date</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Time In</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Time Out</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Status</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Hours & Breaks</th>
-                <th className="text-center px-4 py-3 font-semibold text-slate-700">Actions</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Date</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Time In</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Time Out</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Hours & Breaks</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -317,24 +317,24 @@ export default function DTRHistoryTable({
                     <tr
                       key={record._id?.toString()}
                       onClick={() => !isLeaveRecord && onRowClick?.(record)}
-                      className={`cursor-pointer transition hover:bg-slate-50 ${isLeaveRecord ? 'relative bg-slate-50' : ''}`}
+                      className={`cursor-pointer transition-colors hover:bg-slate-50 ${isLeaveRecord ? 'relative bg-slate-50' : ''}`}
                     >
                       {/* Date */}
-                      <td className="px-4 py-3 text-slate-900">{formatDate(record.date)}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{formatDate(record.date)}</td>
 
                       {/* Time In */}
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-slate-700 tabular-nums">
                         {primaryClock?.timeIn ? formatTime(primaryClock.timeIn) : '-'}
                       </td>
 
                       {/* Time Out */}
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-slate-700 tabular-nums">
                         {primaryClock?.timeOut ? formatTime(primaryClock.timeOut) : '-'}
                       </td>
 
                       {/* Status */}
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(record.attendanceStatus || 'present')}`}>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClass(record.attendanceStatus || 'present')}`}>
                           {getStatusLabel(record.attendanceStatus || 'present')}
                         </span>
                       </td>
@@ -346,7 +346,7 @@ export default function DTRHistoryTable({
                             timeIn={primaryClock.timeIn}
                             timeOut={primaryClock.timeOut}
                             breaks={primaryClock.breaks || []}
-                            className="w-48"
+                            className="w-52"
                           />
                         )}
                       </td>
@@ -359,7 +359,7 @@ export default function DTRHistoryTable({
                               e.stopPropagation();
                               onEditClick?.(record);
                             }}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/80 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                             title="Edit"
                           >
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -385,7 +385,7 @@ export default function DTRHistoryTable({
       </div>
 
       {/* Pagination (Task page format) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
         <p className="text-xs text-slate-500">
           Showing {start}-{end} of {total}
         </p>

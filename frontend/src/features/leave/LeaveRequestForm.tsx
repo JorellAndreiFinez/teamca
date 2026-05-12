@@ -96,24 +96,26 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
         )}
 
         {/* Date Range */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">Start Date</label>
+            <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Start Date</label>
             <Input
               type="date"
               name="startDate"
               value={formData.startDate}
               onChange={handleChange}
+              className="rounded-xl border-slate-200/80 focus:ring-blue-200"
               required
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">End Date</label>
+            <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">End Date</label>
             <Input
               type="date"
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
+              className="rounded-xl border-slate-200/80 focus:ring-blue-200"
               required
             />
           </div>
@@ -121,12 +123,12 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
 
         {/* Duration */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">Duration</label>
+          <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Duration</label>
           <select
             name="duration"
             value={formData.duration}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-400"
+            className="w-full rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-900 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
           >
             <option value="0.5">0.5 day (4 hours)</option>
             <option value="1">1 day (8 hours)</option>
@@ -137,7 +139,7 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
 
         {/* Reason */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">Reason</label>
+          <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Reason</label>
           <textarea
             name="reason"
             value={formData.reason}
@@ -145,18 +147,14 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
             placeholder="Explain the reason for your leave request..."
             maxLength={500}
             rows={4}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-400"
+            className="w-full rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-900 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
             required
           />
           <p className="text-xs text-slate-500">{formData.reason.length}/500 characters</p>
         </div>
 
         {/* Submit Button */}
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-        >
+        <Button type="submit" disabled={loading} className="w-full rounded-xl">
           {loading ? 'Submitting...' : 'Submit Leave Request'}
         </Button>
       </form>

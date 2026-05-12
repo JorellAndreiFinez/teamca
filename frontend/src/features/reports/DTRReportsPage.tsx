@@ -222,23 +222,23 @@ export default function DTRReportsPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-900">DTR Reports & Analytics</h1>
-        <p className="text-sm text-slate-600 mt-1">Attendance tracking and analysis</p>
+        <p className="mt-1 text-sm text-slate-600">Attendance tracking and analysis</p>
       </div>
 
       {/* Filters */}
-      <Card>
-        <div className="p-4 space-y-4">
-          <div className="flex gap-4 flex-wrap items-end">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+      <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
+        <div className="space-y-4 p-5">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="min-w-[200px] flex-1">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Start Date</label>
               <Input
                 type="date"
                 value={dateRange.startDate}
                 onChange={(e) => handleDateRangeChange(e.target.value, dateRange.endDate)}
               />
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+            <div className="min-w-[200px] flex-1">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">End Date</label>
               <Input
                 type="date"
                 value={dateRange.endDate}
@@ -256,7 +256,7 @@ export default function DTRReportsPage() {
           </div>
 
           {/* Export Buttons */}
-          <div className="flex gap-2 pt-2 border-t">
+          <div className="flex gap-2 border-t border-slate-200 pt-4">
             <Button variant="secondary" size="sm" onClick={exportToPDF} className="flex items-center gap-2">
               <Download size={16} />
               Export PDF
@@ -271,77 +271,85 @@ export default function DTRReportsPage() {
 
       {/* Stats Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-32 bg-slate-100 rounded-lg animate-pulse" />
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-slate-100" />
           ))}
         </div>
       ) : stats ? (
         <>
           {/* Main Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs text-slate-600 font-medium">Working Days</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalWorkingDays}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Working Days</p>
+                    <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{stats.totalWorkingDays}</p>
                   </div>
-                  <Calendar className="text-blue-500" size={32} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-200/70 bg-blue-50">
+                    <Calendar className="text-blue-700" size={20} />
+                  </div>
                 </div>
               </div>
             </Card>
 
-            <Card>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
+            <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs text-slate-600 font-medium">Total Hours</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalHoursWorked.toFixed(1)}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Total Hours</p>
+                    <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{stats.totalHoursWorked.toFixed(1)}</p>
                   </div>
-                  <Clock className="text-green-500" size={32} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200/70 bg-emerald-50">
+                    <Clock className="text-emerald-700" size={20} />
+                  </div>
                 </div>
               </div>
             </Card>
 
-            <Card>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
+            <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs text-slate-600 font-medium">Avg Hours/Day</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{stats.averageDailyHours.toFixed(1)}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Avg Hours/Day</p>
+                    <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{stats.averageDailyHours.toFixed(1)}</p>
                   </div>
-                  <TrendingUp className="text-purple-500" size={32} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200/70 bg-violet-50">
+                    <TrendingUp className="text-violet-700" size={20} />
+                  </div>
                 </div>
               </div>
             </Card>
 
-            <Card>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
+            <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs text-slate-600 font-medium">Late Arrivals</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{stats.lateArrivals}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Late Arrivals</p>
+                    <p className="mt-1.5 text-2xl font-bold text-slate-900 tabular-nums">{stats.lateArrivals}</p>
                   </div>
-                  <AlertCircle className="text-red-500" size={32} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200/70 bg-rose-50">
+                    <AlertCircle className="text-rose-700" size={20} />
+                  </div>
                 </div>
               </div>
             </Card>
           </div>
 
           {/* Detailed Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <div className="p-4">
-                <p className="text-sm font-medium text-slate-700 mb-3">Attendance Breakdown</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card className="rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="p-5">
+                <p className="mb-3 text-sm font-semibold text-slate-700">Attendance Breakdown</p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Present</span>
-                    <span className="font-semibold text-green-700">{stats.presentDays}</span>
+                    <span className="font-semibold text-emerald-700">{stats.presentDays}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Absent</span>
-                    <span className="font-semibold text-red-700">{stats.absentDays}</span>
+                    <span className="font-semibold text-rose-700">{stats.absentDays}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">On Leave</span>

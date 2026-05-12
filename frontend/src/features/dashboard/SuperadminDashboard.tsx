@@ -10,7 +10,7 @@ import type { Task } from '../../types/task';
 
 function UsersIcon() {
   return (
-    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
@@ -19,7 +19,7 @@ function UsersIcon() {
 
 function EmailIcon() {
   return (
-    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
     </svg>
@@ -28,7 +28,7 @@ function EmailIcon() {
 
 function DeptIcon() {
   return (
-    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
@@ -37,7 +37,7 @@ function DeptIcon() {
 
 function TaskIcon() {
   return (
-    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -54,6 +54,13 @@ const MOCK_WHITELIST = [
   { id: 2, email: 'intern2@example.com', status: 'Pending Setup', date: '2024-02-01' },
   { id: 3, email: 'admin1@example.com', status: 'Setup Complete', date: '2024-01-10' },
 ];
+
+const ACTION_TONE_STYLES: Record<'blue' | 'emerald' | 'amber' | 'violet', string> = {
+  blue: 'border-blue-200/70 bg-blue-50 text-blue-700',
+  emerald: 'border-emerald-200/70 bg-emerald-50 text-emerald-700',
+  amber: 'border-amber-200/70 bg-amber-50 text-amber-700',
+  violet: 'border-violet-200/70 bg-violet-50 text-violet-700',
+};
 
 export default function SuperadminDashboard() {
   const user = useAuthStore((state) => state.user);
@@ -98,22 +105,15 @@ export default function SuperadminDashboard() {
     [tasks],
   );
 
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
   const stats = [
-    { label: 'Total Users', value: 32, icon: <UsersIcon />, tone: 'blue' as const, hint: 'Directory count' },
-    { label: 'Whitelisted Emails', value: whitelist.length, icon: <EmailIcon />, tone: 'green' as const, hint: 'Access-ready emails' },
-    { label: 'Departments', value: 4, icon: <DeptIcon />, tone: 'purple' as const, hint: 'Configured teams' },
+    { label: 'Total Users', value: 32, icon: <UsersIcon />, tone: 'slate' as const, hint: 'Directory count' },
+    { label: 'Whitelisted Emails', value: whitelist.length, icon: <EmailIcon />, tone: 'slate' as const, hint: 'Access-ready emails' },
+    { label: 'Departments', value: 4, icon: <DeptIcon />, tone: 'slate' as const, hint: 'Configured teams' },
     {
       label: 'Active Tasks',
       value: taskLoading ? '...' : activeTaskCount,
       icon: <TaskIcon />,
-      tone: 'green' as const,
+      tone: 'slate' as const,
       hint: taskLoading ? 'Syncing tasks' : `${tasks.length} total tasks`,
     },
   ];
@@ -165,9 +165,7 @@ export default function SuperadminDashboard() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {greeting()}, {user?.first_name ?? 'Superadmin'}! 👋
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Superadmin Overview</h1>
           <p className="text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString('en-US', {
               weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -240,18 +238,23 @@ export default function SuperadminDashboard() {
         <Card title="Quick Actions">
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Manage Users', href: '/users', desc: 'View & edit user accounts', color: 'border-blue-200 hover:bg-blue-50' },
-              { label: 'View Tasks', href: '/tasks', desc: 'Monitor all active tasks', color: 'border-green-200 hover:bg-green-50' },
-              { label: 'DTR Records', href: '/dtr', desc: 'Review attendance logs', color: 'border-orange-200 hover:bg-orange-50' },
-              { label: 'My Profile', href: '/profile', desc: 'Update your information', color: 'border-purple-200 hover:bg-purple-50' },
+              { label: 'Manage Users', href: '/users', desc: 'View & edit user accounts', tone: 'blue' as const, short: 'U' },
+              { label: 'View Tasks', href: '/tasks', desc: 'Monitor all active tasks', tone: 'emerald' as const, short: 'T' },
+              { label: 'DTR Records', href: '/dtr', desc: 'Review attendance logs', tone: 'amber' as const, short: 'D' },
+              { label: 'My Profile', href: '/profile', desc: 'Update your information', tone: 'violet' as const, short: 'P' },
             ].map((action) => (
               <a
                 key={action.label}
                 href={action.href}
-                className={`block p-4 rounded-lg border ${action.color} transition-colors`}
+                className="group flex h-full flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
               >
-                <p className="text-sm font-semibold text-gray-800">{action.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{action.desc}</p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900">{action.label}</p>
+                  <span className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border text-xs font-semibold ${ACTION_TONE_STYLES[action.tone]}`}>
+                    {action.short}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{action.desc}</p>
               </a>
             ))}
           </div>
