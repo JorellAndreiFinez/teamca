@@ -1,0 +1,33 @@
+# Dependencies (reinstalled inside Docker)
+node_modules
+**/node_modules
+
+# Build outputs (rebuilt inside Docker)
+**/dist
+**/.astro
+
+# Dev / tooling artifacts
+**/.husky
+**/.git
+**/.gitignore
+**/.eslintcache
+**/coverage
+**/*.log
+**/*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Docker files themselves
+**/Dockerfile
+**/docker-compose*.yml
+**/.dockerignore
+
+# Docs / website workspaces (not needed for runtime)
+documentation
+website
+
+# Secrets — never bake into image
+# .env is passed at runtime via env_file, NOT copied
+.env
