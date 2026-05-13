@@ -19,8 +19,6 @@ build/
 # Agents for UI (hehe)
 .agents/
 .claude/
-*.md
-!README.md
 
 # System files
 .DS_Store
