@@ -8,7 +8,12 @@ export interface ITaskFeedback extends Document {
 }
 
 const taskFeedbackSchema = new Schema<ITaskFeedback>({
-  task_id: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true },
+  task_id: {
+    type: Schema.Types.ObjectId,
+    ref: "Task",
+    required: true,
+    index: true,
+  },
   supervisor_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
   comments: { type: String, required: true, trim: true },
   created_at: { type: Date, default: Date.now },
@@ -16,4 +21,7 @@ const taskFeedbackSchema = new Schema<ITaskFeedback>({
 
 taskFeedbackSchema.index({ task_id: 1, created_at: -1 });
 
-export default mongoose.model<ITaskFeedback>("TaskFeedback", taskFeedbackSchema);
+export default mongoose.model<ITaskFeedback>(
+  "TaskFeedback",
+  taskFeedbackSchema,
+);

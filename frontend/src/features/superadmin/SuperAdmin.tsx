@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/Card";
+import { StatCardSkeleton, WidgetSkeleton } from "../../components/ui/Skeleton";
 
 export default function SuperAdmin() {
   const [users, setUsers] = useState<User[]>([]);
@@ -51,51 +52,57 @@ export default function SuperAdmin() {
   return (
     <div className="space-y-4">
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">
-              Total Users
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CardTitle>{isLoading ? "-" : summary.totalUsers}</CardTitle>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">
-              Active Users
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CardTitle>{isLoading ? "-" : summary.activeUsers}</CardTitle>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">
-              Whitelisted
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CardTitle>{isLoading ? "-" : summary.whitelistedUsers}</CardTitle>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wide">
-              Management
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CardTitle>{isLoading ? "-" : summary.managementUsers}</CardTitle>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, index) => <StatCardSkeleton key={index} />)
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Total Users
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CardTitle>{summary.totalUsers}</CardTitle>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Active Users
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CardTitle>{summary.activeUsers}</CardTitle>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Whitelisted
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CardTitle>{summary.whitelistedUsers}</CardTitle>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Management
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CardTitle>{summary.managementUsers}</CardTitle>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <UserDirectory />
+      {isLoading ? <WidgetSkeleton lines={5} /> : <UserDirectory />}
     </div>
   );
 }

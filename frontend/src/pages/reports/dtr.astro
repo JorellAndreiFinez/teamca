@@ -1,0 +1,8 @@
+---
+import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import DTRReportsPage from "@/features/reports/DTRReportsPage";
+---
+
+<DashboardLayout pageTitle="DTR Reports" requiredAuthentication={true}>
+  <DTRReportsPage client:load />
+</DashboardLayout>

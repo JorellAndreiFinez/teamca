@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { ActivityLogsPage } from "../features/activityLogs/ActivityLogsPage";
+---
+
+<DashboardLayout>
+  <div class="h-full overflow-hidden">
+    <ActivityLogsPage client:load />
+  </div>
+</DashboardLayout>

@@ -1,6 +1,6 @@
-// backend\src\services\authService.ts
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User";
 import InternProfile from "../models/InternProfile";
 
@@ -27,7 +27,9 @@ const issueToken = (userId: string) => {
     throw new Error("JWT secret is not configured.");
   }
 
-  return jwt.sign({ sub: userId }, secret, { expiresIn: "1d" });
+  return jwt.sign({ sub: userId, user_id: userId }, secret, {
+    expiresIn: "1d",
+  });
 };
 
 export const checkEmail = async (email: string) => {
@@ -51,6 +53,7 @@ export const login = async (payload: LoginInput) => {
   const user = await User.findOne({
     email: payload.email.trim().toLowerCase(),
   });
+
   if (!user || !user.password_hash) {
     throw new Error("Invalid credentials.");
   }
@@ -86,6 +89,7 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   const user = await User.findOne({
     email: payload.email.trim().toLowerCase(),
   });
+
   if (!user) {
     throw new Error("Email is not whitelisted.");
   }
@@ -103,24 +107,25 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   user.is_active = true;
 
   if (payload.department_id) {
-    user.department_id = payload.department_id;
-    user.department_role = "Intern";
+    user.departments = [
+      {
+        department_id: new mongoose.Types.ObjectId(payload.department_id),
+        department_role: "Intern",
+      },
+    ];
   }
 
   await user.save();
 
   if (payload.school_university && payload.required_hours) {
     const existingProfile = await InternProfile.findOne({ user_id: user._id });
-    const expectedEndDate = new Date();
-    expectedEndDate.setDate(expectedEndDate.getDate() + 90);
 
     if (!existingProfile) {
       await InternProfile.create({
         user_id: user._id,
-        school: payload.school_university,
+        school_university: payload.school_university,
         required_hours: payload.required_hours,
         rendered_hours_total: 0,
-        expected_end_date: expectedEndDate,
       });
     }
   }

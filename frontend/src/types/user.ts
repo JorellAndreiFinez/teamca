@@ -13,24 +13,29 @@ export interface User {
 
   first_name?: string;
   last_name?: string;
-  email: string;
+  email?: string;
 
   global_role?: GlobalRole;
   is_active?: boolean;
 
   departments?: DepartmentAssignment[];
 
-  createdAt?: string; // backend ISO string
+  working_hours?: {
+    start?: string;
+    end?: string;
+  };
+
+  working_days?: ("M" | "T" | "W" | "Th" | "F" | "Sat" | "Sun")[];
+
+  createdAt?: string;
   updatedAt?: string;
 }
-
 export interface InternProfile {
   profile_id: number;
   user_id: string;
   school_university: string;
   required_hours: number;
   rendered_hours_total: number;
-  expected_end_date: Date;
   actual_end_date?: Date;
 }
 
@@ -38,6 +43,8 @@ export interface Department {
   _id?: string;
   department_id?: number | string;
   department_name: string;
+  description?: string | null;
+  department_head?: string | null;
   supervisor_id?: string;
   head_id?: string;
   created_at?: Date;

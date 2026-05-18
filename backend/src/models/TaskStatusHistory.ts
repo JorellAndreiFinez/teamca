@@ -11,7 +11,12 @@ export interface ITaskStatusHistory extends Document {
 }
 
 const taskStatusHistorySchema = new Schema<ITaskStatusHistory>({
-  task_id: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true },
+  task_id: {
+    type: Schema.Types.ObjectId,
+    ref: "Task",
+    required: true,
+    index: true,
+  },
   updated_by: { type: Schema.Types.ObjectId, ref: "User", required: true },
   previous_status: {
     type: String,
@@ -29,4 +34,7 @@ const taskStatusHistorySchema = new Schema<ITaskStatusHistory>({
 
 taskStatusHistorySchema.index({ task_id: 1, timestamp: -1 });
 
-export default mongoose.model<ITaskStatusHistory>("TaskStatusHistory", taskStatusHistorySchema);
+export default mongoose.model<ITaskStatusHistory>(
+  "TaskStatusHistory",
+  taskStatusHistorySchema,
+);

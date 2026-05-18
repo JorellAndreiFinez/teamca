@@ -16,6 +16,10 @@ build/
 .vscode/
 .idea/
 
+# Agents for UI (hehe)
+.agents/
+.claude/
+
 # System files
 .DS_Store
 Thumbs.db

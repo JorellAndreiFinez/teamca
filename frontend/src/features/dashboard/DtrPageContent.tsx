@@ -4,6 +4,7 @@ import { dtrService } from '../../services/dtrService';
 import type { DailyTimeRecord } from '../../types/dtr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
 import DtrAnalyticsWidget from '../../components/widgets/DtrAnalyticsWidget';
+import { ActivityListItemSkeleton } from '../../components/ui/Skeleton';
 
 export default function DtrPageContent() {
   const { user, isIntern, canManageOwnDepartment, canViewAllDepartments } = useAuthStore((state) => ({
@@ -24,7 +25,7 @@ export default function DtrPageContent() {
     const loadRecords = async () => {
       setIsLoading(true);
       try {
-        const data = await dtrService.getDTRRecords(user.user_id);
+        const data = await dtrService.getDTRRecords();
         setRecords(data);
       } catch {
         setRecords([]);
@@ -63,7 +64,13 @@ export default function DtrPageContent() {
           <CardTitle className="text-lg">Recent Records</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-slate-500">Loading records...</p> : null}
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <ActivityListItemSkeleton key={index} />
+              ))}
+            </div>
+          ) : null}
 
           {!isLoading && recentRecords.length === 0 ? (
             <p className="text-sm text-slate-500">No DTR records available yet.</p>
@@ -71,12 +78,12 @@ export default function DtrPageContent() {
 
           {!isLoading && recentRecords.length > 0 ? (
             <ul className="space-y-2">
-              {recentRecords.map((record) => (
-                <li key={record.dtr_id} className="rounded-md border border-slate-200 p-3">
+              {recentRecords.map((record, index) => (
+                <li key={record._id || index} className="rounded-md border border-slate-200 p-3">
                   <p className="text-sm font-medium text-slate-900">
                     {new Date(record.date).toLocaleDateString()} • {record.status}
                   </p>
-                  <p className="text-xs text-slate-500">Hours rendered: {record.hours_rendered ?? 0}</p>
+                  <p className="text-xs text-slate-500">Hours rendered: {record.totalHours ?? 0}</p>
                 </li>
               ))}
             </ul>

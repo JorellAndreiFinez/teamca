@@ -8,8 +8,18 @@ export interface ITaskComment extends Document {
 }
 
 const taskCommentSchema = new Schema<ITaskComment>({
-  task_id: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true },
-  user_id: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  task_id: {
+    type: Schema.Types.ObjectId,
+    ref: "Task",
+    required: true,
+    index: true,
+  },
+  user_id: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+  },
   message: { type: String, required: true, trim: true, maxlength: 2000 },
   created_at: { type: Date, default: Date.now },
 });

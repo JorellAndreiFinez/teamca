@@ -1,0 +1,36 @@
+{
+  "name": "teamca-documentation",
+  "version": "1.0.0",
+  "description": "Complete documentation system for TeamCA intern management system using Astro Starlight",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "docs:clean": "rm -rf dist .astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.0",
+    "astro": "^6.1.8"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "documentation",
+    "starlight",
+    "astro",
+    "teamca",
+    "intern-management",
+    "api-docs"
+  ],
+  "author": "TeamCA Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

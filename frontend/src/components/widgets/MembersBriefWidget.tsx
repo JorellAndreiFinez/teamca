@@ -1,5 +1,6 @@
 import type { User } from '../../types/user';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { ActivityListItemSkeleton } from '../ui/Skeleton';
 
 type MembersBriefWidgetProps = {
   title: string;
@@ -14,7 +15,13 @@ export default function MembersBriefWidget({ title, members, isLoading = false }
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading ? <p className="text-sm text-slate-500">Loading members...</p> : null}
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <ActivityListItemSkeleton key={index} />
+            ))}
+          </div>
+        ) : null}
 
         {!isLoading && members.length === 0 ? (
           <p className="text-sm text-slate-500">No members available.</p>
@@ -28,7 +35,7 @@ export default function MembersBriefWidget({ title, members, isLoading = false }
                   {member.first_name} {member.last_name}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {member.department_role} • {member.global_role}
+                  {member.departments?.[0]?.department_role ?? 'Unassigned'} • {member.global_role}
                 </p>
               </li>
             ))}

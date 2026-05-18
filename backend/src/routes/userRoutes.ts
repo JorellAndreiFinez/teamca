@@ -1,4 +1,3 @@
-// backend/src/routes/userRoutes.ts
 import express from "express";
 import {
   getUsers,
@@ -13,7 +12,6 @@ import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
 
 const router = express.Router();
 
-// Only Superadmin can access whitelist
 router.get(
   "/whitelisted",
   authMiddleware,
@@ -21,23 +19,17 @@ router.get(
   getWhitelistedUsers,
 );
 
-// Superadmin OR Admin can access all users
 router.get(
   "/",
   authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"], ["Supervisor"]),
+  requireAnyRole(["Superadmin", "Admin"], ["Head", "Supervisor"]),
   getUsers,
 );
 
 router.get("/:userId", authMiddleware, getUserById);
 router.put("/:userId", authMiddleware, updateUser);
 
-router.post(
-  "/",
-  authMiddleware,
-  requireAnyRole(["Superadmin", "Admin"]),
-  createUser,
-);
+router.post("/", authMiddleware, requireGlobalRole("Superadmin"), createUser);
 
 router.delete(
   "/:userId",

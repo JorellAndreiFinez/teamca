@@ -1,8 +1,8 @@
-declare module 'axios' {
+declare module "axios" {
   export interface AxiosRequestHeaders {
     [key: string]: string | undefined;
     Authorization?: string;
-    'Content-Type'?: string;
+    "Content-Type"?: string;
   }
 
   export interface InternalAxiosRequestConfig {
@@ -27,7 +27,10 @@ declare module 'axios' {
   }
 
   export interface InterceptorManager<V> {
-    use(onFulfilled?: (value: V) => V | Promise<V>, onRejected?: (error: AxiosError) => unknown): number;
+    use(
+      onFulfilled?: (value: V) => V | Promise<V>,
+      onRejected?: (error: AxiosError) => unknown,
+    ): number;
   }
 
   export interface AxiosInstance {
@@ -35,11 +38,29 @@ declare module 'axios' {
       request: InterceptorManager<InternalAxiosRequestConfig>;
       response: InterceptorManager<AxiosResponse>;
     };
-    get<T = unknown>(url: string, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
-    post<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
-    put<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
-    patch<T = unknown>(url: string, data?: unknown, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
-    delete<T = unknown>(url: string, config?: InternalAxiosRequestConfig): Promise<AxiosResponse<T>>;
+    get<T = unknown>(
+      url: string,
+      config?: InternalAxiosRequestConfig,
+    ): Promise<AxiosResponse<T>>;
+    post<T = unknown>(
+      url: string,
+      data?: unknown,
+      config?: InternalAxiosRequestConfig,
+    ): Promise<AxiosResponse<T>>;
+    put<T = unknown>(
+      url: string,
+      data?: unknown,
+      config?: InternalAxiosRequestConfig,
+    ): Promise<AxiosResponse<T>>;
+    patch<T = unknown>(
+      url: string,
+      data?: unknown,
+      config?: InternalAxiosRequestConfig,
+    ): Promise<AxiosResponse<T>>;
+    delete<T = unknown>(
+      url: string,
+      config?: InternalAxiosRequestConfig,
+    ): Promise<AxiosResponse<T>>;
   }
 
   export interface AxiosStatic {

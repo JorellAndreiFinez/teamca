@@ -1,48 +1,73 @@
-// frontend/src/services/userService.ts
 import api from "./api";
-import { User } from "../types/user";
+import { User, UserProfile } from "../types/user";
+
+export type UserProfileResponse = UserProfile;
+
+// safe API error shape
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+};
+
+// proper payload types (no any)
+export type CreateUserPayload = Record<string, unknown>;
+export type ActivateWhitelistPayload = Record<string, unknown>;
 
 export const userService = {
   getAllUsers: async (): Promise<User[]> => {
     try {
       const { data } = await api.get<User[]>("/users");
       return data;
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
+    } catch {
       return [];
     }
   },
 
-  createUser: async (payload: any): Promise<User> => {
-    try {
-      const { data } = await api.post<User>("/users", payload);
-      console.log("[createUser] success:", data);
-      return data;
-    } catch (err) {
-      console.error("[createUser] error:", err);
-      throw err;
-    }
+  createUser: async (payload: CreateUserPayload): Promise<User> => {
+    const { data } = await api.post<User>("/users", payload);
+    return data;
   },
 
   updateUser: async (userId: string, payload: Partial<User>): Promise<User> => {
-    try {
-      const { data } = await api.put<User>(`/users/${userId}`, payload);
-      console.log("[updateUser] success:", data);
-      return data;
-    } catch (err) {
-      console.error("[updateUser] error:", err);
-      throw err;
-    }
+    const { data } = await api.put<User>(`/users/${userId}`, payload);
+    return data;
   },
 
-  // DELETE USER
   deleteUser: async (userId: string): Promise<void> => {
     try {
       await api.delete(`/users/${userId}`);
-      console.log(`[deleteUser] User ${userId} deleted successfully`);
-    } catch (err) {
-      console.error(`[deleteUser] Failed to delete user ${userId}:`, err);
-      throw err;
+    } catch (err: unknown) {
+      const e = err as ApiError;
+
+      const message =
+        e?.response?.data?.message || e?.message || "Failed to delete user";
+
+      throw new Error(message, { cause: err });
     }
+  },
+
+  getProfile: async (userId: string): Promise<UserProfileResponse> => {
+    const { data } = await api.get<UserProfileResponse>(`/users/${userId}`);
+    return data;
+  },
+
+  createWhitelistedUser: async (email: string): Promise<User> => {
+    const { data } = await api.post<User>("/users/whitelist", { email });
+    return data;
+  },
+
+  activateWhitelistedUser: async (
+    userId: string,
+    payload: ActivateWhitelistPayload,
+  ): Promise<User> => {
+    const { data } = await api.post<User>(
+      `/users/${userId}/activate-whitelist`,
+      payload,
+    );
+    return data;
   },
 };

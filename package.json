@@ -1,0 +1,57 @@
+{
+  "name": "teamca",
+  "version": "1.0.0",
+  "description": "TeamCA - Comprehensive Intern Management System",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "website",
+    "documentation"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "backend:dev": "npm run dev -w backend",
+    "backend:build": "npm run build -w backend",
+    "frontend:dev": "npm run dev -w frontend",
+    "frontend:build": "npm run build -w frontend",
+    "website:dev": "npm run dev -w website",
+    "website:build": "npm run build -w website",
+    "docs:dev": "npm run dev -w documentation",
+    "docs:build": "npm run build -w documentation",
+    "docs:preview": "npm run preview -w documentation",
+    "lint:backend": "npm run lint -w backend",
+    "lint:frontend": "npm run lint -w frontend",
+    "lint:website": "npm run lint -w website",
+    "lint:fix:backend": "npm run lint:fix -w backend",
+    "lint:fix:frontend": "npm run lint:fix -w frontend",
+    "lint:fix:website": "npm run lint:fix -w website",
+    "lint:fix:all": "npm run lint:fix:backend && npm run lint:fix:frontend && npm run lint:fix:website",
+    "format": "npm run format --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "prepare": "husky && husky install"
+  },
+  "keywords": [
+    "intern-management",
+    "task-tracking",
+    "dtr",
+    "rbac",
+    "full-stack"
+  ],
+  "author": "TeamCA Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "9.39.4",
+    "husky": "^8.0.0"
+  }
+}
