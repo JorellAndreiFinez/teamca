@@ -249,7 +249,7 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
       .lean();
 
     res.json(whitelistedUsers);
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };

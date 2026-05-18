@@ -38,7 +38,7 @@ export const getActivityLogsHandler = async (req: Request, res: Response) => {
     );
 
     res.json(result);
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "failed to fetch activity logs" });
   }
 };
@@ -72,7 +72,7 @@ export const exportActivityLogsHandler = async (
       `attachment; filename="activity-logs-${new Date().toISOString().split("T")[0]}.csv"`,
     );
     res.send(csv);
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "failed to export activity logs" });
   }
 };

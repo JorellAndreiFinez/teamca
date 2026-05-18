@@ -19,7 +19,7 @@ export const connectDB = async () => {
       serverSelectionTimeoutMS: process.env.NODE_ENV === 'production' ? 30000 : 5000,
       socketTimeoutMS: process.env.NODE_ENV === 'production' ? 45000 : 10000,
     });
-  } catch (err) {
+  } catch {
     process.exit(1);
   }
 };

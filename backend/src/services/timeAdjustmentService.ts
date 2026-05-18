@@ -1,6 +1,5 @@
 import TimeAdjustmentRequest from "../models/TimeAdjustmentRequest";
 import DTR from "../models/DTR";
-import User from "../models/User";
 import { emitUserDTRUpdated } from "../socket/io";
 
 export const timeAdjustmentService = {

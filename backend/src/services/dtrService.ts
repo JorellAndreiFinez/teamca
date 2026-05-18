@@ -5,7 +5,6 @@ import DTRSummary from "../models/DTRSummary";
 import User from "../models/User";
 import Leave from "../models/Leave";
 import { emitUserDTRUpdated } from "../socket/io";
-import type { IDTR } from "../models/DTR";
 
 /**
  * CONFIGURATION
