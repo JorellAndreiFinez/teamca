@@ -41,7 +41,7 @@ export const logActivity = async (input: LogActivityInput): Promise<void> => {
     void log.save().catch(() => {
       // Intentionally ignore activity logging write failures.
     });
-  } catch (err) {
+  } catch {
     // Intentionally ignore activity logging runtime failures.
   }
 };

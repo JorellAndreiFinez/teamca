@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Button from "../ui/Button";
 import MobileMenu from "./MobileMenu";
 import "../../styles/global.css";
-import { File, LogIn } from "lucide-react";
+// import { File, LogIn } from "lucide-react";
 
 const Navbar: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -22,28 +22,30 @@ const Navbar: React.FC = () => {
         </a>
 
         <div className="hidden md:flex gap-12 justify-center flex-1">
-          {links.map((link) => (
-            <a
-              key={link}
-              href={`/${link.toLowerCase()}`}
-              className="text-sm font-medium transition hover:text-primary-color"
-            >
-              {link}
-            </a>
-          ))}
+          {links.map((link) => {
+            const path = link === "Home" ? "/" : `/${link.toLowerCase()}`;
+
+            return (
+              <a
+                key={link}
+                href={path}
+                className="text-sm font-medium transition hover:text-primary-color"
+              >
+                {link}
+              </a>
+            );
+          })}
         </div>
 
         <div className="hidden md:flex items-center gap-4">
           <Button
             variant="secondary"
-            className="flex items-center gap-2 backdrop-blur-md "
+            className="flex items-center gap-2 backdrop-blur-md text-sm"
           >
-            <File className="w-4 h-4" />
-            Application Guideline
+            Signin
           </Button>
 
-          <Button variant="default" className="flex items-center gap-2">
-            <LogIn className="w-4 h-4" />
+          <Button variant="default" className="flex items-center gap-2 text-sm">
             Login
           </Button>
         </div>

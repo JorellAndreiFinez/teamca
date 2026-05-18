@@ -13,7 +13,7 @@ const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    "px-6 py-3 rounded-md font-semibold transition inline-block w-auto text-center font-sans";
+    "px-4 py-2 rounded-sm font-semibold transition inline-block w-auto text-center font-sans";
 
   let style: React.CSSProperties = {};
   let variantClasses = "";
@@ -24,7 +24,7 @@ const Button: React.FC<ButtonProps> = ({
         background: "var(--btn-default)",
         color: "var(--primary-color)",
         textTransform: "uppercase",
-        border: "3px solid var(--br-color-default)",
+        border: "2px solid var(--br-color-default)",
       };
       variantClasses = "hover:brightness-110";
       break;
@@ -33,7 +33,7 @@ const Button: React.FC<ButtonProps> = ({
         background: "var(--btn-secondary)",
         color: "var(--white-color)",
         textTransform: "uppercase",
-        border: "3px solid var(--br-color-secondary)",
+        border: "2px solid var(--br-color-secondary)",
       };
       variantClasses = "hover:bg-[var(--light-primary-color)]";
       break;

@@ -1,0 +1,22 @@
+---
+import "@/styles/global.css";
+import MainLayout from '@/layouts/MainLayout.tsx';
+import CareersHero from '@/components/hero/CareersHero.tsx';
+import FinancialAdvisors from "@/components/sections/careers/FinancialAdvisors";
+import Interns from "@/components/sections/careers/Interns";
+
+---
+<html lang="en">
+  <head>
+    <title>Services | Team CA</title>
+  </head>
+  <body>
+    <MainLayout client:load>
+      <CareersHero client:load />
+      <FinancialAdvisors client:load />
+      <Interns client:load />
+
+
+    </MainLayout>
+  </body>
+</html>

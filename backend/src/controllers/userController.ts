@@ -130,7 +130,7 @@ export const getUsers = async (req: Request, res: Response) => {
     }
 
     res.json(users);
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -160,9 +160,7 @@ export const getUserById = async (req: Request, res: Response) => {
     }
 
     res.json(user);
-  } catch (err: unknown) {
-    const error = err as Error;
-
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -559,7 +557,7 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
       .lean();
 
     res.json(whitelistedUsers);
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };
