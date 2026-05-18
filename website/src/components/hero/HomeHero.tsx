@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import Button from "../ui/Button";
+import Button from "@/components/ui/Button";
 import { File } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -166,7 +166,6 @@ const HomeHero: React.FC = () => {
           Because love means preparing for their future, no matter what.
         </p>
         <Button variant="default" className="flex items-center gap-2">
-          <File className="w-4 h-4" />
           Learn More
         </Button>
       </div>

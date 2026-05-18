@@ -6,7 +6,10 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+
     "baseUrl": "src",
+    "ignoreDeprecations": "6.0",
+
     "paths": {
       "@/*": ["*"]
     }

@@ -12,28 +12,33 @@ import SectionHeader from "@/components/header/SectionHeader";
 const services = [
   {
     icon: Code,
-    title: "Web Development",
-    description: "Modern, scalable web applications.",
+    title: "Financial Planning",
+    description:
+      "Take control of your financial future with a plan built just for you.",
   },
   {
     icon: LayoutDashboard,
-    title: "UI/UX Design",
-    description: "Clean and user-focused interfaces.",
+    title: "Life Insurance ",
+    description:
+      "Secure your future and your family’s with protection you can trust.",
   },
   {
     icon: Smartphone,
-    title: "Mobile Apps",
-    description: "iOS & Android app solutions.",
+    title: "Investment Planning",
+    description:
+      "Start growing your wealth with confidence through smart, guided strategies.",
   },
   {
     icon: Cloud,
-    title: "Cloud Services",
-    description: "Secure and scalable cloud setup.",
+    title: "Retirement Planning",
+    description:
+      "Build the retirement you deserve and enjoy life without financial worries.",
   },
   {
     icon: ShieldCheck,
-    title: "Cybersecurity",
-    description: "Protecting systems and data.",
+    title: "Education Planning",
+    description:
+      "Achieve educational goals with a flexible plan designed for the future.",
   },
 ];
 
@@ -49,38 +54,50 @@ const WhatWeDo: React.FC = () => {
           color="yellow"
         />
 
-        {/* Cards */}
-        <div className="mt-14 flex flex-wrap gap-6 justify-center">
-          {services.map((service, index) => {
-            const Icon = service.icon;
-            return (
-              <div
-                key={index}
-                className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-md transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:bg-white/10
-                  w-full sm:w-full md:flex-1 md:min-w-0"
-              >
-                {/* Icon */}
-                <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-xl mb-4">
-                  <Icon className="w-9 h-9 md:w-10 md:h-10 text-secondary" />
+        <div className="mt-14 flex justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full max-w-7xl">
+            {services.map((service, index) => {
+              const Icon = service.icon;
+
+              return (
+                <div
+                  key={index}
+                  className="
+            flex flex-col text-center
+            rounded-2xl border border-white/10
+            bg-white/5 backdrop-blur-xl
+            p-5 shadow-md transition-all duration-300
+            hover:-translate-y-2 hover:bg-white/10 hover:shadow-xl
+            w-full h-full
+          "
+                >
+                  {/* ICON (fixed alignment block) */}
+                  <div className="flex justify-center mb-3">
+                    <div className="w-11 h-11 flex items-center justify-center rounded-xl">
+                      <Icon className="w-7 h-7 text-secondary" />
+                    </div>
+                  </div>
+
+                  {/* TITLE (fixed height feel) */}
+                  <h3 className="text-base font-semibold leading-snug min-h-[40px] flex items-center justify-center">
+                    {service.title}
+                  </h3>
+
+                  {/* DESCRIPTION (flex area to equalize height) */}
+                  <p className="mt-2 text-xs sm:text-sm text-white/70 line-clamp-3 flex-1 flex items-start justify-center">
+                    {service.description}
+                  </p>
+
+                  {/* BUTTON (always bottom aligned) */}
+                  <div className="mt-auto pt-4">
+                    <Button variant="secondary" className="w-full">
+                      Learn More
+                    </Button>
+                  </div>
                 </div>
-
-                {/* Title */}
-                <h3 className="text-lg md:text-xl font-semibold text-center">
-                  {service.title}
-                </h3>
-
-                {/* Description */}
-                <p className="mt-2 text-sm md:text-base text-muted-foreground text-center">
-                  {service.description}
-                </p>
-
-                {/* Button */}
-                <div className="mt-5">
-                  <Button variant="secondary">Learn More</Button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

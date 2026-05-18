@@ -1,12 +1,18 @@
-// SectionHeader.tsx
 import React from "react";
 
 type SectionHeaderProps = {
-  title: string;
+  title?: string | null;
   description?: string | null;
   align?: "left" | "center" | "right";
   color?: "yellow" | "white";
   size?: "xs" | "sm" | "lg" | "xl";
+  containerSize?: "sm" | "md" | "lg" | "xl" | "full";
+
+  // NEW
+  titleParts?: {
+    text: string;
+    color?: "yellow" | "white";
+  }[];
 };
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -15,22 +21,21 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   align = "left",
   color = "white",
   size = "lg",
+  containerSize = "lg",
+  titleParts,
 }) => {
-  // Tailwind alignment mapping
-  const alignClasses: Record<string, string> = {
+  const alignClasses = {
     left: "text-left",
     center: "text-center",
     right: "text-right",
   };
 
-  // Tailwind color mapping
-  const colorClasses: Record<string, string> = {
+  const colorClasses = {
     white: "text-[--white-color]",
     yellow: "text-[--secondary-color]",
   };
 
-  // Tailwind size mapping (h2 / p)
-  const sizeClasses: Record<string, { h2: string; p: string }> = {
+  const sizeClasses = {
     xs: {
       h2: "text-xl sm:text-2xl lg:text-3xl",
       p: "text-sm sm:text-base lg:text-lg",
@@ -45,19 +50,43 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     },
     xl: {
       h2: "text-4xl sm:text-5xl lg:text-6xl",
-      p: "text-xl sm:text-2xl lg:text-3xl",
+      p: "text-lg sm:text-xl lg:text-xl",
     },
+  };
+
+  const containerClasses = {
+    sm: "max-w-2xl",
+    md: "max-w-4xl",
+    lg: "max-w-6xl",
+    xl: "max-w-7xl",
+    full: "max-w-full",
   };
 
   const currentSize = sizeClasses[size];
 
   return (
-    <div className={`mb-8 ${alignClasses[align]} max-w-8xl`}>
-      <h2
-        className={`font-bold my-10 ${colorClasses[color]} ${currentSize.h2}`}
-      >
-        {title}
+    <div
+      className={`mb-8 mx-auto ${alignClasses[align]} ${containerClasses[containerSize]}`}
+    >
+      <h2 className={`font-bold my-10 ${currentSize.h2}`}>
+        {titleParts ? (
+          titleParts.map((part, i) => (
+            <span
+              key={i}
+              className={
+                part.color === "yellow"
+                  ? "text-[--secondary-color]"
+                  : "text-[--white-color]"
+              }
+            >
+              {part.text}
+            </span>
+          ))
+        ) : (
+          <span className={colorClasses[color]}>{title}</span>
+        )}
       </h2>
+
       {description && <p className={`mb-5 ${currentSize.p}`}>{description}</p>}
     </div>
   );

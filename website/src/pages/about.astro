@@ -1,6 +1,12 @@
 ---
-import "../styles/global.css";
-import MainLayout from '../layouts/MainLayout.tsx';
+import "@/styles/global.css";
+import MainLayout from '@/layouts/MainLayout.tsx';
+import AboutHero from '@/components/hero/AboutHero.tsx';
+import Mission from "@/components/sections/about/Mission";
+import WhatWeStandFor from "@/components/sections/about/WhatWeStandFor";
+import Founder from "@/components/sections/about/Founder";
+import Recognition from "@/components/sections/about/Recognition";
+
 
 ---
 <html lang="en">
@@ -9,7 +15,13 @@ import MainLayout from '../layouts/MainLayout.tsx';
   </head>
   <body>
     <MainLayout client:load>
-      
+      <AboutHero client:load />
+      <Mission client:load />
+      <WhatWeStandFor client:load />
+      <Founder client:load />
+
+      <Recognition client:load />
+
     </MainLayout>
   </body>
 </html>
