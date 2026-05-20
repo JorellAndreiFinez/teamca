@@ -8,6 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/Dialog';
+import {
+  getAttendanceBadgeClass,
+  getAttendanceBadgeLabel,
+} from '../../utils/dtrUtils';
 
 type DTRHistoryTableProps = {
   records: DailyTimeRecord[];
@@ -82,35 +86,6 @@ export default function DTRHistoryTable({
     return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'present':
-        return 'border-emerald-200/70 bg-emerald-50 text-emerald-700';
-      case 'late':
-        return 'border-amber-200/70 bg-amber-50 text-amber-700';
-      case 'very_late':
-        return 'border-orange-200/70 bg-orange-50 text-orange-700';
-      case 'absent':
-        return 'border-rose-200/70 bg-rose-50 text-rose-700';
-      default:
-        return 'border-slate-200/70 bg-slate-50 text-slate-700';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'present':
-        return 'Present';
-      case 'late':
-        return 'Late';
-      case 'very_late':
-        return 'Very Late';
-      case 'absent':
-        return 'Absent';
-      default:
-        return status;
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -334,8 +309,8 @@ export default function DTRHistoryTable({
 
                       {/* Status */}
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClass(record.attendanceStatus || 'present')}`}>
-                          {getStatusLabel(record.attendanceStatus || 'present')}
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getAttendanceBadgeClass(record.attendanceStatus || 'present')}`}>
+                          {getAttendanceBadgeLabel(record.attendanceStatus || 'present')}
                         </span>
                       </td>
 
