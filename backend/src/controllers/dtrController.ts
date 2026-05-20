@@ -216,20 +216,12 @@ export const getHistory = async (req: AuthRequest, res: Response) => {
       sort_by: sort_by as string | undefined,
     };
 
-    const result = await dtrService.getHistoryPaginated(userId, pageNum, limitNum, filters);
+    // Changed: getHistoryWithLeaves instead of getHistoryPaginated
+    const result = await dtrService.getHistoryWithLeaves(userId, pageNum, limitNum, filters);
 
-    res.json({
-      success: true,
-      message: "History retrieved successfully",
-      data: result,
-    });
+    res.json({ success: true, message: "History retrieved successfully", data: result });
   } catch (error: unknown) {
     const err = error as Error;
-
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };

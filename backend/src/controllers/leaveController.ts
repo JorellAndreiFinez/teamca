@@ -1,119 +1,200 @@
-import { Request, Response } from "express";
+// backend/src/controllers/leaveController.ts
+
+import type { Request, Response } from "express";
+import { z } from "zod";
 import * as leaveService from "../services/leaveService";
 
-type AuthRequest = Request;
+// ─── validation schemas ───────────────────────────────────────────────────────
 
-const getUserId = (req: AuthRequest): string => {
-  if (!req.user) {
-    throw new Error("Unauthorized");
-  }
+const createLeaveSchema = z.object({
+  leaveType: z
+    .enum(["vacation", "sick", "emergency", "unpaid", "other"])
+    .optional()
+    .default("other"),
+  startDate: z.string().min(1, "startDate is required"),
+  endDate: z.string().min(1, "endDate is required"),
+  reason: z.string().min(3, "Reason must be at least 3 characters").max(500),
+});
 
-  return req.user.user_id.toString();
+const reviewLeaveSchema = z.object({
+  rejectionReason: z.string().trim().max(500).optional(),
+});
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+const getUserId = (req: Request): string => {
+  if (!req.user) throw new Error("Unauthorized: Missing user");
+  return String(req.user.user_id);
 };
 
-const normalizeParam = (value: string | string[]): string => {
-  return Array.isArray(value) ? value[0] : value;
-};
+// ─── handlers ─────────────────────────────────────────────────────────────────
 
-export const createLeave = async (req: AuthRequest, res: Response) => {
+/**
+ * POST /leave
+ * Create a new leave request for the authenticated user.
+ */
+export const createLeaveHandler = async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-    const { duration, startDate, endDate, reason } = req.body;
 
-    if (![0.5, 1, 2, 3].includes(duration)) {
-      throw new Error("Invalid leave duration");
+    const parsed = createLeaveSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error.",
+        issues: parsed.error.issues,
+      });
     }
 
-    const leave = await leaveService.createLeave(userId, {
-      duration,
-      startDate,
-      endDate,
-      reason,
+    const leave = await leaveService.createLeave({
+      userId,
+      leaveType: parsed.data.leaveType,
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
+      reason: parsed.data.reason,
     });
 
-    res.json({
+    return res.status(201).json({
       success: true,
-      message: "Leave request submitted",
+      message: "Leave request submitted successfully.",
       data: leave,
     });
-  } catch (error: unknown) {
+  } catch (error) {
     const err = error as Error;
-
-    res.status(400).json({
+    const isValidation =
+      err.message.includes("overlap") ||
+      err.message.includes("Invalid date") ||
+      err.message.includes("startDate must be");
+    return res.status(isValidation ? 400 : 500).json({
       success: false,
-      message: err.message,
+      message: err.message || "Failed to create leave request.",
     });
   }
 };
 
-export const getMyLeaves = async (req: AuthRequest, res: Response) => {
+/**
+ * GET /leave/me
+ * Get all leave requests for the authenticated user.
+ */
+export const getMyLeavesHandler = async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-
-    const leaves = await leaveService.getUserLeaves(userId);
-
-    res.json({
-      success: true,
-      count: leaves.length,
-      data: leaves,
-    });
-  } catch (error: unknown) {
+    const leaves = await leaveService.getMyLeaves(userId);
+    return res.status(200).json({ success: true, data: leaves });
+  } catch (error) {
     const err = error as Error;
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return res.status(500).json({ success: false, message: err.message || "Failed to fetch leaves." });
   }
 };
 
-export const approveLeave = async (req: Request, res: Response) => {
+/**
+ * GET /leave/pending
+ * Get pending leaves scoped to the reviewer's role:
+ *   - Admin/Superadmin → all pending leaves
+ *   - Department Head  → pending leaves in their department(s) only
+ */
+export const getPendingLeavesHandler = async (req: Request, res: Response) => {
   try {
-    const leaveId = normalizeParam(req.params.leaveId);
-    const { status } = req.body;
+    const actorId = getUserId(req);
+    const leaves = await leaveService.getPendingLeaves(actorId);
+    return res.status(200).json({ success: true, data: leaves });
+  } catch (error) {
+    const err = error as Error;
+    return res.status(500).json({ success: false, message: err.message || "Failed to fetch pending leaves." });
+  }
+};
 
-    if (!["approved", "rejected"].includes(status)) {
-      throw new Error("Invalid status");
+/**
+ * PATCH /leave/:leaveId/approve
+ * Approve or reject a leave request.
+ * Body: { status: "approved" | "rejected", rejectionReason?: string }
+ *
+ * Uses a single endpoint to stay compatible with the existing frontend leaveService
+ * which calls PATCH /leave/:id/approve with { status: "approved" | "rejected" }.
+ */
+export const reviewLeaveHandler = async (req: Request, res: Response) => {
+  try {
+    const actorId = getUserId(req);
+    const leaveId = req.params.leaveId;
+
+    if (!leaveId) {
+      return res.status(400).json({ success: false, message: "leaveId is required." });
     }
 
-    const leave = await leaveService.updateLeaveStatus(
-      leaveId,
-      status as "approved" | "rejected",
-    );
+    // status comes from the body (existing frontend contract)
+    const statusSchema = z.object({
+      status: z.enum(["approved", "rejected"]),
+      rejectionReason: z.string().trim().max(500).optional(),
+    });
 
-    res.json({
+    const parsed = statusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error.",
+        issues: parsed.error.issues,
+      });
+    }
+
+    let leave;
+
+    if (parsed.data.status === "approved") {
+      leave = await leaveService.approveLeave({ leaveId, actorId });
+    } else {
+      if (!parsed.data.rejectionReason) {
+        return res.status(400).json({
+          success: false,
+          message: "rejectionReason is required when rejecting a leave.",
+        });
+      }
+      leave = await leaveService.rejectLeave({
+        leaveId,
+        actorId,
+        rejectionReason: parsed.data.rejectionReason,
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: `Leave ${status}`,
+      message: `Leave ${parsed.data.status} successfully.`,
       data: leave,
     });
-  } catch (error: unknown) {
+  } catch (error) {
     const err = error as Error;
-
-    res.status(400).json({
-      success: false,
-      message: err.message,
-    });
+    const isNotFound = err.message.includes("not found");
+    const isBadState = err.message.includes("Cannot");
+    const isMissingReason = err.message.includes("required");
+    const statusCode = isNotFound ? 404 : isBadState || isMissingReason ? 400 : 500;
+    return res.status(statusCode).json({ success: false, message: err.message });
   }
 };
 
-export const cancelLeave = async (req: AuthRequest, res: Response) => {
+/**
+ * PATCH /leave/:leaveId/cancel
+ * Cancel own pending leave request.
+ */
+export const cancelLeaveHandler = async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-    const leaveId = normalizeParam(req.params.leaveId);
+    const leaveId = req.params.leaveId;
+
+    if (!leaveId) {
+      return res.status(400).json({ success: false, message: "leaveId is required." });
+    }
 
     const leave = await leaveService.cancelLeave(userId, leaveId);
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      message: "Leave cancelled successfully",
+      message: "Leave request cancelled.",
       data: leave,
     });
-  } catch (error: unknown) {
+  } catch (error) {
     const err = error as Error;
-
-    res.status(400).json({
-      success: false,
-      message: err.message,
-    });
+    const isNotFound = err.message.includes("not found");
+    const isForbidden = err.message.includes("your own");
+    const isBadState = err.message.includes("Only pending");
+    const statusCode = isNotFound ? 404 : isForbidden ? 403 : isBadState ? 400 : 500;
+    return res.status(statusCode).json({ success: false, message: err.message });
   }
 };
