@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import {
   createDepartment,
+  deleteDepartment,
   getAllDepartments,
   getDepartmentById,
   getDepartmentsByIds,
@@ -77,12 +78,21 @@ export const getDepartment = async (req: Request, res: Response) => {
 
 export const createDepartmentHandler = async (req: Request, res: Response) => {
   try {
-    const { department_name } = req.body as { department_name?: string };
+    const { department_name, description, department_head } = req.body as {
+      department_name?: string;
+      description?: string;
+      department_head?: string;
+    };
+
     if (!department_name) {
       return res.status(400).json({ message: "department_name is required." });
     }
 
-    const created = await createDepartment(department_name);
+    const created = await createDepartment(
+      department_name,
+      description,
+      department_head,
+    );
     return res.status(201).json(created);
   } catch (error) {
     if (
@@ -92,28 +102,63 @@ export const createDepartmentHandler = async (req: Request, res: Response) => {
       return res.status(409).json({ message: error.message });
     }
 
+    if (error instanceof Error) {
+      return res.status(400).json({ message: error.message });
+    }
+
     return res.status(500).json({ message: "Failed to create department." });
   }
 };
 
 export const updateDepartmentHandler = async (req: Request, res: Response) => {
   try {
-    const { department_name } = req.body as { department_name?: string };
-    if (!department_name) {
-      return res.status(400).json({ message: "department_name is required." });
-    }
+    const { department_name, description, department_head } = req.body as {
+      department_name?: string;
+      description?: string;
+      department_head?: string | null;
+    };
 
-    const updated = await updateDepartment(
-      getDepartmentIdParam(req),
+    const updated = await updateDepartment(getDepartmentIdParam(req), {
       department_name,
-    );
+      description,
+      department_head,
+    });
     return res.status(200).json(updated);
   } catch (error) {
     if (error instanceof Error && error.message === "Department not found.") {
       return res.status(404).json({ message: error.message });
     }
 
+    if (error instanceof Error) {
+      return res.status(400).json({ message: error.message });
+    }
+
     return res.status(500).json({ message: "Failed to update department." });
+  }
+};
+
+export const deleteDepartmentHandler = async (req: Request, res: Response) => {
+  try {
+    const departmentId = getDepartmentIdParam(req);
+    await deleteDepartment(departmentId);
+    return res.status(200).json({ message: "Department deleted successfully." });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Department not found.") {
+      return res.status(404).json({ message: error.message });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message.includes("Cannot delete department")
+    ) {
+      return res.status(409).json({ message: error.message });
+    }
+
+    if (error instanceof Error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Failed to delete department." });
   }
 };
 
@@ -122,4 +167,5 @@ export default {
   getDepartment,
   createDepartmentHandler,
   updateDepartmentHandler,
+  deleteDepartmentHandler,
 };

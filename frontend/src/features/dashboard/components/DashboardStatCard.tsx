@@ -11,11 +11,11 @@ interface DashboardStatCardProps {
 }
 
 const TONE_STYLES: Record<DashboardStatTone, string> = {
-  blue: 'border-blue-100 bg-blue-50/70 text-blue-700',
-  green: 'border-emerald-100 bg-emerald-50/70 text-emerald-700',
-  amber: 'border-amber-100 bg-amber-50/70 text-amber-700',
-  purple: 'border-violet-100 bg-violet-50/70 text-violet-700',
-  slate: 'border-slate-200 bg-slate-50 text-slate-700',
+  blue: 'border-blue-200/70 bg-blue-50/80 text-blue-700',
+  green: 'border-emerald-200/70 bg-emerald-50/80 text-emerald-700',
+  amber: 'border-amber-200/70 bg-amber-50/80 text-amber-700',
+  purple: 'border-indigo-200/70 bg-indigo-50/80 text-indigo-700',
+  slate: 'border-slate-200/70 bg-slate-50/80 text-slate-700',
 };
 
 export default function DashboardStatCard({
@@ -26,19 +26,20 @@ export default function DashboardStatCard({
   tone = 'slate',
 }: DashboardStatCardProps) {
   return (
-    <article className="rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+    <article className="group rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.6)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
+          <p className="mt-2 text-2xl font-semibold leading-none text-slate-950 tabular-nums">{value}</p>
+        </div>
         {icon ? (
-          <div className={`flex h-9 w-9 items-center justify-center rounded-lg border ${TONE_STYLES[tone]}`}>
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${TONE_STYLES[tone]} shadow-sm`}>
             {icon}
           </div>
         ) : null}
       </div>
 
-      <p className="text-2xl font-bold leading-none text-slate-900">{value}</p>
-
-      {hint ? <p className="mt-2 text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
     </article>
   );
 }

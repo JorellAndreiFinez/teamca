@@ -38,14 +38,11 @@ export const logActivity = async (input: LogActivityInput): Promise<void> => {
       timestamp: new Date(),
     });
 
-    void log.save().catch((err: unknown) => {
-      console.error(
-        "[logActivity] failed to save log:",
-        err instanceof Error ? err.message : err,
-      );
+    void log.save().catch(() => {
+      // Intentionally ignore activity logging write failures.
     });
-  } catch (err) {
-    console.error("[logActivity] error:", err);
+  } catch {
+    // Intentionally ignore activity logging runtime failures.
   }
 };
 

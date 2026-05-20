@@ -4,7 +4,9 @@ import api from "./api";
 import type { Department } from "../types/user";
 
 export interface DepartmentPayload {
-  department_name: string;
+  department_name?: string;
+  description?: string;
+  department_head?: string | null;
 }
 
 export const departmentService = {
@@ -29,10 +31,14 @@ export const departmentService = {
     departmentId: string | number,
     payload: DepartmentPayload,
   ): Promise<Department> => {
-    const { data } = await api.put<Department>(
+    const { data } = await api.patch<Department>(
       `/departments/${departmentId}`,
       payload,
     );
     return data;
+  },
+
+  deleteDepartment: async (departmentId: string | number): Promise<void> => {
+    await api.delete(`/departments/${departmentId}`);
   },
 };

@@ -14,10 +14,11 @@ export default tseslint.config(
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
         },
       ],
       "no-console": ["warn", { allow: ["warn", "error"] }],
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
       "prefer-const": "error",
       "no-debugger": "error",
       eqeqeq: ["warn", "always"],

@@ -48,7 +48,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
         const data = await departmentService.getAllDepartments();
         setDepartments(data);
       } catch (err) {
-        console.error("Failed to fetch departments", err);
+        // Keep UI responsive even if departments fail to load.
       }
     };
 
@@ -122,8 +122,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
           global_role: "Standard_User",
           is_active: true,
           department_id: "",
-          department_role: "Intern",
-        });
+          department_role: "Intern",          required_hours: 8,
+          working_hours: { start: "08:00", end: "17:00" },
+          working_days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],        });
         setIsWhitelist(false);
       } catch (err: any) {
         setError(err?.response?.data?.message || "Failed to whitelist email.");

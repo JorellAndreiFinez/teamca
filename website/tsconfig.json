@@ -1,12 +1,16 @@
 {
   "extends": "astro/tsconfigs/base",
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+
     "baseUrl": "src",
+    "ignoreDeprecations": "6.0",
+
     "paths": {
       "@/*": ["*"]
     }

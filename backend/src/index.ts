@@ -2,16 +2,23 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 import http from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { connectDB } from "./config/db";
-import { initTaskSocket } from "./socket/io";
-import routes from "./routes/index";
+import { connectDB } from "./config/db.js";
+import { initTaskSocket } from "./socket/io.js";
+import routes from "./routes/index.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("Missing JWT_SECRET in production environment. Exiting.");
+  process.exit(1);
+}
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
@@ -49,7 +56,8 @@ const corsOptions: cors.CorsOptions = {
     }
     return callback(null, false);
   },
-  credentials: false,
+  // allow cookies / Authorization header in cross-origin requests from the app
+  credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -83,9 +91,10 @@ const _apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-connectDB().then(() => console.warn("MongoDB ready"));
+void connectDB();
 
-app.use("/api", routes);
+app.use("/api/auth", _authLimiter);
+app.use("/api", _apiLimiter, routes);
 
 // ── Health check
 app.get("/health", (_req, res) =>
@@ -95,6 +104,4 @@ app.get("/health", (_req, res) =>
 const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
-server.listen(PORT, () =>
-  console.warn(`Server running at http://localhost:${PORT}`),
-);
+server.listen(PORT);

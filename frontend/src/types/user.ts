@@ -20,8 +20,6 @@ export interface User {
 
   departments?: DepartmentAssignment[];
 
-  required_hours?: number;
-
   working_hours?: {
     start?: string;
     end?: string;
@@ -38,7 +36,6 @@ export interface InternProfile {
   school_university: string;
   required_hours: number;
   rendered_hours_total: number;
-  expected_end_date: Date;
   actual_end_date?: Date;
 }
 
@@ -46,6 +43,8 @@ export interface Department {
   _id?: string;
   department_id?: number | string;
   department_name: string;
+  description?: string | null;
+  department_head?: string | null;
   supervisor_id?: string;
   head_id?: string;
   created_at?: Date;

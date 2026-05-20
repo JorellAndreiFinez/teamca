@@ -28,23 +28,13 @@ export const userService = {
   },
 
   createUser: async (payload: CreateUserPayload): Promise<User> => {
-    try {
-      const { data } = await api.post<User>("/users", payload);
-      return data;
-    } catch (err: unknown) {
-      console.error("[createUser] error:", err);
-      throw err;
-    }
+    const { data } = await api.post<User>("/users", payload);
+    return data;
   },
 
   updateUser: async (userId: string, payload: Partial<User>): Promise<User> => {
-    try {
-      const { data } = await api.put<User>(`/users/${userId}`, payload);
-      return data;
-    } catch (err: unknown) {
-      console.error("[updateUser] error:", err);
-      throw err;
-    }
+    const { data } = await api.put<User>(`/users/${userId}`, payload);
+    return data;
   },
 
   deleteUser: async (userId: string): Promise<void> => {
@@ -56,8 +46,6 @@ export const userService = {
       const message =
         e?.response?.data?.message || e?.message || "Failed to delete user";
 
-      console.error(`[deleteUser] Failed to delete user ${userId}:`, message);
-
       throw new Error(message, { cause: err });
     }
   },
@@ -68,28 +56,18 @@ export const userService = {
   },
 
   createWhitelistedUser: async (email: string): Promise<User> => {
-    try {
-      const { data } = await api.post<User>("/users/whitelist", { email });
-      return data;
-    } catch (err: unknown) {
-      console.error("[createWhitelistedUser] error:", err);
-      throw err;
-    }
+    const { data } = await api.post<User>("/users/whitelist", { email });
+    return data;
   },
 
   activateWhitelistedUser: async (
     userId: string,
     payload: ActivateWhitelistPayload,
   ): Promise<User> => {
-    try {
-      const { data } = await api.post<User>(
-        `/users/${userId}/activate-whitelist`,
-        payload,
-      );
-      return data;
-    } catch (err: unknown) {
-      console.error("[activateWhitelistedUser] error:", err);
-      throw err;
-    }
+    const { data } = await api.post<User>(
+      `/users/${userId}/activate-whitelist`,
+      payload,
+    );
+    return data;
   },
 };

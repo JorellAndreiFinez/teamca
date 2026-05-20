@@ -1,0 +1,26 @@
+---
+import "@/styles/global.css";
+import MainLayout from '@/layouts/MainLayout.tsx';
+import ServicesHero from '@/components/hero/ServicesHero.tsx';
+import CoreSolutions from "@/components/sections/services/CoreSolutions";
+import CorporateSolutions from "@/components/sections/services/CorporateSolutions";
+import PersonalSolutions from "@/components/sections/services/PersonalSolutions";
+import CTA from "@/components/sections/home/CTA";
+
+
+---
+<html lang="en">
+  <head>
+    <title>Services | Team CA</title>
+  </head>
+  <body>
+    <MainLayout client:load>
+      <ServicesHero client:load />
+      <CoreSolutions client:load />
+      <CorporateSolutions client:load />
+      <PersonalSolutions client:load />
+      <CTA client:load />
+
+    </MainLayout>
+  </body>
+</html>

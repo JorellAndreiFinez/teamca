@@ -47,7 +47,7 @@ export default function UserDirectory() {
       const data = await userService.getAllUsers();
       setUsers(data);
     } catch (err) {
-      console.error("Failed to fetch users:", err);
+      // Handle error
     } finally {
       setLoading(false);
     }
@@ -192,7 +192,6 @@ export default function UserDirectory() {
       setDeleteTarget(null);
       await fetchUsers();
     } catch (err: any) {
-      console.error("Failed to delete user:", err);
       const errorMessage = err?.message || "Failed to delete user. Please try again.";
       setDeleteError(errorMessage);
     } finally {

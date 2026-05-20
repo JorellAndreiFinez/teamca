@@ -34,7 +34,6 @@ export type UpdateUserInput = {
   }[];
 
   is_active?: boolean;
-  required_hours?: number;
 
   working_hours?: {
     start?: string;
@@ -57,8 +56,6 @@ export type CreateUserInput = {
     department_role: DepartmentRole;
   }[];
 
-  required_hours?: number;
-
   working_hours?: {
     start: string;
     end: string;
@@ -71,7 +68,6 @@ export type UpsertInternProfileInput = {
   school_university?: string;
   required_hours?: number;
   rendered_hours_total?: number;
-  expected_end_date?: Date;
   actual_end_date?: Date | null;
 };
 
@@ -159,8 +155,6 @@ export const createUser = async (payload: CreateUserInput) => {
     global_role: payload.global_role,
     is_active: payload.is_active ?? true,
 
-    required_hours: payload.required_hours ?? 0,
-
     working_hours: {
       start: payload.working_hours?.start || "",
       end: payload.working_hours?.end || "",
@@ -206,10 +200,6 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
   }
   if (payload.global_role !== undefined) user.global_role = payload.global_role;
   if (payload.is_active !== undefined) user.is_active = payload.is_active;
-
-  if (payload.required_hours !== undefined) {
-    user.required_hours = payload.required_hours;
-  }
 
   // ✅ working_hours
   if (payload.working_hours) {
@@ -259,8 +249,7 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
       .lean();
 
     res.json(whitelistedUsers);
-  } catch (err) {
-    console.error(err);
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -277,11 +266,10 @@ export const upsertUserInternProfile = async (
   if (!existingProfile) {
     if (
       !payload.school_university ||
-      !payload.required_hours ||
-      !payload.expected_end_date
+      !payload.required_hours
     ) {
       throw new Error(
-        "school_university, required_hours, and expected_end_date are required for new intern profiles.",
+        "school_university and required_hours are required for new intern profiles.",
       );
     }
 
@@ -290,7 +278,6 @@ export const upsertUserInternProfile = async (
       school_university: payload.school_university,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total ?? 0,
-      expected_end_date: payload.expected_end_date,
       actual_end_date: payload.actual_end_date ?? null,
     });
   } else {
@@ -302,9 +289,6 @@ export const upsertUserInternProfile = async (
     }
     if (payload.rendered_hours_total !== undefined) {
       existingProfile.rendered_hours_total = payload.rendered_hours_total;
-    }
-    if (payload.expected_end_date !== undefined) {
-      existingProfile.expected_end_date = payload.expected_end_date;
     }
     if (payload.actual_end_date !== undefined) {
       existingProfile.actual_end_date = payload.actual_end_date;

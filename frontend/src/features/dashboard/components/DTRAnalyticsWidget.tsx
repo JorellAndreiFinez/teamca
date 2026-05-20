@@ -104,7 +104,7 @@ export default function DTRAnalyticsWidget({
 
           if (!workingHours?.start || !workingHours?.end) return true;
 
-          return isValidClockInTime(c.timeIn, workingHours.start, 30);
+          return isValidClockInTime(c.timeIn?.toString() || String(c.timeIn), workingHours.start, 30);
         });
       }).length
     : 0;
@@ -182,21 +182,7 @@ export default function DTRAnalyticsWidget({
         ))}
       </div>
 
-      {/* Today's info */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <div className="text-xs text-gray-500">
-          <span className="font-medium text-gray-700">Today: </span>
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          })}
-        </div>
 
-        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
-          Active
-        </span>
-      </div>
     </div>
   );
 }

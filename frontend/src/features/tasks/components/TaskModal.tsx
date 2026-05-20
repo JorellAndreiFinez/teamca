@@ -8,6 +8,7 @@ import TaskDetails from './TaskDetails';
 import TaskFeedbacks from './TaskFeedbacks';
 import TaskLinks from './TaskLinks';
 import TaskTimeline from './TaskTimeline';
+import { WidgetSkeleton } from '../../../components/ui/Skeleton';
 
 type TaskModalProps = {
   open: boolean;
@@ -99,18 +100,11 @@ export default function TaskModal({
       ) : undefined}
     >
       {isLoading ? (
-        <div className="flex min-h-56 items-center justify-center">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-5">
-            <svg className="h-6 w-6 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" className="opacity-25" />
-              <path
-                d="M21 12a9 9 0 0 0-9-9"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                className="opacity-90"
-              />
-            </svg>
+        <div className="space-y-4">
+          <WidgetSkeleton lines={4} />
+          <div className="grid gap-4 lg:grid-cols-[1.2fr,1fr]">
+            <WidgetSkeleton lines={4} />
+            <WidgetSkeleton lines={4} />
           </div>
         </div>
       ) : !displayTask ? null : (

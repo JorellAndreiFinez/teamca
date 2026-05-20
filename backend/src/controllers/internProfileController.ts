@@ -105,7 +105,6 @@ export const createInternProfileHandler = async (
       school_university?: string;
       required_hours?: number;
       rendered_hours_total?: number;
-      expected_end_date?: string;
       actual_end_date?: string | null;
     };
 
@@ -113,12 +112,11 @@ export const createInternProfileHandler = async (
     if (
       !payload.user_id ||
       !schoolUniversity ||
-      typeof payload.required_hours !== "number" ||
-      !payload.expected_end_date
+      typeof payload.required_hours !== "number"
     ) {
       return res.status(400).json({
         message:
-          "user_id, school_university, required_hours, and expected_end_date are required.",
+          "user_id, school_university, and required_hours are required.",
       });
     }
 
@@ -159,7 +157,6 @@ export const createInternProfileHandler = async (
       school_university: schoolUniversity,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
-      expected_end_date: new Date(payload.expected_end_date),
       actual_end_date: actualEndDate,
     });
 
@@ -218,7 +215,6 @@ export const updateInternProfileByUser = async (
       school_university?: string;
       required_hours?: number;
       rendered_hours_total?: number;
-      expected_end_date?: string;
       actual_end_date?: string | null;
     };
 
@@ -233,9 +229,6 @@ export const updateInternProfileByUser = async (
       school_university: payload.school_university,
       required_hours: payload.required_hours,
       rendered_hours_total: payload.rendered_hours_total,
-      expected_end_date: payload.expected_end_date
-        ? new Date(payload.expected_end_date)
-        : undefined,
       actual_end_date: actualEndDate,
     });
 

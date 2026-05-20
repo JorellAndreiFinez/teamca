@@ -14,8 +14,6 @@ export interface IUser extends Document {
   departments: IUserDepartment[];
   is_active: boolean;
 
-  required_hours: number;
-
   working_hours: {
     start: string; // "08:00"
     end: string; // "17:00"
@@ -58,8 +56,6 @@ const userSchema = new Schema<IUser>(
 
     departments: { type: [userDepartmentSchema], default: [] },
     is_active: { type: Boolean, default: true },
-
-    required_hours: { type: Number, default: 0 },
 
     working_hours: {
       start: { type: String, default: "" }, // "08:00"

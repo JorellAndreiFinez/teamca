@@ -31,8 +31,7 @@ export const checkEmail = async (req: Request, res: Response) => {
 
     // Regular user: exists and active
     return res.json({ exists: true, needsSetup: false });
-  } catch (err) {
-    console.error(err);
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -89,7 +88,7 @@ export const login = async (req: Request, res: Response) => {
     }).catch(() => {}); // Ignore logging errors
 
     res.json({ token, user: userData });
-  } catch (err) {
+  } catch {
     // log failed login
     const email = String(req.body?.email ?? "")
       .trim()
@@ -105,7 +104,6 @@ export const login = async (req: Request, res: Response) => {
         changes: { reason: "invalid credentials or server error" },
       }).catch(() => {}); // Ignore logging errors
     }
-    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -199,8 +197,7 @@ export const completeSetup = async (req: Request, res: Response) => {
     delete userData.password_hash;
 
     res.status(200).json({ token, user: userData });
-  } catch (err) {
-    console.error(err);
+  } catch {
     res.status(500).json({ message: "Server error" });
   }
 };

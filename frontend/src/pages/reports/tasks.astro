@@ -1,0 +1,8 @@
+---
+import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import TaskAnalyticsPage from "@/features/reports/TaskAnalyticsPage";
+---
+
+<DashboardLayout pageTitle="Task Analytics" requiredAuthentication={true}>
+  <TaskAnalyticsPage client:load />
+</DashboardLayout>

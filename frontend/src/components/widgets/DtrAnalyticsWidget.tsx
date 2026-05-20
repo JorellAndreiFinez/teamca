@@ -1,5 +1,6 @@
 import type { DailyTimeRecord } from "../../types/dtr";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { ProgressBarSkeleton } from "../ui/Skeleton";
 
 type DtrAnalyticsWidgetProps = {
   records: DailyTimeRecord[];
@@ -11,11 +12,11 @@ export default function DtrAnalyticsWidget({
   isLoading = false,
 }: DtrAnalyticsWidgetProps) {
   const totalHours = records.reduce(
-    (sum, record) => sum + (record.hours_rendered ?? 0),
+    (sum, record) => sum + (record.totalHours ?? 0),
     0,
   );
   const presentDays = records.filter(
-    (record) => record.status === "Present",
+    (record) => record.attendanceStatus === "present" || record.status === "approved",
   ).length;
 
   return (
@@ -25,7 +26,13 @@ export default function DtrAnalyticsWidget({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-slate-500">Loading DTR analytics...</p>
+          <div className="space-y-4">
+            <ProgressBarSkeleton />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="h-20 animate-pulse rounded-md border border-slate-200 bg-slate-100" />
+              <div className="h-20 animate-pulse rounded-md border border-slate-200 bg-slate-100" />
+            </div>
+          </div>
         ) : null}
 
         {!isLoading ? (

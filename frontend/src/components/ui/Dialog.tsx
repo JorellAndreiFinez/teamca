@@ -11,7 +11,7 @@ export const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <RadixDialog.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/50 backdrop-blur-sm", className)}
+    className={cn("fixed inset-0 z-50 bg-slate-950/45", className)}
     {...props}
   />
 ));
@@ -60,8 +60,21 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <RadixDialog.Title
     ref={ref}
-    className={cn("text-lg font-semibold text-gray-900", className)}
+    className={cn("text-lg font-semibold text-slate-900", className)}
     {...props}
   />
 ));
 DialogTitle.displayName = "DialogTitle";
+
+// Description
+export const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof RadixDialog.Description>,
+  React.ComponentPropsWithoutRef<typeof RadixDialog.Description>
+>(({ className, ...props }, ref) => (
+  <RadixDialog.Description
+    ref={ref}
+    className={cn("text-sm text-slate-500", className)}
+    {...props}
+  />
+));
+DialogDescription.displayName = "DialogDescription";

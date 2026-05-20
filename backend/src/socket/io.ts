@@ -1,7 +1,7 @@
 import { Server as HttpServer } from "http";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { Server, type Socket } from "socket.io";
-import User from "../models/User";
+import User from "../models/User.js";
 
 type TokenPayload = JwtPayload & {
   sub?: string;
@@ -161,4 +161,12 @@ export const emitUsersDirectoryUpdated = (
   for (const userId of uniqueUserIds) {
     ioInstance.to(`user:${userId}`).emit("user:directory-updated", payload);
   }
+};
+
+export const emitUserDTRUpdated = (userId: string, payload: unknown) => {
+  if (!ioInstance) {
+    return;
+  }
+
+  ioInstance.to(`user:${userId}`).emit("dtr:updated", payload);
 };

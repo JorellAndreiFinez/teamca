@@ -10,6 +10,17 @@ const departmentSchema = new Schema(
       minlength: 2,
       maxlength: 120,
     },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: null,
+    },
+    department_head: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,

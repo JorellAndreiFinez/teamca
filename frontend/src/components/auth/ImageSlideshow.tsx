@@ -68,7 +68,7 @@ export default function ImageSlideshow({ isMobile = false }: ImageSlideshowProps
       {/* Overlay dimming - darker on mobile, subtle on desktop */}
       <div
         className={`absolute inset-0 ${
-          isMobile ? 'bg-black/40' : 'bg-gradient-to-r from-blue-600/80 to-transparent'
+          isMobile ? 'bg-slate-950/45' : 'bg-gradient-to-r from-blue-600/80 to-transparent'
         }`}
       />
 

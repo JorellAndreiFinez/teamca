@@ -178,7 +178,7 @@ export const activityLogger = (
     const safeUserId = user_id ?? "anonymous";
     const safeUserName = user_name ?? "Unknown User";
 
-    logActivity({
+    void logActivity({
       user_id: safeUserId,
       user_name: safeUserName,
       action_type: actionType,
@@ -187,8 +187,6 @@ export const activityLogger = (
       changes,
       resource_type: resourceType,
       status: logStatus,
-    }).catch((err) => {
-      console.error("[activityLogger] failed to log activity:", err.message);
     });
   };
 

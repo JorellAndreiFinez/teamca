@@ -2,20 +2,37 @@
 
 export type DTRStatus = "Present" | "Absent" | "Leave" | "Holiday";
 
-// frontend/src/types/dtr.ts
-export interface ClockEntry {
-  timeIn: string;
-  timeOut?: string;
-  totalHours?: number;
+// Clock entry with break tracking
+export interface IBreak {
+  breakStart: Date | string;
+  breakEnd?: Date | string;
+  duration?: number; // minutes
+  type: 'lunch' | 'rest' | 'other';
 }
 
-export interface DailyTimeRecord {
-  _id: string;
-  userId: string;
-  date: string;
-  clocks: ClockEntry[];
-  status: "pending" | "approved" | "rejected";
+export interface ClockEntry {
+  timeIn: Date | string;
+  timeOut?: Date | string;
+  totalHours?: number;
+  overtimeHours?: number;
   remarks?: string;
-  createdAt: string;
-  updatedAt: string;
+  status?: string;
+  breaks?: IBreak[];
+}
+
+// Daily Time Record (matches backend structure)
+export interface DailyTimeRecord {
+  _id?: string;
+  userId?: string;
+  departmentId?: string;
+  date: Date | string;
+  clocks: ClockEntry[];
+  attendanceStatus?: 'present' | 'late' | 'very_late' | 'absent';
+  totalHours?: number;
+  undertimeHours?: number;
+  totalBreakTime?: number;
+  status?: "pending" | "approved" | "rejected";
+  remarks?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
