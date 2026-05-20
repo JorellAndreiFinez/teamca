@@ -309,7 +309,9 @@ export default function DTRHistoryTable({
 
                       {/* Status */}
                       <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getAttendanceBadgeClass(record.attendanceStatus || 'present')}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getAttendanceBadgeClass(record.attendanceStatus || 'present')}`}
+                        >
                           {getAttendanceBadgeLabel(record.attendanceStatus || 'present')}
                         </span>
                       </td>
