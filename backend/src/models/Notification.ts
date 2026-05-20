@@ -1,6 +1,10 @@
+// backend/src/models/Notification.ts
+// UPDATED: added leave_* event types to NotificationEventType union and schema enum
+
 import mongoose, { Document, Schema, Types } from "mongoose";
 
 export type NotificationEventType =
+  // ── existing task events ──────────────────────────────────────────────────
   | "task_comment_created"
   | "task_feedback_added"
   | "task_assignment_added"
@@ -14,11 +18,17 @@ export type NotificationEventType =
   | "task_deleted"
   | "task_due_today"
   | "task_overdue"
+  // ── existing user events ──────────────────────────────────────────────────
   | "user_profile_updated"
   | "user_role_changed"
   | "user_activation_changed"
   | "user_deleted"
-  | "intern_profile_updated";
+  | "intern_profile_updated"
+  // ── NEW: leave events ─────────────────────────────────────────────────────
+  | "leave_submitted"      // notifies admin/heads when a user files a leave
+  | "leave_approved"       // notifies the applicant when leave is approved
+  | "leave_rejected"       // notifies the applicant when leave is rejected
+  | "leave_cancelled";     // notifies admin/heads when a user cancels their leave
 
 export interface INotification extends Document {
   recipient_id: Types.ObjectId;
@@ -26,7 +36,7 @@ export interface INotification extends Document {
   event_type: NotificationEventType;
   title: string;
   message: string;
-  entity_type?: "task" | "user";
+  entity_type?: "task" | "user" | "leave";
   entity_id?: Types.ObjectId;
   metadata?: Record<string, unknown>;
   is_read: boolean;
@@ -45,6 +55,7 @@ const notificationSchema = new Schema<INotification>({
   event_type: {
     type: String,
     enum: [
+      // task
       "task_comment_created",
       "task_feedback_added",
       "task_assignment_added",
@@ -58,18 +69,24 @@ const notificationSchema = new Schema<INotification>({
       "task_deleted",
       "task_due_today",
       "task_overdue",
+      // user
       "user_profile_updated",
       "user_role_changed",
       "user_activation_changed",
       "user_deleted",
       "intern_profile_updated",
+      // leave (new)
+      "leave_submitted",
+      "leave_approved",
+      "leave_rejected",
+      "leave_cancelled",
     ],
     required: true,
     index: true,
   },
   title: { type: String, required: true, trim: true, maxlength: 160 },
   message: { type: String, required: true, trim: true, maxlength: 500 },
-  entity_type: { type: String, enum: ["task", "user"] },
+  entity_type: { type: String, enum: ["task", "user", "leave"] },
   entity_id: { type: Schema.Types.ObjectId },
   metadata: { type: Schema.Types.Mixed },
   is_read: { type: Boolean, default: false, index: true },

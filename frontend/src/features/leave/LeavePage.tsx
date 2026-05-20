@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import Button from '../../components/ui/Button';
 import LeaveRequestForm from './LeaveRequestForm';
 import LeaveListTable from './LeaveListTable';
+import LeaveApprovalPanel from './LeaveApprovalPanel';
 import { leaveService } from '../../services/leaveService';
 import type { ILeave, CreateLeavePayload } from '../../types/leave';
 import { StatCardSkeleton, ActivityListItemSkeleton } from '../../components/ui/Skeleton';
@@ -11,11 +12,15 @@ export default function LeavePage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
+  const isAdmin = user?.global_role === 'Admin' || user?.global_role === 'Superadmin';
+  const isHead = user?.departments?.some((d) => d.department_role === 'Head');
+  const isReviewer = isAdmin || isHead;
+
   const [mounted, setMounted] = useState(false);
   const [leaves, setLeaves] = useState<ILeave[]>([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'request' | 'history'>('request');
+  const [activeTab, setActiveTab] = useState<'request' | 'history' | 'approvals'>('request');
   const [error, setError] = useState('');
 
   React.useEffect(() => {
@@ -156,6 +161,20 @@ export default function LeavePage() {
           >
             History
           </button>
+
+          {/* Only visible to Admins and Department Heads */}
+          {isReviewer && (
+            <button
+              onClick={() => setActiveTab('approvals')}
+              className={`pb-3 font-medium text-sm transition-colors ${
+                activeTab === 'approvals'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Pending Approvals
+            </button>
+          )}
         </div>
       </div>
 
@@ -182,6 +201,12 @@ export default function LeavePage() {
                 onCancel={handleCancelLeave}
               />
             )}
+          </div>
+        )}
+
+        {activeTab === 'approvals' && isReviewer && (
+          <div>
+            <LeaveApprovalPanel />
           </div>
         )}
       </div>

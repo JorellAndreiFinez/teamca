@@ -1,16 +1,48 @@
-// backend\src\routes\leaveRoutes.ts
+// backend/src/routes/leaveRoutes.ts
 
-import express from "express";
-import * as leaveController from "../controllers/leaveController";
+import { Router } from "express";
 import { authMiddleware } from "../middlewares/authMiddleware";
+import { requireAnyRole } from "../middlewares/rbac";
+import {
+  createLeaveHandler,
+  getMyLeavesHandler,
+  getPendingLeavesHandler,
+  reviewLeaveHandler,
+  cancelLeaveHandler,
+} from "../controllers/leaveController";
 
-const router = express.Router();
+const router = Router();
 
-router.post("/", authMiddleware, leaveController.createLeave);
-router.get("/me", authMiddleware, leaveController.getMyLeaves);
+// All leave routes require authentication
+router.use(authMiddleware);
 
-router.patch("/:leaveId/approve", authMiddleware, leaveController.approveLeave);
+// ── applicant routes ───────────────────────────────────────────────────────────
 
-router.patch("/:leaveId/cancel", authMiddleware, leaveController.cancelLeave);
+// POST   /leave          → file a new leave request (any authenticated user)
+router.post("/", createLeaveHandler);
+
+// GET    /leave/me       → get own leave history
+router.get("/me", getMyLeavesHandler);
+
+// PATCH  /leave/:leaveId/cancel  → cancel own pending leave
+router.patch("/:leaveId/cancel", cancelLeaveHandler);
+
+// ── reviewer routes ────────────────────────────────────────────────────────────
+
+// GET    /leave/pending  → get pending leaves (admins: all; heads: dept-scoped)
+// requireAnyRole: global Admin/Superadmin OR department Head
+router.get(
+  "/pending",
+  requireAnyRole(["Admin", "Superadmin"], ["Head"]),
+  getPendingLeavesHandler,
+);
+
+// PATCH  /leave/:leaveId/approve  → approve or reject a leave
+// Body: { status: "approved" | "rejected", rejectionReason?: string }
+router.patch(
+  "/:leaveId/approve",
+  requireAnyRole(["Admin", "Superadmin"], ["Head"]),
+  reviewLeaveHandler,
+);
 
 export default router;
