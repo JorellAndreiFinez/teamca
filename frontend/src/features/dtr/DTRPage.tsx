@@ -166,7 +166,9 @@ export default function DTRPage() {
       try {
         await refreshRecords();
         await fetchHistory();
-      } catch (err) { }
+      } catch (err) {
+        console.error("Failed to refresh DTR data after socket update.", err);
+      }
     },
     [refreshRecords, fetchHistory],
   );
