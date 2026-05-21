@@ -115,8 +115,7 @@ export const createInternProfileHandler = async (
       typeof payload.required_hours !== "number"
     ) {
       return res.status(400).json({
-        message:
-          "user_id, school_university, and required_hours are required.",
+        message: "user_id, school_university, and required_hours are required.",
       });
     }
 

@@ -231,7 +231,6 @@ export const createWhitelistedUserHandler = async (
 
     res.status(201).json(newUser);
   } catch (err: unknown) {
-
     const errorMessage =
       err instanceof Error ? err.message : "Failed to whitelist email";
 

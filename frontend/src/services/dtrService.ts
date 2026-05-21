@@ -88,11 +88,14 @@ export const dtrService = {
       limit: limit.toString(),
       ...(filters?.date_from && { date_from: filters.date_from }),
       ...(filters?.date_to && { date_to: filters.date_to }),
-      ...(filters?.status && filters.status !== "all" && { status: filters.status }),
+      ...(filters?.status &&
+        filters.status !== "all" && { status: filters.status }),
       ...(filters?.sort_by && { sort_by: filters.sort_by }),
     });
 
-    const res = await api.get<PaginatedDTRResponse>(`/dtr/history?${params.toString()}`);
+    const res = await api.get<PaginatedDTRResponse>(
+      `/dtr/history?${params.toString()}`,
+    );
     return res.data.data;
   },
 
@@ -104,60 +107,65 @@ export const dtrService = {
     reason: string,
     originalValue?: string,
   ) => {
-    const res = await api.post<{ success: boolean; data: TimeAdjustmentRequest }>(
-      "/dtr/adjustment-request",
-      {
-        dtrDate,
-        adjustmentType,
-        requestedValue,
-        reason,
-        originalValue,
-      },
-    );
+    const res = await api.post<{
+      success: boolean;
+      data: TimeAdjustmentRequest;
+    }>("/dtr/adjustment-request", {
+      dtrDate,
+      adjustmentType,
+      requestedValue,
+      reason,
+      originalValue,
+    });
     return res.data.data;
   },
 
   getUserAdjustmentRequests: async (status?: string) => {
     const params = status ? `?status=${status}` : "";
-    const res = await api.get<{ success: boolean; data: TimeAdjustmentRequest[] }>(
-      `/dtr/adjustment-requests${params}`,
-    );
+    const res = await api.get<{
+      success: boolean;
+      data: TimeAdjustmentRequest[];
+    }>(`/dtr/adjustment-requests${params}`);
     return res.data.data;
   },
 
   getPendingAdjustmentRequests: async () => {
-    const res = await api.get<{ success: boolean; data: TimeAdjustmentRequest[] }>(
-      "/dtr/adjustment-requests-pending",
-    );
+    const res = await api.get<{
+      success: boolean;
+      data: TimeAdjustmentRequest[];
+    }>("/dtr/adjustment-requests-pending");
     return res.data.data;
   },
 
   getAdjustmentRequest: async (id: string) => {
-    const res = await api.get<{ success: boolean; data: TimeAdjustmentRequest }>(
-      `/dtr/adjustment-request/${id}`,
-    );
+    const res = await api.get<{
+      success: boolean;
+      data: TimeAdjustmentRequest;
+    }>(`/dtr/adjustment-request/${id}`);
     return res.data.data;
   },
 
   approveAdjustmentRequest: async (id: string, reviewNotes?: string) => {
-    const res = await api.post<{ success: boolean; data: TimeAdjustmentRequest }>(
-      `/dtr/adjustment-request/${id}/approve`,
-      { reviewNotes },
-    );
+    const res = await api.post<{
+      success: boolean;
+      data: TimeAdjustmentRequest;
+    }>(`/dtr/adjustment-request/${id}/approve`, { reviewNotes });
     return res.data.data;
   },
 
   rejectAdjustmentRequest: async (id: string, reviewNotes: string) => {
-    const res = await api.post<{ success: boolean; data: TimeAdjustmentRequest }>(
-      `/dtr/adjustment-request/${id}/reject`,
-      { reviewNotes },
-    );
+    const res = await api.post<{
+      success: boolean;
+      data: TimeAdjustmentRequest;
+    }>(`/dtr/adjustment-request/${id}/reject`, { reviewNotes });
     return res.data.data;
   },
 
   // Reminder Settings
   getReminderSettings: async (): Promise<ReminderSettings> => {
-    const res = await api.get<{ success: boolean; data: ReminderSettings }>("/dtr/reminders");
+    const res = await api.get<{ success: boolean; data: ReminderSettings }>(
+      "/dtr/reminders",
+    );
     return res.data.data;
   },
 
@@ -208,4 +216,3 @@ export const dtrService = {
     return (res.data as any).data;
   },
 };
-

@@ -157,9 +157,12 @@ export const timeOut = async (userId: string, remarks: string) => {
 
   // TOTAL HOURS (excluding breaks)
   let totalMinutes = (now.getTime() - lastClock.timeIn.getTime()) / 60000;
-  
+
   if (lastClock.breaks && lastClock.breaks.length > 0) {
-    const breakMinutes = lastClock.breaks.reduce((sum: number, b: any) => sum + (b.duration || 0), 0);
+    const breakMinutes = lastClock.breaks.reduce(
+      (sum: number, b: any) => sum + (b.duration || 0),
+      0,
+    );
     totalMinutes -= breakMinutes;
   }
 
@@ -210,7 +213,10 @@ export const getMyDTR = async (userId: string) => {
 /**
  * START BREAK
  */
-export const startBreak = async (userId: string, breakType: "lunch" | "rest" | "other" = "rest") => {
+export const startBreak = async (
+  userId: string,
+  breakType: "lunch" | "rest" | "other" = "rest",
+) => {
   const today = getTodayPH();
   const now = new Date();
 
@@ -283,12 +289,17 @@ export const endBreak = async (userId: string) => {
   }
 
   // calculate break duration
-  const breakDuration = Math.floor((now.getTime() - activeBreak.breakStart.getTime()) / 60000);
+  const breakDuration = Math.floor(
+    (now.getTime() - activeBreak.breakStart.getTime()) / 60000,
+  );
   activeBreak.breakEnd = now;
   activeBreak.duration = breakDuration;
 
   // update total break time
-  const totalBreakTime = (lastClock.breaks || []).reduce((sum, b) => sum + (b.duration || 0), 0);
+  const totalBreakTime = (lastClock.breaks || []).reduce(
+    (sum, b) => sum + (b.duration || 0),
+    0,
+  );
   dtr.totalBreakTime = totalBreakTime;
 
   await dtr.save();
@@ -314,10 +325,13 @@ const calculateTotalHours = (clock: any) => {
   }
 
   let totalMinutes = (clock.timeOut.getTime() - clock.timeIn.getTime()) / 60000;
-  
+
   // deduct break time
   if (clock.breaks && clock.breaks.length > 0) {
-    const breakMinutes = clock.breaks.reduce((sum: number, b: any) => sum + (b.duration || 0), 0);
+    const breakMinutes = clock.breaks.reduce(
+      (sum: number, b: any) => sum + (b.duration || 0),
+      0,
+    );
     totalMinutes -= breakMinutes;
   }
 
@@ -364,7 +378,10 @@ export const updateDTRTotals = async (dtrId: string) => {
 /**
  * GENERATE DTR SUMMARY (weekly/monthly)
  */
-export const generateDTRSummary = async (userId: string, period: "week" | "month") => {
+export const generateDTRSummary = async (
+  userId: string,
+  period: "week" | "month",
+) => {
   const today = getTodayPH();
   let startDate: Date;
   let endDate: Date;
@@ -375,7 +392,7 @@ export const generateDTRSummary = async (userId: string, period: "week" | "month
     const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
     startDate = new Date(today.setDate(diff));
     startDate.setHours(0, 0, 0, 0);
-    
+
     endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
@@ -383,7 +400,7 @@ export const generateDTRSummary = async (userId: string, period: "week" | "month
     // get start of current month
     startDate = new Date(today.getFullYear(), today.getMonth(), 1);
     startDate.setHours(0, 0, 0, 0);
-    
+
     endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     endDate.setHours(23, 59, 59, 999);
   }
@@ -402,7 +419,10 @@ export const generateDTRSummary = async (userId: string, period: "week" | "month
     endDate: { $gte: startDate },
   }).lean();
 
-  const daysOnLeave = leaves.reduce((sum: number, l: any) => sum + (l.duration || 0), 0);
+  const daysOnLeave = leaves.reduce(
+    (sum: number, l: any) => sum + (l.duration || 0),
+    0,
+  );
 
   // calculate metrics
   let totalHours = 0;
@@ -416,8 +436,10 @@ export const generateDTRSummary = async (userId: string, period: "week" | "month
 
   records.forEach((dtr) => {
     totalHours += dtr.totalHours || 0;
-    overtimeHours += (dtr.clocks || [])
-      .reduce((sum: number, c: any) => sum + (c.overtimeHours || 0), 0);
+    overtimeHours += (dtr.clocks || []).reduce(
+      (sum: number, c: any) => sum + (c.overtimeHours || 0),
+      0,
+    );
     totalBreakTime += dtr.totalBreakTime || 0;
 
     if (dtr.attendanceStatus === "present") {
@@ -553,23 +575,27 @@ export const getHistoryPaginated = async (
   }
 
   // Status filter
-  if (filters?.status && filters.status !== 'all') {
+  if (filters?.status && filters.status !== "all") {
     query.attendanceStatus = filters.status;
   }
 
   // Determine sort
   let sortObj: any = { date: -1 }; // default: newest first
-  if (filters?.sort_by === 'date_asc') {
+  if (filters?.sort_by === "date_asc") {
     sortObj = { date: 1 };
-  } else if (filters?.sort_by === 'hours_desc') {
+  } else if (filters?.sort_by === "hours_desc") {
     sortObj = { totalHours: -1, date: -1 };
-  } else if (filters?.sort_by === 'hours_asc') {
+  } else if (filters?.sort_by === "hours_asc") {
     sortObj = { totalHours: 1, date: -1 };
   }
 
   // Execute query
   const total = await DTR.countDocuments(query);
-  const items = await DTR.find(query).sort(sortObj).skip(skip).limit(limitNum).exec();
+  const items = await DTR.find(query)
+    .sort(sortObj)
+    .skip(skip)
+    .limit(limitNum)
+    .exec();
 
   const total_pages = Math.ceil(total / limitNum);
 

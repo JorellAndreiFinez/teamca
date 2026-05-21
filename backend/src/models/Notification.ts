@@ -25,10 +25,10 @@ export type NotificationEventType =
   | "user_deleted"
   | "intern_profile_updated"
   // ── NEW: leave events ─────────────────────────────────────────────────────
-  | "leave_submitted"      // notifies admin/heads when a user files a leave
-  | "leave_approved"       // notifies the applicant when leave is approved
-  | "leave_rejected"       // notifies the applicant when leave is rejected
-  | "leave_cancelled";     // notifies admin/heads when a user cancels their leave
+  | "leave_submitted" // notifies admin/heads when a user files a leave
+  | "leave_approved" // notifies the applicant when leave is approved
+  | "leave_rejected" // notifies the applicant when leave is rejected
+  | "leave_cancelled"; // notifies admin/heads when a user cancels their leave
 
 export interface INotification extends Document {
   recipient_id: Types.ObjectId;

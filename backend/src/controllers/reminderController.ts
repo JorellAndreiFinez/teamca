@@ -19,14 +19,20 @@ export const reminderController = {
       const user = (req as any).user as IUser;
       const userId = (req as any).user?.user_id || (user as any)?._id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
 
-      const reminder = await reminderService.getOrCreateReminder(String(userId));
+      const reminder = await reminderService.getOrCreateReminder(
+        String(userId),
+      );
 
       res.status(200).json({ success: true, data: reminder });
     } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message || "Server error" });
+      res
+        .status(500)
+        .json({ success: false, message: error.message || "Server error" });
     }
   },
 
@@ -35,7 +41,9 @@ export const reminderController = {
       const user = (req as any).user as IUser;
       const userId = (req as any).user?.user_id || (user as any)?._id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
       const validated = updateReminderSchema.parse(req.body);
 
@@ -61,7 +69,9 @@ export const reminderController = {
       const user = (req as any).user as IUser;
       const userId = (req as any).user?.user_id || (user as any)?._id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
 
       const reminder = await reminderService.updateReminderSettings(
@@ -78,7 +88,9 @@ export const reminderController = {
 
       res.status(200).json({ success: true, data: reminder });
     } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message || "Server error" });
+      res
+        .status(500)
+        .json({ success: false, message: error.message || "Server error" });
     }
   },
 };

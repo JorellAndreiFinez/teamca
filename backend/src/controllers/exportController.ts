@@ -34,7 +34,9 @@ export const exportController = {
       const user = (req as any).user as IUser;
       const userId = (req as any).user?.user_id || (user as any)?._id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
       const { startDate, endDate, format, type } = exportQuerySchema.parse({
         startDate: req.query.startDate,
@@ -42,7 +44,6 @@ export const exportController = {
         format: req.query.format || "csv",
         type: req.query.type || "records",
       });
-
 
       let exportData: any;
 
@@ -129,14 +130,15 @@ export const exportController = {
       const user = (req as any).user as IUser;
       const userId = (req as any).user?.user_id || (user as any)?._id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
       const { startDate, endDate, type } = exportQuerySchema.parse({
         startDate: req.query.startDate,
         endDate: req.query.endDate,
         type: req.query.type || "records",
       });
-
 
       let exportData: any;
 
