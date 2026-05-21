@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import Notification from "../models/Notification";
 import {
   addTaskComment,
   addTaskFeedback,
@@ -23,6 +22,9 @@ import Task from "../models/Task";
 import TaskAssignment from "../models/TaskAssignment";
 import User from "../models/User";
 import { createNotificationsForRecipients } from "../services/notificationService";
+import {
+  emitDeadlineNotificationsForTask,
+} from "../services/deadlineService";
 import {
   emitTaskCommentCreated,
   emitTaskStatusUpdated,
@@ -285,129 +287,6 @@ const getDepartmentReviewerIdsForTask = async (
     .lean();
 
   return [...new Set(reviewers.map((item) => String(item._id)))];
-};
-
-type DeadlineNotificationTask = {
-  task_id: string | number;
-  title: string;
-  status: string;
-  deadline?: string | Date;
-};
-
-const getStartOfDayTimestamp = (value: Date): number =>
-  new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
-
-const formatDateKey = (value: Date): string => {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const emitDeadlineNotificationsForTask = async (
-  task: DeadlineNotificationTask,
-  actorId?: string,
-  actorFirstName?: string,
-) => {
-  if (!task.deadline || task.status === "Completed") {
-    return;
-  }
-
-  const deadlineDate = new Date(task.deadline);
-  if (Number.isNaN(deadlineDate.getTime())) {
-    return;
-  }
-
-  const taskId = String(task.task_id);
-  const today = new Date();
-  const deadlineDay = getStartOfDayTimestamp(deadlineDate);
-  const todayDay = getStartOfDayTimestamp(today);
-
-  const isDueToday = deadlineDay === todayDay;
-  const isOverdue = deadlineDay < todayDay;
-
-  if (!isDueToday && !isOverdue) {
-    return;
-  }
-
-  const recipientIds = [
-    ...new Set([
-      ...(await getTaskParticipantIds(taskId)),
-      ...(await getDepartmentReviewerIdsForTask(taskId)),
-    ]),
-  ];
-
-  if (recipientIds.length === 0) {
-    return;
-  }
-
-  if (isDueToday) {
-    const alertKey = `task_due_today:${taskId}:${formatDateKey(today)}`;
-    const alreadyNotified = await Notification.exists({
-      event_type: "task_due_today",
-      "metadata.alert_key": alertKey,
-    });
-
-    if (!alreadyNotified) {
-      const notifications = await createNotificationsForRecipients(
-        recipientIds,
-        {
-          actorId,
-          eventType: "task_due_today",
-          title: "Task due today",
-          message: `Make sure to submit your work on "${task.title}" for reviewing.`,
-          entityType: "task",
-          entityId: taskId,
-          metadata: {
-            task_id: taskId,
-            task_title: task.title,
-            task_status: task.status,
-            deadline: deadlineDate,
-            actor_first_name: actorFirstName,
-            alert_key: alertKey,
-          },
-        },
-      );
-
-      for (const notification of notifications) {
-        emitUsersNotification([notification.recipient_id], notification);
-      }
-    }
-  }
-
-  if (isOverdue) {
-    const alertKey = `task_overdue:${taskId}`;
-    const alreadyNotified = await Notification.exists({
-      event_type: "task_overdue",
-      "metadata.alert_key": alertKey,
-    });
-
-    if (!alreadyNotified) {
-      const notifications = await createNotificationsForRecipients(
-        recipientIds,
-        {
-          actorId,
-          eventType: "task_overdue",
-          title: "Task overdue",
-          message: `Please accomplish "${task.title}" at your earliest convenience.`,
-          entityType: "task",
-          entityId: taskId,
-          metadata: {
-            task_id: taskId,
-            task_title: task.title,
-            task_status: task.status,
-            deadline: deadlineDate,
-            actor_first_name: actorFirstName,
-            alert_key: alertKey,
-          },
-        },
-      );
-
-      for (const notification of notifications) {
-        emitUsersNotification([notification.recipient_id], notification);
-      }
-    }
-  }
 };
 
 export const createTaskHandler = async (req: Request, res: Response) => {

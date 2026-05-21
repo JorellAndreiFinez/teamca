@@ -15,6 +15,8 @@ export interface Task {
   deadline?: string | Date;
   created_at: string | Date;
   assignees?: string[];
+  is_overdue?: boolean;
+  is_due_today?: boolean;
 }
 
 export interface TaskUserSummary {

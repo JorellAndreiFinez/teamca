@@ -9,6 +9,7 @@ import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import { initTaskSocket } from "./socket/io.js";
 import routes from "./routes/index.js";
+import { scheduleDeadlineSweep } from "./utils/scheduler.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -92,6 +93,7 @@ const _apiLimiter = rateLimit({
 });
 
 void connectDB();
+scheduleDeadlineSweep();
 
 app.use("/api/auth", _authLimiter);
 app.use("/api", _apiLimiter, routes);

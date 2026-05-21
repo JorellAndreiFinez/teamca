@@ -94,3 +94,37 @@ export function formatTaskDeadlineLabel(
 
   return `Overdue by ${Math.abs(dayDiff)} days`;
 }
+
+// returns true when the deadline is in the past and the task is not completed
+export function isOverdueDeadline(
+  value?: string | Date | null,
+  status?: string,
+): boolean {
+  if (!value || status === "Completed") {
+    return false;
+  }
+
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  return getDayDifference(date, new Date()) < 0;
+}
+
+// returns true when the deadline falls on today and the task is not completed
+export function isDueTodayDeadline(
+  value?: string | Date | null,
+  status?: string,
+): boolean {
+  if (!value || status === "Completed") {
+    return false;
+  }
+
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  return getDayDifference(date, new Date()) === 0;
+}

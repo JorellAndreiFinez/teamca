@@ -190,7 +190,7 @@ export const getPendingLeaves = async (actorId: string) => {
 
   const isAdmin = actor.global_role === "Admin" || actor.global_role === "Superadmin";
 
-  let query: any = { status: "pending" };
+  const query: any = { status: "pending" };
 
   if (!isAdmin) {
     // Head: only their department(s)

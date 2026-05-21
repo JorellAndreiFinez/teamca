@@ -16,7 +16,11 @@ export type NotificationEventType =
   | "user_role_changed"
   | "user_activation_changed"
   | "user_deleted"
-  | "intern_profile_updated";
+  | "intern_profile_updated"
+  | "leave_submitted"
+  | "leave_approved"
+  | "leave_rejected"
+  | "leave_cancelled";
 
 export interface NotificationItem {
   notification_id: string;
@@ -25,7 +29,7 @@ export interface NotificationItem {
   event_type: NotificationEventType;
   title: string;
   message: string;
-  entity_type?: "task" | "user";
+  entity_type?: "task" | "user" | "leave";
   entity_id?: string;
   metadata?: Record<string, unknown>;
   is_read: boolean;

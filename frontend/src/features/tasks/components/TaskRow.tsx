@@ -1,5 +1,5 @@
 import type { TaskListItem, TaskPriority, TaskStatus } from '../../../types/task';
-import { formatTaskDeadlineLabel } from '../../../utils/dateUtils';
+import { formatTaskDeadlineLabel, isOverdueDeadline } from '../../../utils/dateUtils';
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
   'Not Started': 'border-slate-200/70 bg-slate-50 text-slate-700',
@@ -31,21 +31,6 @@ const formatDate = (value?: string | Date) => {
   return new Date(value).toLocaleDateString();
 };
 
-const isOverdueDeadline = (value?: string | Date): boolean => {
-  if (!value) {
-    return false;
-  }
-
-  const deadline = new Date(value);
-  if (Number.isNaN(deadline.getTime())) {
-    return false;
-  }
-
-  const now = new Date();
-  const deadlineDay = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate()).getTime();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  return deadlineDay < today;
-};
 
 const formatAssignees = (task: TaskListItem) => {
   if (!task.assigned_users.length) {
@@ -60,7 +45,7 @@ const formatAssignees = (task: TaskListItem) => {
 
 export default function TaskRow({ task, onClick, selectionMode, selected, canSelect, onToggleSelect }: TaskRowProps) {
   const isCompleted = task.status === 'Completed';
-  const isOverdue = isOverdueDeadline(task.deadline);
+  const isOverdue = task.is_overdue ?? isOverdueDeadline(task.deadline, task.status);
   const completionDeadlineLabel = !task.deadline
     ? 'Completed'
     : isOverdue
