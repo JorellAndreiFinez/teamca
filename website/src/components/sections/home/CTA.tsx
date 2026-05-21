@@ -4,7 +4,7 @@ import React from "react";
 
 const CTA: React.FC = () => {
   return (
-    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary-2] px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary-2] px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
@@ -21,7 +21,7 @@ const CTA: React.FC = () => {
           color="yellow"
           size="xl"
         />
-        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-24">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-12 sm:mt-24">
           <Button
             variant="secondary"
             className="flex items-center gap-2 backdrop-blur-md "

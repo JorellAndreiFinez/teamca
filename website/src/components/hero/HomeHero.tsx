@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
 import Button from "@/components/ui/Button";
-import { File } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -147,7 +146,7 @@ const HomeHero: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full min-h-[250vh] overflow-hidden"
+      className="relative w-full min-h-[190vh] sm:min-h-[220vh] lg:min-h-[250vh] overflow-hidden"
     >
       <img
         src="/partials/circle-gradient-shade.png"
@@ -157,12 +156,12 @@ const HomeHero: React.FC = () => {
       {/* Hero text */}
       <div
         ref={textRef}
-        className="absolute top-60 left-12 md:left-24 lg:left-32 max-w-5xl text-left z-20"
+        className="absolute top-28 xs:top-32 sm:top-40 md:top-52 lg:top-60 left-4 xs:left-5 sm:left-8 md:left-24 lg:left-32 right-4 max-w-5xl text-left z-20"
       >
-        <h1 className="text-6xl md:text-7xl font-heading text-white mb-4">
+        <h1 className="text-[2.35rem] xs:text-[2.65rem] sm:text-5xl md:text-6xl lg:text-7xl font-heading text-white mb-4 leading-[1.04]">
           At Pru Life UK, we believe that every life is insurable.
         </h1>
-        <p className="text-white/90 text-xl md:text-2xl mb-6 max-w-lg">
+        <p className="text-white/90 text-base xs:text-lg sm:text-xl md:text-2xl mb-6 max-w-lg">
           Because love means preparing for their future, no matter what.
         </p>
         <Button variant="default" className="flex items-center gap-2">
@@ -190,7 +189,7 @@ const HomeHero: React.FC = () => {
         <img
           src="/partials/team-poster.png"
           alt="Team Poster"
-          className="h-full w-full object-contain"
+          className="h-full w-full min-w-[620px] sm:min-w-0 object-contain"
         />
       </div>
 

@@ -21,7 +21,7 @@ export default function FinancialAdvisors() {
   ];
 
   return (
-    <section className="relative w-full min-h-[60vh] text-white px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -45,7 +45,7 @@ export default function FinancialAdvisors() {
         <div className="mt-14 max-w-5xl mx-auto">
           <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden shadow-xl">
             {/* TOP CONTENT */}
-            <div className="p-8 md:p-12">
+            <div className="p-4 xs:p-6 md:p-12">
               <div className="max-w-3xl">
                 <h3 className="text-2xl md:text-3xl font-semibold leading-tight">
                   Start Your Journey With Team CA
@@ -58,7 +58,7 @@ export default function FinancialAdvisors() {
                 </p>
 
                 {/* SUBJECT FORMAT */}
-                <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-5 py-4">
+                <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-4 xs:px-5 py-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-2">
                     Email Subject Format
                   </p>
@@ -79,19 +79,19 @@ export default function FinancialAdvisors() {
                       border border-white/10
                       bg-white/[0.03]
                       backdrop-blur-lg
-                      p-6
+                      p-4 xs:p-6
                       transition-all duration-300
                       hover:bg-white/[0.06]
                       hover:-translate-y-1
                     "
                   >
                     {/* NAME */}
-                    <div className="flex items-center gap-3 mb-5">
+                    <div className="flex items-center gap-3 mb-5 min-w-0">
                       <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
                         <User className="w-5 h-5 text-white" />
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-semibold text-lg">
                           {contact.name}
                         </h4>
@@ -136,7 +136,7 @@ export default function FinancialAdvisors() {
             </div>
 
             {/* BOTTOM SECTION */}
-            <div className="border-t border-white/10 bg-black/10 px-8 md:px-12 py-6">
+            <div className="border-t border-white/10 bg-black/10 px-4 xs:px-8 md:px-12 py-6">
               <p className="text-center text-sm md:text-base text-white/60 leading-relaxed">
                 We welcome passionate individuals who are eager to grow,
                 inspire, and create a meaningful impact through financial

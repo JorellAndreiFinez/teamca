@@ -104,4 +104,17 @@ app.get("/health", (_req, res) =>
 const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
-server.listen(PORT);
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(
+      `Port ${PORT} is already in use. Stop the process using it or set a different PORT in backend/.env.`,
+    );
+    process.exit(1);
+  }
+
+  throw error;
+});
+
+server.listen(PORT, () => {
+  console.log(`API server listening on port ${PORT}`);
+});

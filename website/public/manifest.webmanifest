@@ -1,0 +1,25 @@
+{
+  "name": "Team CA",
+  "short_name": "Team CA",
+  "description": "Team CA financial services and career opportunities.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ac1212",
+  "theme_color": "#ac1212",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/teamca-white-circle-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/teamca-white-circle-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

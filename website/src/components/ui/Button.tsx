@@ -13,7 +13,7 @@ const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    "px-4 py-2 rounded-sm font-semibold transition inline-block w-auto text-center font-sans";
+    "px-4 py-2 rounded-sm font-semibold transition inline-block w-auto max-w-full text-center font-sans text-sm sm:text-base leading-snug";
 
   let style: React.CSSProperties = {};
   let variantClasses = "";
