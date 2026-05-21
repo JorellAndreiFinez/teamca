@@ -6,9 +6,9 @@ import {
   getWhitelistedUsers,
   createUser,
   deleteUser,
-} from "../controllers/userController";
-import { authMiddleware } from "../middlewares/authMiddleware";
-import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac";
+} from "../controllers/userController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { requireAnyRole, requireGlobalRole } from "../middlewares/rbac.js";
 
 const router = express.Router();
 

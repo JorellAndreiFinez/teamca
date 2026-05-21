@@ -3,7 +3,7 @@ import ActivityLog, {
   ActionType,
   ResourceType,
   LogStatus,
-} from "../models/ActivityLog";
+} from "../models/ActivityLog.js";
 
 export interface LogActivityInput {
   user_id: string;

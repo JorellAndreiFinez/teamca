@@ -1,5 +1,5 @@
 import { Router } from "express";
-import authenticateJWT from "../middlewares/auth";
+import authenticateJWT from "../middlewares/auth.js";
 import {
   addTaskCommentHandler,
   addTaskWorkLinkHandler,
@@ -16,7 +16,7 @@ import {
   listTasksHandler,
   updateTaskDetailsHandler,
   updateTaskStatusHandler,
-} from "../controllers/taskController";
+} from "../controllers/taskController.js";
 
 const router = Router();
 

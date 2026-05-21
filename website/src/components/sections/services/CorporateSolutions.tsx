@@ -33,7 +33,7 @@ export default function CorporateSolutions() {
   };
 
   return (
-    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary] px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary] px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -66,9 +66,9 @@ export default function CorporateSolutions() {
                 {/* HEADER */}
                 <button
                   onClick={() => toggleCard(index)}
-                  className="w-full flex items-center text-center justify-between px-6 py-5 hover:bg-white/5 transition-colors duration-300"
+                  className="w-full flex items-center text-left justify-between gap-4 px-4 sm:px-6 py-5 hover:bg-white/5 transition-colors duration-300"
                 >
-                  <h3 className="text-lg md:text-xl font-semibold ">
+                    <h3 className="text-base xs:text-lg md:text-xl font-semibold">
                     {item.title}
                   </h3>
 
@@ -88,7 +88,7 @@ export default function CorporateSolutions() {
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="px-6 py-3 text-white/70 text-sm md:text-base leading-relaxed">
+                    <div className="px-4 sm:px-6 py-3 text-white/70 text-sm md:text-base leading-relaxed">
                       {item.description}
                     </div>
                   </div>

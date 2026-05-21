@@ -31,7 +31,7 @@
     "lint:fix:all": "npm run lint:fix:backend && npm run lint:fix:frontend && npm run lint:fix:website",
     "format": "npm run format --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "prepare": "husky && husky install"
+    "prepare": "node -e \"if (!process.env.CI && !process.env.VERCEL) require('child_process').execSync('husky install', {stdio:'inherit'})\""
   },
   "keywords": [
     "intern-management",

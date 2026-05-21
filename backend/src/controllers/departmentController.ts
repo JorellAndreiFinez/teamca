@@ -6,7 +6,7 @@ import {
   getDepartmentById,
   getDepartmentsByIds,
   updateDepartment,
-} from "../services/departmentService";
+} from "../services/departmentService.js";
 
 const getDepartmentIdParam = (req: Request): string => {
   const raw = req.params.departmentId;
@@ -141,7 +141,9 @@ export const deleteDepartmentHandler = async (req: Request, res: Response) => {
   try {
     const departmentId = getDepartmentIdParam(req);
     await deleteDepartment(departmentId);
-    return res.status(200).json({ message: "Department deleted successfully." });
+    return res
+      .status(200)
+      .json({ message: "Department deleted successfully." });
   } catch (error) {
     if (error instanceof Error && error.message === "Department not found.") {
       return res.status(404).json({ message: error.message });

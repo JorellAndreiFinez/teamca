@@ -1,17 +1,17 @@
 import { Types } from "mongoose";
-import Department from "../models/Department";
+import Department from "../models/Department.js";
 import Task, {
   type ITask,
   type TaskPriority,
   type TaskStatus,
-} from "../models/Task";
-import TaskAssignment from "../models/TaskAssignment";
-import TaskComment from "../models/TaskComment";
-import TaskFeedback from "../models/TaskFeedback";
-import TaskStatusHistory from "../models/TaskStatusHistory";
-import TaskWorkLink from "../models/TaskWorkLink";
-import User, { type IUser } from "../models/User";
-import { getDeadlineState } from "./deadlineService";
+} from "../models/Task.js";
+import TaskAssignment from "../models/TaskAssignment.js";
+import TaskComment from "../models/TaskComment.js";
+import TaskFeedback from "../models/TaskFeedback.js";
+import TaskStatusHistory from "../models/TaskStatusHistory.js";
+import TaskWorkLink from "../models/TaskWorkLink.js";
+import User, { type IUser } from "../models/User.js";
+import { getDeadlineState } from "./deadlineService.js";
 
 type ActorRole = IUser["global_role"];
 type ActorDepartmentRole = IUser["departments"][number]["department_role"];

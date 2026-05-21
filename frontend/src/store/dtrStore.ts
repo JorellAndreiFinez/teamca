@@ -1,14 +1,14 @@
-import { create } from 'zustand';
-import type { DailyTimeRecord } from '../types/dtr';
-import { dtrService } from '../services/dtrService';
+import { create } from "zustand";
+import type { DailyTimeRecord } from "../types/dtr";
+import { dtrService } from "../services/dtrService";
 
 const getActiveClock = (records: DailyTimeRecord[]) => {
   if (!records.length) return undefined;
 
   // Only check the most recent (today's) DTR record for open clocks
   // This prevents picking up stale unclosed entries from past days
-  const today = records.sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+  const today = records.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   )[0];
 
   return today?.clocks?.find((clock) => clock.timeIn && !clock.timeOut);
@@ -18,9 +18,9 @@ const syncFlagsFromRecords = (records: DailyTimeRecord[]) => {
   const activeClock = getActiveClock(records);
   const breakIsActive = Boolean(
     activeClock &&
-      activeClock.breaks &&
-      activeClock.breaks.length > 0 &&
-      !activeClock.breaks[activeClock.breaks.length - 1].breakEnd,
+    activeClock.breaks &&
+    activeClock.breaks.length > 0 &&
+    !activeClock.breaks[activeClock.breaks.length - 1].breakEnd,
   );
 
   return {
@@ -29,7 +29,10 @@ const syncFlagsFromRecords = (records: DailyTimeRecord[]) => {
   };
 };
 
-const mergeRecordIntoState = (records: DailyTimeRecord[], nextRecord: DailyTimeRecord) => {
+const mergeRecordIntoState = (
+  records: DailyTimeRecord[],
+  nextRecord: DailyTimeRecord,
+) => {
   if (!nextRecord?._id) {
     return records;
   }
@@ -80,9 +83,12 @@ export const useDtrStore = create<DtrState>((set, get) => ({
         return { records, ...syncFlagsFromRecords(records) };
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || '';
+      const msg = err?.response?.data?.message || err?.message || "";
       // If server says already clocked in, refresh records to sync state
-      if (typeof msg === 'string' && msg.toLowerCase().includes('already clocked in')) {
+      if (
+        typeof msg === "string" &&
+        msg.toLowerCase().includes("already clocked in")
+      ) {
         await get().refreshRecords();
         return;
       }
@@ -100,9 +106,14 @@ export const useDtrStore = create<DtrState>((set, get) => ({
         return { records, ...syncFlagsFromRecords(records) };
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || '';
+      const msg = err?.response?.data?.message || err?.message || "";
       // If server says no clock-in found or last clock already timed out, refresh and sync
-      if (typeof msg === 'string' && (msg.toLowerCase().includes('no clock-in') || msg.toLowerCase().includes('already timed out') || msg.toLowerCase().includes('last clock-in already timed out'))) {
+      if (
+        typeof msg === "string" &&
+        (msg.toLowerCase().includes("no clock-in") ||
+          msg.toLowerCase().includes("already timed out") ||
+          msg.toLowerCase().includes("last clock-in already timed out"))
+      ) {
         await get().refreshRecords();
         // ensure local flag reflects no active clock
         get().setClockedIn(false);
@@ -116,7 +127,7 @@ export const useDtrStore = create<DtrState>((set, get) => ({
     get().setClockedIn(false);
     await get().refreshRecords();
   },
-  startBreak: async (breakType = 'rest') => {
+  startBreak: async (breakType = "rest") => {
     const updatedRecord = await dtrService.startBreak(breakType);
     set((state) => {
       const records = mergeRecordIntoState(state.records, updatedRecord);

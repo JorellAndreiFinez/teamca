@@ -10,11 +10,11 @@ export interface IDTRSummary extends Document {
   endDate: Date;
 
   // hours tracking
-  totalHours: number;              // total work hours rendered
-  requiredHours: number;           // baseline requirement
-  overtimeHours: number;           // hours beyond required
-  undertimeHours: number;          // hours short of required
-  totalBreakTime: number;          // total break time in minutes
+  totalHours: number; // total work hours rendered
+  requiredHours: number; // baseline requirement
+  overtimeHours: number; // hours beyond required
+  undertimeHours: number; // hours short of required
+  totalBreakTime: number; // total break time in minutes
 
   // day counts
   daysPresent: number;
@@ -23,8 +23,8 @@ export interface IDTRSummary extends Document {
   daysOnLeave: number;
 
   // violations
-  lateCount: number;               // number of late arrivals
-  undertimeDays: number;           // days with undertime
+  lateCount: number; // number of late arrivals
+  undertimeDays: number; // days with undertime
 
   createdAt: Date;
   updatedAt: Date;
@@ -33,7 +33,11 @@ export interface IDTRSummary extends Document {
 const DTRSummarySchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    departmentId: { type: Schema.Types.ObjectId, ref: "Department", required: true },
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+    },
 
     period: {
       type: String,

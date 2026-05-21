@@ -1,6 +1,6 @@
-import DTR from "../models/DTR";
-import DTRSummary from "../models/DTRSummary";
-import User from "../models/User";
+import DTR from "../models/DTR.js";
+import DTRSummary from "../models/DTRSummary.js";
+import User from "../models/User.js";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
@@ -54,7 +54,14 @@ export const exportService = {
 
     if (!records.length) {
       return {
-        headers: ["Date", "Time In", "Time Out", "Total Hours", "Status", "Remarks"],
+        headers: [
+          "Date",
+          "Time In",
+          "Time Out",
+          "Total Hours",
+          "Status",
+          "Remarks",
+        ],
         rows: [],
         user: user?.first_name + " " + user?.last_name,
       };
@@ -73,7 +80,14 @@ export const exportService = {
     });
 
     return {
-      headers: ["Date", "Time In", "Time Out", "Total Hours", "Status", "Remarks"],
+      headers: [
+        "Date",
+        "Time In",
+        "Time Out",
+        "Total Hours",
+        "Status",
+        "Remarks",
+      ],
       rows,
       user: user?.first_name + " " + user?.last_name,
     };
@@ -89,13 +103,22 @@ export const exportService = {
 
     if (period === "week") {
       const dayOfWeek = dateInPeriod.getDay();
-      const diff = dateInPeriod.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const diff =
+        dateInPeriod.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
       startDate = new Date(dateInPeriod.setDate(diff));
       endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 6);
     } else {
-      startDate = new Date(dateInPeriod.getFullYear(), dateInPeriod.getMonth(), 1);
-      endDate = new Date(dateInPeriod.getFullYear(), dateInPeriod.getMonth() + 1, 0);
+      startDate = new Date(
+        dateInPeriod.getFullYear(),
+        dateInPeriod.getMonth(),
+        1,
+      );
+      endDate = new Date(
+        dateInPeriod.getFullYear(),
+        dateInPeriod.getMonth() + 1,
+        0,
+      );
     }
 
     const summary = await DTRSummary.findOne({
@@ -169,8 +192,14 @@ export const exportService = {
       records: detailed,
       summary: {
         totalRecords: detailed.length,
-        totalHoursRendered: detailed.reduce((sum, d) => sum + (d.totalHours || 0), 0),
-        totalBreakTime: detailed.reduce((sum, d) => sum + (d.totalBreakTime || 0), 0),
+        totalHoursRendered: detailed.reduce(
+          (sum, d) => sum + (d.totalHours || 0),
+          0,
+        ),
+        totalBreakTime: detailed.reduce(
+          (sum, d) => sum + (d.totalBreakTime || 0),
+          0,
+        ),
       },
     };
   },
@@ -254,7 +283,10 @@ export const exportService = {
     const meta: Array<[string, string]> = [];
     if (data?.user) meta.push(["User", data.user]);
     if (data?.dateRange?.start && data?.dateRange?.end) {
-      meta.push(["Date Range", `${data.dateRange.start} to ${data.dateRange.end}`]);
+      meta.push([
+        "Date Range",
+        `${data.dateRange.start} to ${data.dateRange.end}`,
+      ]);
     }
     if (data?.startDate && data?.endDate) {
       meta.push(["Date Range", `${data.startDate} to ${data.endDate}`]);
@@ -309,7 +341,10 @@ export const exportService = {
         to: { row: headerRowNumber, column: headers.length },
       };
     } else if (data?.data) {
-      const rows = Object.entries(data.data).map(([key, value]) => [key, value]);
+      const rows = Object.entries(data.data).map(([key, value]) => [
+        key,
+        value,
+      ]);
       const headerRowNumber = sheet.rowCount + 1;
       sheet.addRow(["Metric", "Value"]);
       applyHeaderStyle(headerRowNumber);
@@ -335,21 +370,28 @@ export const exportService = {
 
     const writeMeta = (items: Array<[string, string]>) => {
       const startX = doc.page.margins.left;
-      const boxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const boxWidth =
+        doc.page.width - doc.page.margins.left - doc.page.margins.right;
       const boxY = doc.y;
       const lineHeight = 14;
       const boxHeight = items.length * lineHeight + 16;
 
       doc.save();
       doc.fillColor("#F8FAFC").rect(startX, boxY, boxWidth, boxHeight).fill();
-      doc.strokeColor("#E2E8F0").rect(startX, boxY, boxWidth, boxHeight).stroke();
+      doc
+        .strokeColor("#E2E8F0")
+        .rect(startX, boxY, boxWidth, boxHeight)
+        .stroke();
       doc.restore();
 
       let cursorY = boxY + 8;
       items.forEach(([label, value]) => {
-        doc.font("Helvetica-Bold").fillColor("#334155").text(`${label}: `, startX + 8, cursorY, {
-          continued: true,
-        });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor("#334155")
+          .text(`${label}: `, startX + 8, cursorY, {
+            continued: true,
+          });
         doc.font("Helvetica").fillColor("#0F172A").text(value);
         cursorY += lineHeight;
       });
@@ -364,7 +406,8 @@ export const exportService = {
     };
 
     const getColumnWidths = (headers: string[]) => {
-      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const pageWidth =
+        doc.page.width - doc.page.margins.left - doc.page.margins.right;
       const weights = headers.map((header) => {
         const key = header.toLowerCase();
         if (key.includes("remarks") || key.includes("break")) return 2.2;
@@ -385,9 +428,15 @@ export const exportService = {
 
       const headerY = doc.y;
       doc.save();
-      doc.fillColor("#E2E8F0").rect(startX, headerY, tableWidth, rowHeight).fill();
+      doc
+        .fillColor("#E2E8F0")
+        .rect(startX, headerY, tableWidth, rowHeight)
+        .fill();
       doc.restore();
-      doc.strokeColor("#CBD5E1").rect(startX, headerY, tableWidth, rowHeight).stroke();
+      doc
+        .strokeColor("#CBD5E1")
+        .rect(startX, headerY, tableWidth, rowHeight)
+        .stroke();
 
       doc.font("Helvetica-Bold").fillColor("#0F172A");
       headers.forEach((header, i) => {
@@ -402,10 +451,16 @@ export const exportService = {
         const rowY = doc.y;
         if (rowIndex % 2 === 0) {
           doc.save();
-          doc.fillColor("#F8FAFC").rect(startX, rowY, tableWidth, rowHeight).fill();
+          doc
+            .fillColor("#F8FAFC")
+            .rect(startX, rowY, tableWidth, rowHeight)
+            .fill();
           doc.restore();
         }
-        doc.strokeColor("#E2E8F0").rect(startX, rowY, tableWidth, rowHeight).stroke();
+        doc
+          .strokeColor("#E2E8F0")
+          .rect(startX, rowY, tableWidth, rowHeight)
+          .stroke();
         row.forEach((cell, i) => {
           const x = startX + widths.slice(0, i).reduce((a, b) => a + b, 0);
           doc.text(cell, x + 6, rowY + 4, { width: widths[i] - 12 });
@@ -419,21 +474,32 @@ export const exportService = {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      doc.fillColor("#0F172A").font("Helvetica-Bold").fontSize(18).text("DTR Export", {
-        align: "left",
-      });
+      doc
+        .fillColor("#0F172A")
+        .font("Helvetica-Bold")
+        .fontSize(18)
+        .text("DTR Export", {
+          align: "left",
+        });
       doc.moveDown(0.2);
       const accentY = doc.y;
       doc.save();
-      doc.strokeColor("#2563EB").lineWidth(2).moveTo(doc.page.margins.left, accentY)
-        .lineTo(doc.page.margins.left + 120, accentY).stroke();
+      doc
+        .strokeColor("#2563EB")
+        .lineWidth(2)
+        .moveTo(doc.page.margins.left, accentY)
+        .lineTo(doc.page.margins.left + 120, accentY)
+        .stroke();
       doc.restore();
       doc.moveDown(0.6);
 
       const meta: Array<[string, string]> = [];
       if (data?.user) meta.push(["User", data.user]);
       if (data?.dateRange?.start && data?.dateRange?.end) {
-        meta.push(["Date Range", `${data.dateRange.start} to ${data.dateRange.end}`]);
+        meta.push([
+          "Date Range",
+          `${data.dateRange.start} to ${data.dateRange.end}`,
+        ]);
       }
       if (data?.startDate && data?.endDate) {
         meta.push(["Date Range", `${data.startDate} to ${data.endDate}`]);
@@ -444,7 +510,9 @@ export const exportService = {
       if (data?.headers && data?.rows) {
         doc.fontSize(9);
         const headers = data.headers.map((h: any) => String(h));
-        const rows = data.rows.map((row: any[]) => row.map((cell) => String(cell ?? "-")));
+        const rows = data.rows.map((row: any[]) =>
+          row.map((cell) => String(cell ?? "-")),
+        );
         writeTable(headers, rows);
       } else if (data?.records) {
         doc.fontSize(9);
@@ -472,7 +540,10 @@ export const exportService = {
         writeTable(headers, rows);
       } else if (data?.data) {
         doc.fontSize(10);
-        const rows = Object.entries(data.data).map(([k, v]) => [String(k), String(v)]);
+        const rows = Object.entries(data.data).map(([k, v]) => [
+          String(k),
+          String(v),
+        ]);
         writeTable(["Metric", "Value"], rows);
       } else {
         doc.fontSize(9).text(this.toJSON(data));

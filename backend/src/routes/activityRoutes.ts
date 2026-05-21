@@ -1,10 +1,10 @@
 import express from "express";
-import { requireGlobalRole } from "../middlewares/rbac";
-import { authMiddleware } from "../middlewares/authMiddleware";
+import { requireGlobalRole } from "../middlewares/rbac.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 import {
   getActivityLogsHandler,
   exportActivityLogsHandler,
-} from "../controllers/activityController";
+} from "../controllers/activityController.js";
 
 const router = express.Router();
 

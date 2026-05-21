@@ -1,5 +1,5 @@
-import Department from "../models/Department";
-import User from "../models/User";
+import Department from "../models/Department.js";
+import User from "../models/User.js";
 
 export const getAllDepartments = async () => {
   return Department.find()

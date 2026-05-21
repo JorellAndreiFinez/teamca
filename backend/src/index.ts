@@ -24,10 +24,20 @@ if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
-const defaultOrigins = ["http://localhost:4321", "http://127.0.0.1:4321"];
-const configuredOrigins = (process.env.CORS_ORIGINS || "")
-  .split(",")
-  .map((origin) => origin.trim())
+const normalizeOrigin = (origin: string): string => origin.replace(/\/+$/, "");
+
+const defaultOrigins = [
+  "http://localhost:4321",
+  "http://127.0.0.1:4321",
+  "https://teamca-frontend.vercel.app",
+].map(normalizeOrigin);
+
+const configuredOrigins = [
+  process.env.FRONTEND_URL,
+  ...(process.env.CORS_ORIGINS || "").split(","),
+]
+  .filter((origin): origin is string => Boolean(origin))
+  .map((origin) => normalizeOrigin(origin.trim()))
   .filter(Boolean);
 const allowedOrigins = Array.from(
   new Set([...defaultOrigins, ...configuredOrigins]),
@@ -47,11 +57,13 @@ const isLocalDevOrigin = (origin: string): boolean => {
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
+    const normalizedOrigin = origin ? normalizeOrigin(origin) : undefined;
+
     // allow non-browser clients (no origin header).
     if (
-      !origin ||
-      allowedOrigins.includes(origin) ||
-      isLocalDevOrigin(origin)
+      !normalizedOrigin ||
+      allowedOrigins.includes(normalizedOrigin) ||
+      isLocalDevOrigin(normalizedOrigin)
     ) {
       return callback(null, true);
     }
@@ -106,4 +118,17 @@ app.get("/health", (_req, res) =>
 const server = http.createServer(app);
 initTaskSocket(server, allowedOrigins);
 
-server.listen(PORT);
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(
+      `Port ${PORT} is already in use. Stop the process using it or set a different PORT in backend/.env.`,
+    );
+    process.exit(1);
+  }
+
+  throw error;
+});
+
+server.listen(PORT, () => {
+  console.log(`API server listening on port ${PORT}`);
+});

@@ -1,9 +1,9 @@
-import DTRReminder from "../models/DTRReminder";
+import DTRReminder from "../models/DTRReminder.js";
 
 export const reminderService = {
   async getOrCreateReminder(userId: string) {
     let reminder = await DTRReminder.findOne({ userId });
-    
+
     if (!reminder) {
       reminder = await DTRReminder.create({
         userId,
@@ -15,7 +15,7 @@ export const reminderService = {
         timezone: "Asia/Manila",
       });
     }
-    
+
     return reminder;
   },
 
@@ -30,12 +30,11 @@ export const reminderService = {
       timezone: string;
     }>,
   ) {
-    const reminder = await DTRReminder.findOneAndUpdate(
-      { userId },
-      updates,
-      { new: true, upsert: true },
-    );
-    
+    const reminder = await DTRReminder.findOneAndUpdate({ userId }, updates, {
+      new: true,
+      upsert: true,
+    });
+
     return reminder;
   },
 
@@ -63,12 +62,9 @@ export const reminderService = {
   async getRemindersToFire() {
     // Get all enabled reminders
     const reminders = await DTRReminder.find({
-      $or: [
-        { enableClockInReminder: true },
-        { enableClockOutReminder: true },
-      ],
+      $or: [{ enableClockInReminder: true }, { enableClockOutReminder: true }],
     }).populate("userId");
-    
+
     return reminders;
   },
 };

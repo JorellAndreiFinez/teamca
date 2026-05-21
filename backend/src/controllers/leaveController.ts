@@ -2,7 +2,7 @@
 
 import type { Request, Response } from "express";
 import { z } from "zod";
-import * as leaveService from "../services/leaveService";
+import * as leaveService from "../services/leaveService.js";
 
 // ─── validation schemas ───────────────────────────────────────────────────────
 
@@ -25,6 +25,17 @@ const reviewLeaveSchema = z.object({
 const getUserId = (req: Request): string => {
   if (!req.user) throw new Error("Unauthorized: Missing user");
   return String(req.user.user_id);
+};
+
+const getRouteParam = (
+  value: string | string[] | undefined,
+  name: string,
+): string => {
+  if (!value || Array.isArray(value)) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return value;
 };
 
 // ─── handlers ─────────────────────────────────────────────────────────────────
@@ -83,7 +94,12 @@ export const getMyLeavesHandler = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: leaves });
   } catch (error) {
     const err = error as Error;
-    return res.status(500).json({ success: false, message: err.message || "Failed to fetch leaves." });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: err.message || "Failed to fetch leaves.",
+      });
   }
 };
 
@@ -100,7 +116,12 @@ export const getPendingLeavesHandler = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: leaves });
   } catch (error) {
     const err = error as Error;
-    return res.status(500).json({ success: false, message: err.message || "Failed to fetch pending leaves." });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: err.message || "Failed to fetch pending leaves.",
+      });
   }
 };
 
@@ -115,11 +136,7 @@ export const getPendingLeavesHandler = async (req: Request, res: Response) => {
 export const reviewLeaveHandler = async (req: Request, res: Response) => {
   try {
     const actorId = getUserId(req);
-    const leaveId = req.params.leaveId;
-
-    if (!leaveId) {
-      return res.status(400).json({ success: false, message: "leaveId is required." });
-    }
+    const leaveId = getRouteParam(req.params.leaveId, "leaveId");
 
     // status comes from the body (existing frontend contract)
     const statusSchema = z.object({
@@ -164,8 +181,14 @@ export const reviewLeaveHandler = async (req: Request, res: Response) => {
     const isNotFound = err.message.includes("not found");
     const isBadState = err.message.includes("Cannot");
     const isMissingReason = err.message.includes("required");
-    const statusCode = isNotFound ? 404 : isBadState || isMissingReason ? 400 : 500;
-    return res.status(statusCode).json({ success: false, message: err.message });
+    const statusCode = isNotFound
+      ? 404
+      : isBadState || isMissingReason
+        ? 400
+        : 500;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
   }
 };
 
@@ -176,11 +199,7 @@ export const reviewLeaveHandler = async (req: Request, res: Response) => {
 export const cancelLeaveHandler = async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-    const leaveId = req.params.leaveId;
-
-    if (!leaveId) {
-      return res.status(400).json({ success: false, message: "leaveId is required." });
-    }
+    const leaveId = getRouteParam(req.params.leaveId, "leaveId");
 
     const leave = await leaveService.cancelLeave(userId, leaveId);
 
@@ -194,7 +213,15 @@ export const cancelLeaveHandler = async (req: Request, res: Response) => {
     const isNotFound = err.message.includes("not found");
     const isForbidden = err.message.includes("your own");
     const isBadState = err.message.includes("Only pending");
-    const statusCode = isNotFound ? 404 : isForbidden ? 403 : isBadState ? 400 : 500;
-    return res.status(statusCode).json({ success: false, message: err.message });
+    const statusCode = isNotFound
+      ? 404
+      : isForbidden
+        ? 403
+        : isBadState
+          ? 400
+          : 500;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
   }
 };

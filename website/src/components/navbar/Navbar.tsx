@@ -12,7 +12,7 @@ const Navbar: React.FC = () => {
 
   return (
     <div className="fixed top-0 left-0 w-full z-50">
-      <nav className="flex items-center justify-between w-full py-4 px-6 md:px-16 lg:px-24 xl:px-32 backdrop-blur-md border-b border-[--br-color-default] text-black">
+      <nav className="flex items-center justify-between w-full py-3 px-4 sm:px-6 md:px-10 lg:px-24 xl:px-32 backdrop-blur-md border-b border-[--br-color-default] text-black">
         <a href="/" className="flex items-center space-x-3">
           <img
             src="/icons/teamca-transparent-logo-1.png"
@@ -21,7 +21,7 @@ const Navbar: React.FC = () => {
           />
         </a>
 
-        <div className="hidden md:flex gap-12 justify-center flex-1">
+        <div className="hidden md:flex gap-5 lg:gap-12 justify-center flex-1">
           {links.map((link) => {
             const path = link === "Home" ? "/" : `/${link.toLowerCase()}`;
 
@@ -51,8 +51,10 @@ const Navbar: React.FC = () => {
         </div>
 
         <button
-          className="md:hidden active:scale-90 transition"
+          className="md:hidden active:scale-90 transition p-2 -mr-2"
           onClick={() => setMenuOpen(!menuOpen)}
+          aria-expanded={menuOpen}
+          aria-label="Toggle menu"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -71,6 +73,7 @@ const Navbar: React.FC = () => {
           </svg>
         </button>
       </nav>
+      {menuOpen && <MobileMenu closeMenu={() => setMenuOpen(false)} />}
     </div>
   );
 };

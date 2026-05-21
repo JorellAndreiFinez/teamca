@@ -1,9 +1,9 @@
 import express from "express";
-import * as dtrController from "../controllers/dtrController";
-import { authMiddleware } from "../middlewares/authMiddleware";
-import { timeAdjustmentController } from "../controllers/timeAdjustmentController";
-import { reminderController } from "../controllers/reminderController";
-import { exportController } from "../controllers/exportController";
+import * as dtrController from "../controllers/dtrController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { timeAdjustmentController } from "../controllers/timeAdjustmentController.js";
+import { reminderController } from "../controllers/reminderController.js";
+import { exportController } from "../controllers/exportController.js";
 
 const router = express.Router();
 
@@ -24,14 +24,26 @@ router.get("/summary/month", authMiddleware, dtrController.getSummaryMonth);
 router.get("/history", authMiddleware, dtrController.getHistory);
 
 // Time Adjustment Requests
-router.post("/adjustment-request", authMiddleware, timeAdjustmentController.submitRequest);
-router.get("/adjustment-requests", authMiddleware, timeAdjustmentController.getUserRequests);
+router.post(
+  "/adjustment-request",
+  authMiddleware,
+  timeAdjustmentController.submitRequest,
+);
+router.get(
+  "/adjustment-requests",
+  authMiddleware,
+  timeAdjustmentController.getUserRequests,
+);
 router.get(
   "/adjustment-requests-pending",
   authMiddleware,
   timeAdjustmentController.getPendingRequests,
 );
-router.get("/adjustment-request/:id", authMiddleware, timeAdjustmentController.getRequest);
+router.get(
+  "/adjustment-request/:id",
+  authMiddleware,
+  timeAdjustmentController.getRequest,
+);
 router.post(
   "/adjustment-request/:id/approve",
   authMiddleware,
@@ -46,7 +58,11 @@ router.post(
 // Reminders
 router.get("/reminders", authMiddleware, reminderController.getReminder);
 router.put("/reminders", authMiddleware, reminderController.updateReminder);
-router.post("/reminders/reset", authMiddleware, reminderController.resetReminder);
+router.post(
+  "/reminders/reset",
+  authMiddleware,
+  reminderController.resetReminder,
+);
 
 // Export
 router.get("/export", authMiddleware, exportController.exportRecords);

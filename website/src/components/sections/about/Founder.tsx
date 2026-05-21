@@ -2,7 +2,7 @@ import SectionHeader from "@/components/header/SectionHeader";
 
 export default function Founder() {
   return (
-    <section className="relative w-full min-h-[60vh] text-white px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -31,18 +31,18 @@ export default function Founder() {
             textTransform: "uppercase",
             border: "3px solid var(--br-color-default)",
           }}
-          className="px-6 py-2 rounded-sm text-sm font-semibold tracking-wider transition-all duration-300 hover:brightness-110"
+          className="px-4 xs:px-6 py-2 rounded-sm text-xs xs:text-sm font-semibold tracking-wider transition-all duration-300 hover:brightness-110 text-center"
         >
           Founder of Team CA
         </div>
       </div>
 
-      <div className="mt-4 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-10 items-center">
+      <div className="mt-4 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-10 items-center">
         <div className="md:col-span-2 flex justify-center md:justify-end">
           <img
             src="/images/about/founder.png"
             alt="Founder"
-            className="w-full max-w-sm h-full object-cover"
+            className="w-full max-w-[280px] sm:max-w-sm h-full object-cover"
           />
         </div>
 

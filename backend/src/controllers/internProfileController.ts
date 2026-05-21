@@ -3,16 +3,16 @@ import {
   createInternProfile,
   getInternProfileByUserId,
   updateInternProfileByUserId,
-} from "../services/internProfileService";
-import { getUserById } from "../services/userService";
-import User from "../models/User";
+} from "../services/internProfileService.js";
+import { getUserById } from "../services/userService.js";
+import User from "../models/User.js";
 import {
   hasDepartmentRoleIn,
   hasSharedDepartment,
   isSameUser,
-} from "../middlewares/rbac";
-import { createNotificationsForRecipients } from "../services/notificationService";
-import { emitUsersNotification } from "../socket/io";
+} from "../middlewares/rbac.js";
+import { createNotificationsForRecipients } from "../services/notificationService.js";
+import { emitUsersNotification } from "../socket/io.js";
 
 const getUserIdParam = (req: Request): string => {
   const raw = req.params.userId;
@@ -115,8 +115,7 @@ export const createInternProfileHandler = async (
       typeof payload.required_hours !== "number"
     ) {
       return res.status(400).json({
-        message:
-          "user_id, school_university, and required_hours are required.",
+        message: "user_id, school_university, and required_hours are required.",
       });
     }
 

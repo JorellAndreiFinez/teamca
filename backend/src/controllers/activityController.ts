@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import {
   getActivityLogs,
   exportActivityLogsToCSV,
-} from "../services/activityService";
+} from "../services/activityService.js";
 import { z } from "zod";
 
 // validate query params

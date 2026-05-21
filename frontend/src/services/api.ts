@@ -34,14 +34,14 @@ api.interceptors.response.use(
       // Clear expired token and redirect to login
       const authStore = useAuthStore.getState();
       authStore.logout();
-      
+
       // Force redirect to login
       if (typeof window !== "undefined") {
         window.location.href = "/login";
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

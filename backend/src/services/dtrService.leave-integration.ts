@@ -8,8 +8,8 @@
 // This patch makes the *history list* also show approved leave records
 // so users see a unified attendance + leave timeline.
 
-import DTR from "../models/DTR";
-import Leave from "../models/Leave";
+import DTR from "../models/DTR.js";
+import Leave from "../models/Leave.js";
 
 // ── Paste this function into dtrService.ts ────────────────────────────────────
 
@@ -54,7 +54,11 @@ export const getHistoryWithLeaves = async (
   }
 
   // When filtering by status, only filter DTR records (leave has its own status)
-  if (filters?.status && filters.status !== "all" && filters.status !== "leave") {
+  if (
+    filters?.status &&
+    filters.status !== "all" &&
+    filters.status !== "leave"
+  ) {
     dtrQuery.attendanceStatus = filters.status;
   }
 
@@ -95,7 +99,7 @@ export const getHistoryWithLeaves = async (
   const normalizedLeave = leaveRecords.map((leave: any) => ({
     _id: leave._id,
     recordType: "leave" as const,
-    date: leave.startDate,       // use startDate as the sort anchor
+    date: leave.startDate, // use startDate as the sort anchor
     startDate: leave.startDate,
     endDate: leave.endDate,
     duration: leave.duration,

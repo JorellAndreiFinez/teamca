@@ -1,9 +1,16 @@
 // backend/src/services/leaveService.ts
 
 import mongoose, { Types } from "mongoose";
-import Leave, { type ILeave, type LeaveStatus, type LeaveType } from "../models/Leave";
-import User from "../models/User";
-import { createNotification, createNotificationsForRecipients } from "./notificationService";
+import Leave, {
+  type ILeave,
+  type LeaveStatus,
+  type LeaveType,
+} from "../models/Leave.js";
+import User from "../models/User.js";
+import {
+  createNotification,
+  createNotificationsForRecipients,
+} from "./notificationService.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +29,9 @@ const computeWorkingDays = (start: Date, end: Date): number => {
 
   while (cur <= last) {
     const day = cur.getDay(); // 0 = Sun, 6 = Sat
-    if (day !== 0 && day !== 6) count++;
+    if (day !== 0 && day !== 6) {
+      count++;
+    }
     cur.setDate(cur.getDate() + 1);
   }
 
@@ -31,7 +40,9 @@ const computeWorkingDays = (start: Date, end: Date): number => {
 
 /** Resolve a user's full name from the DB — used for review history labels. */
 const resolveActorName = async (userId: string): Promise<string> => {
-  const user = await User.findById(userId).select("first_name last_name email").lean();
+  const user = await User.findById(userId)
+    .select("first_name last_name email")
+    .lean();
   if (!user) return "Unknown";
   const full = `${user.first_name} ${user.last_name}`.trim();
   return full || user.email;
@@ -42,7 +53,10 @@ const resolveActorName = async (userId: string): Promise<string> => {
  * Used to notify the right reviewers when a leave is submitted/cancelled.
  */
 const findReviewerIds = async (departmentId?: string): Promise<string[]> => {
-  const adminQuery: any = { global_role: { $in: ["Admin", "Superadmin"] }, is_active: true };
+  const adminQuery: any = {
+    global_role: { $in: ["Admin", "Superadmin"] },
+    is_active: true,
+  };
   const admins = await User.find(adminQuery).select("_id").lean();
   const adminIds = admins.map((a) => String(a._id));
 
@@ -70,7 +84,7 @@ export type CreateLeaveInput = {
   userId: string;
   leaveType?: LeaveType;
   startDate: string; // ISO string
-  endDate: string;   // ISO string
+  endDate: string; // ISO string
   reason: string;
 };
 
@@ -107,7 +121,9 @@ const normalize = (leave: ILeave) => ({
  * Notifies all admins + department head(s) that a leave was filed.
  */
 export const createLeave = async (input: CreateLeaveInput) => {
-  const user = await User.findById(input.userId).select("first_name last_name email departments").lean();
+  const user = await User.findById(input.userId)
+    .select("first_name last_name email departments")
+    .lean();
   if (!user) throw new Error("User not found.");
 
   const start = new Date(input.startDate);
@@ -116,7 +132,9 @@ export const createLeave = async (input: CreateLeaveInput) => {
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     throw new Error("Invalid date format.");
   }
-  if (start > end) throw new Error("startDate must be before or equal to endDate.");
+  if (start > end) {
+    throw new Error("startDate must be before or equal to endDate.");
+  }
 
   const duration = computeWorkingDays(start, end);
   const departmentId = user.departments?.[0]?.department_id;
@@ -147,8 +165,11 @@ export const createLeave = async (input: CreateLeaveInput) => {
   });
 
   // ── notify reviewers ─────────────────────────────────────────────────────
-  const reviewerIds = await findReviewerIds(departmentId ? String(departmentId) : undefined);
-  const applicantName = `${user.first_name} ${user.last_name}`.trim() || user.email;
+  const reviewerIds = await findReviewerIds(
+    departmentId ? String(departmentId) : undefined,
+  );
+  const applicantName =
+    `${user.first_name} ${user.last_name}`.trim() || user.email;
 
   if (reviewerIds.length > 0) {
     await createNotificationsForRecipients(reviewerIds, {
@@ -188,7 +209,8 @@ export const getPendingLeaves = async (actorId: string) => {
 
   if (!actor) throw new Error("Actor not found.");
 
-  const isAdmin = actor.global_role === "Admin" || actor.global_role === "Superadmin";
+  const isAdmin =
+    actor.global_role === "Admin" || actor.global_role === "Superadmin";
 
   const query: any = { status: "pending" };
 
@@ -204,10 +226,14 @@ export const getPendingLeaves = async (actorId: string) => {
   }
 
   const leaves = await Leave.find(query)
-    .populate<{ userId: { _id: Types.ObjectId; first_name: string; last_name: string; email: string } }>(
-      "userId",
-      "first_name last_name email",
-    )
+    .populate<{
+      userId: {
+        _id: Types.ObjectId;
+        first_name: string;
+        last_name: string;
+        email: string;
+      };
+    }>("userId", "first_name last_name email")
     .sort({ createdAt: 1 }) // oldest first — FIFO approval queue
     .lean();
 
@@ -215,10 +241,12 @@ export const getPendingLeaves = async (actorId: string) => {
     ...normalize(l as unknown as ILeave),
     applicant: l.userId
       ? {
-        _id: String(l.userId._id),
-        name: `${l.userId.first_name} ${l.userId.last_name}`.trim() || l.userId.email,
-        email: l.userId.email,
-      }
+          _id: String(l.userId._id),
+          name:
+            `${l.userId.first_name} ${l.userId.last_name}`.trim() ||
+            l.userId.email,
+          email: l.userId.email,
+        }
       : undefined,
   }));
 };
@@ -324,7 +352,9 @@ export const cancelLeave = async (userId: string, leaveId: string) => {
     throw new Error("You can only cancel your own leave requests.");
   }
   if (leave.status !== "pending") {
-    throw new Error(`Only pending leaves can be cancelled. This leave is ${leave.status}.`);
+    throw new Error(
+      `Only pending leaves can be cancelled. This leave is ${leave.status}.`,
+    );
   }
 
   const actorName = await resolveActorName(userId);

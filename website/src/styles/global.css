@@ -64,6 +64,24 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--primary-color);
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+body {
+  min-width: 0;
 }
 
 h1,
@@ -108,4 +126,16 @@ nav a {
 
 footer h3 {
   color: var(--primary-color);
+}
+
+@media (max-width: 379px) {
+  h1,
+  h2,
+  h3,
+  p,
+  a,
+  button,
+  span {
+    overflow-wrap: anywhere;
+  }
 }

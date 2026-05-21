@@ -4,6 +4,7 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { CompactDTRSummary } from "../../components/compactDTRSummary";
 import DTRHistoryTable from "./DTRHistoryTable";
+import DTRRecordDetailModal from "./DTRRecordDetailModal";
 import { useDtrStore } from "../../store/dtrStore";
 import { dtrService } from "../../services/dtrService";
 import type { DailyTimeRecord } from "../../types/dtr";
@@ -64,6 +65,9 @@ export default function DTRPage() {
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Detail modal state
+  const [selectedRecord, setSelectedRecord] = useState<DailyTimeRecord | null>(null);
   const [historyFilters, setHistoryFilters] = useState({
     status: 'all',
     sort_by: 'date_desc',
@@ -94,10 +98,10 @@ export default function DTRPage() {
 
   const totalMinutesWorked = clockInTime
     ? Math.max(
-        0,
-        Math.floor((Date.now() - clockInTime.getTime()) / 60000) -
-          (isBreakActive ? breakDuration : 0),
-      )
+      0,
+      Math.floor((Date.now() - clockInTime.getTime()) / 60000) -
+      (isBreakActive ? breakDuration : 0),
+    )
     : 0;
 
   const syncBreakTimer = React.useCallback(() => {
@@ -162,7 +166,9 @@ export default function DTRPage() {
       try {
         await refreshRecords();
         await fetchHistory();
-      } catch (err) {}
+      } catch (err) {
+        console.error("Failed to refresh DTR data after socket update.", err);
+      }
     },
     [refreshRecords, fetchHistory],
   );
@@ -326,7 +332,7 @@ export default function DTRPage() {
   };
 
   const handleHistoryRowClick = (record: DailyTimeRecord) => {
-    // TODO: Open details modal/drawer
+    setSelectedRecord(record);
   };
 
   const handleHistoryEditClick = (record: DailyTimeRecord) => {
@@ -354,7 +360,7 @@ export default function DTRPage() {
             </div>
           )}
         </div>
-        
+
         {/* Simplified DTR Card on Right */}
         <div className="w-full lg:w-80 flex-shrink-0">
           <Card className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 p-5 shadow-sm">
@@ -432,22 +438,22 @@ export default function DTRPage() {
 
       {/* ATTENDANCE HISTORY */}
       <Card className="p-0 overflow-hidden bg-transparent">
-          <DTRHistoryTable
-            records={historyRecords}
-            page={historyPage}
-            limit={historyLimit}
-            total={historyTotal}
-            total_pages={historyTotalPages}
-            isLoading={historyLoading}
-            onPageChange={handleHistoryPageChange}
-            onRowClick={handleHistoryRowClick}
-            onEditClick={handleHistoryEditClick}
-            onFilterChange={handleHistoryFilterChange}
-            onSortChange={handleHistorySortChange}
-            onDownload={handleDownloadHistory}
-            onRemind={() => setShowReminderModal(true)}
-          />
-        </Card>
+        <DTRHistoryTable
+          records={historyRecords}
+          page={historyPage}
+          limit={historyLimit}
+          total={historyTotal}
+          total_pages={historyTotalPages}
+          isLoading={historyLoading}
+          onPageChange={handleHistoryPageChange}
+          onRowClick={handleHistoryRowClick}
+          onEditClick={handleHistoryEditClick}
+          onFilterChange={handleHistoryFilterChange}
+          onSortChange={handleHistorySortChange}
+          onDownload={handleDownloadHistory}
+          onRemind={() => setShowReminderModal(true)}
+        />
+      </Card>
 
       {/* 🔥 CLOCK OUT MODAL */}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -535,6 +541,12 @@ export default function DTRPage() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* DTR RECORD DETAIL MODAL */}
+      <DTRRecordDetailModal
+        record={selectedRecord}
+        open={Boolean(selectedRecord)}
+        onClose={() => setSelectedRecord(null)}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import User from "../models/User";
-import InternProfile from "../models/InternProfile";
+import User from "../models/User.js";
+import InternProfile from "../models/InternProfile.js";
 import { Request, Response } from "express";
 
 const SAFE_USER_SELECT = "-password_hash";
@@ -264,10 +264,7 @@ export const upsertUserInternProfile = async (
   const existingProfile = await InternProfile.findOne({ user_id: user._id });
 
   if (!existingProfile) {
-    if (
-      !payload.school_university ||
-      !payload.required_hours
-    ) {
+    if (!payload.school_university || !payload.required_hours) {
       throw new Error(
         "school_university and required_hours are required for new intern profiles.",
       );

@@ -2,7 +2,7 @@ import SectionHeader from "@/components/header/SectionHeader";
 
 export default function Mission() {
   return (
-    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary] px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary] px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       <div className="absolute inset-0">
         <img
           src="/partials/layer-blur.png"
@@ -24,7 +24,7 @@ export default function Mission() {
           <img
             src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=80"
             alt="Team collaboration sample"
-            className="w-full max-w-5xl h-[420px] object-cover rounded-2xl shadow-lg"
+            className="w-full max-w-5xl h-[260px] sm:h-[340px] md:h-[420px] object-cover rounded-2xl shadow-lg"
           />
         </div>
       </div>

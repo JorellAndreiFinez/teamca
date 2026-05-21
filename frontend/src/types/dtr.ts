@@ -7,7 +7,7 @@ export interface IBreak {
   breakStart: Date | string;
   breakEnd?: Date | string;
   duration?: number; // minutes
-  type: 'lunch' | 'rest' | 'other';
+  type: "lunch" | "rest" | "other";
 }
 
 export interface ClockEntry {
@@ -27,7 +27,7 @@ export interface DailyTimeRecord {
   departmentId?: string;
   date: Date | string;
   clocks: ClockEntry[];
-  attendanceStatus?: 'present' | 'late' | 'very_late' | 'absent';
+  attendanceStatus?: "present" | "late" | "very_late" | "absent";
   totalHours?: number;
   undertimeHours?: number;
   totalBreakTime?: number;
