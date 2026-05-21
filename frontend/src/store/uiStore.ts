@@ -15,7 +15,8 @@ export const useUIStore = create<UIState>()(
       darkMode: false,
       sidebarOpen: true,
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
-      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      toggleSidebar: () =>
+        set((state) => ({ sidebarOpen: !state.sidebarOpen })),
     }),
     {
       name: "ui-storage",

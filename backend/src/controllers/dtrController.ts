@@ -41,7 +41,9 @@ export const timeOut = async (req: AuthRequest, res: Response) => {
     const schema = z.object({ remarks: z.string().min(1) });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ success: false, message: "Invalid payload" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
     }
 
     const { remarks } = parsed.data;
@@ -77,7 +79,6 @@ export const getMyDTR = async (req: AuthRequest, res: Response) => {
   } catch (error: unknown) {
     const err = error as Error;
 
-
     res.status(500).json({
       success: false,
       message: err.message,
@@ -93,10 +94,14 @@ export const getMyDTR = async (req: AuthRequest, res: Response) => {
 export const startBreak = async (req: AuthRequest, res: Response) => {
   try {
     const userId = getUserId(req);
-    const schema = z.object({ breakType: z.enum(["lunch", "rest", "other"]).optional() });
+    const schema = z.object({
+      breakType: z.enum(["lunch", "rest", "other"]).optional(),
+    });
     const parsed = schema.safeParse(req.body || {});
     if (!parsed.success) {
-      return res.status(400).json({ success: false, message: "Invalid payload" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
     }
 
     const { breakType = "rest" } = parsed.data;
@@ -151,7 +156,6 @@ export const getSummaryWeek = async (req: AuthRequest, res: Response) => {
   try {
     const userId = getUserId(req);
 
-
     const summary = await dtrService.getSummary(userId, "week");
 
     res.json({
@@ -161,7 +165,6 @@ export const getSummaryWeek = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: unknown) {
     const err = error as Error;
-
 
     res.status(500).json({
       success: false,
@@ -178,7 +181,6 @@ export const getSummaryMonth = async (req: AuthRequest, res: Response) => {
   try {
     const userId = getUserId(req);
 
-
     const summary = await dtrService.getSummary(userId, "month");
 
     res.json({
@@ -188,7 +190,6 @@ export const getSummaryMonth = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: unknown) {
     const err = error as Error;
-
 
     res.status(500).json({
       success: false,
@@ -217,9 +218,18 @@ export const getHistory = async (req: AuthRequest, res: Response) => {
     };
 
     // Changed: getHistoryWithLeaves instead of getHistoryPaginated
-    const result = await dtrService.getHistoryWithLeaves(userId, pageNum, limitNum, filters);
+    const result = await dtrService.getHistoryWithLeaves(
+      userId,
+      pageNum,
+      limitNum,
+      filters,
+    );
 
-    res.json({ success: true, message: "History retrieved successfully", data: result });
+    res.json({
+      success: true,
+      message: "History retrieved successfully",
+      data: result,
+    });
   } catch (error: unknown) {
     const err = error as Error;
     res.status(500).json({ success: false, message: err.message });

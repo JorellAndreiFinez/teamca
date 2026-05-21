@@ -31,37 +31,39 @@ export const initializeSocket = async (): Promise<Socket | null> => {
     return null;
   }
 
-  socketConnectingPromise = new Promise((resolve: (value: Socket | null) => void) => {
-    try {
-      const socket = io(config.backendUrl, {
-        transports: ["websocket"],
-        auth: { token },
-        autoConnect: true,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: 10,
-      });
+  socketConnectingPromise = new Promise(
+    (resolve: (value: Socket | null) => void) => {
+      try {
+        const socket = io(config.backendUrl, {
+          transports: ["websocket"],
+          auth: { token },
+          autoConnect: true,
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 10,
+        });
 
-      socket.on("connect", () => {
-        socketInstance = socket;
-        socketConnectingPromise = null;
-        resolve(socket);
-      });
+        socket.on("connect", () => {
+          socketInstance = socket;
+          socketConnectingPromise = null;
+          resolve(socket);
+        });
 
-      socket.on("connect_error", (error) => {
+        socket.on("connect_error", (error) => {
+          socketConnectingPromise = null;
+          resolve(null);
+        });
+
+        socket.on("disconnect", () => {
+          // Don't set to null, let reconnection handle it
+        });
+      } catch (error) {
         socketConnectingPromise = null;
         resolve(null);
-      });
-
-      socket.on("disconnect", () => {
-        // Don't set to null, let reconnection handle it
-      });
-    } catch (error) {
-      socketConnectingPromise = null;
-      resolve(null);
-    }
-  });
+      }
+    },
+  );
 
   return socketConnectingPromise;
 };

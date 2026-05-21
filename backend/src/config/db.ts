@@ -16,8 +16,9 @@ export const connectDB = async () => {
   try {
     await mongoose.connect(MONGO_URI, {
       // Set shorter timeout for local connections
-      serverSelectionTimeoutMS: process.env.NODE_ENV === 'production' ? 30000 : 5000,
-      socketTimeoutMS: process.env.NODE_ENV === 'production' ? 45000 : 10000,
+      serverSelectionTimeoutMS:
+        process.env.NODE_ENV === "production" ? 30000 : 5000,
+      socketTimeoutMS: process.env.NODE_ENV === "production" ? 45000 : 10000,
     });
   } catch {
     process.exit(1);

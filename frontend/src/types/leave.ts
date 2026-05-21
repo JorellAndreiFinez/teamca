@@ -51,7 +51,7 @@ export type LeaveDuration = 0.5 | 1 | 2 | 3 | number;
 export interface CreateLeavePayload {
   leaveType?: LeaveType;
   startDate: string; // ISO
-  endDate: string;   // ISO
+  endDate: string; // ISO
   reason: string;
   duration?: LeaveDuration; // optional — backend recomputes from dates
 }

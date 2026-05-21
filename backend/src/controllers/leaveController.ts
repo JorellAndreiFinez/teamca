@@ -83,7 +83,12 @@ export const getMyLeavesHandler = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: leaves });
   } catch (error) {
     const err = error as Error;
-    return res.status(500).json({ success: false, message: err.message || "Failed to fetch leaves." });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: err.message || "Failed to fetch leaves.",
+      });
   }
 };
 
@@ -100,7 +105,12 @@ export const getPendingLeavesHandler = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: leaves });
   } catch (error) {
     const err = error as Error;
-    return res.status(500).json({ success: false, message: err.message || "Failed to fetch pending leaves." });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: err.message || "Failed to fetch pending leaves.",
+      });
   }
 };
 
@@ -118,7 +128,9 @@ export const reviewLeaveHandler = async (req: Request, res: Response) => {
     const leaveId = req.params.leaveId;
 
     if (!leaveId) {
-      return res.status(400).json({ success: false, message: "leaveId is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "leaveId is required." });
     }
 
     // status comes from the body (existing frontend contract)
@@ -164,8 +176,14 @@ export const reviewLeaveHandler = async (req: Request, res: Response) => {
     const isNotFound = err.message.includes("not found");
     const isBadState = err.message.includes("Cannot");
     const isMissingReason = err.message.includes("required");
-    const statusCode = isNotFound ? 404 : isBadState || isMissingReason ? 400 : 500;
-    return res.status(statusCode).json({ success: false, message: err.message });
+    const statusCode = isNotFound
+      ? 404
+      : isBadState || isMissingReason
+        ? 400
+        : 500;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
   }
 };
 
@@ -179,7 +197,9 @@ export const cancelLeaveHandler = async (req: Request, res: Response) => {
     const leaveId = req.params.leaveId;
 
     if (!leaveId) {
-      return res.status(400).json({ success: false, message: "leaveId is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "leaveId is required." });
     }
 
     const leave = await leaveService.cancelLeave(userId, leaveId);
@@ -194,7 +214,15 @@ export const cancelLeaveHandler = async (req: Request, res: Response) => {
     const isNotFound = err.message.includes("not found");
     const isForbidden = err.message.includes("your own");
     const isBadState = err.message.includes("Only pending");
-    const statusCode = isNotFound ? 404 : isForbidden ? 403 : isBadState ? 400 : 500;
-    return res.status(statusCode).json({ success: false, message: err.message });
+    const statusCode = isNotFound
+      ? 404
+      : isForbidden
+        ? 403
+        : isBadState
+          ? 400
+          : 500;
+    return res
+      .status(statusCode)
+      .json({ success: false, message: err.message });
   }
 };

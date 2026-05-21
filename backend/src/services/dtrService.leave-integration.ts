@@ -54,7 +54,11 @@ export const getHistoryWithLeaves = async (
   }
 
   // When filtering by status, only filter DTR records (leave has its own status)
-  if (filters?.status && filters.status !== "all" && filters.status !== "leave") {
+  if (
+    filters?.status &&
+    filters.status !== "all" &&
+    filters.status !== "leave"
+  ) {
     dtrQuery.attendanceStatus = filters.status;
   }
 
@@ -95,7 +99,7 @@ export const getHistoryWithLeaves = async (
   const normalizedLeave = leaveRecords.map((leave: any) => ({
     _id: leave._id,
     recordType: "leave" as const,
-    date: leave.startDate,       // use startDate as the sort anchor
+    date: leave.startDate, // use startDate as the sort anchor
     startDate: leave.startDate,
     endDate: leave.endDate,
     duration: leave.duration,
