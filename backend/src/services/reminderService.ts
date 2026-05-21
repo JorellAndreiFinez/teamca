@@ -1,4 +1,4 @@
-import DTRReminder from "../models/DTRReminder";
+import DTRReminder from "../models/DTRReminder.js";
 
 export const reminderService = {
   async getOrCreateReminder(userId: string) {

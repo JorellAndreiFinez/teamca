@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "../models/User";
-import { logActivity } from "../services/activityService";
+import User from "../models/User.js";
+import { logActivity } from "../services/activityService.js";
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "teamca-dev-secret-change-in-production";

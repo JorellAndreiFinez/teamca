@@ -1,6 +1,6 @@
-import DTR from "../models/DTR";
-import DTRSummary from "../models/DTRSummary";
-import User from "../models/User";
+import DTR from "../models/DTR.js";
+import DTRSummary from "../models/DTRSummary.js";
+import User from "../models/User.js";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as dtrService from "../services/dtrService";
+import * as dtrService from "../services/dtrService.js";
 import { z } from "zod";
 
 type AuthRequest = Request;

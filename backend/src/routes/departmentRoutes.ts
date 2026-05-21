@@ -5,9 +5,9 @@ import {
   getDepartment,
   listDepartments,
   updateDepartmentHandler,
-} from "../controllers/departmentController";
-import authenticateJWT from "../middlewares/auth";
-import { requireGlobalRole } from "../middlewares/rbac";
+} from "../controllers/departmentController.js";
+import authenticateJWT from "../middlewares/auth.js";
+import { requireGlobalRole } from "../middlewares/rbac.js";
 
 const router = Router();
 

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import Notification from "../models/Notification";
+import Notification from "../models/Notification.js";
 import {
   addTaskComment,
   addTaskFeedback,
@@ -18,16 +18,16 @@ import {
   listTaskWorkLinks,
   updateTaskDetails,
   updateTaskStatus,
-} from "../services/taskService";
-import Task from "../models/Task";
-import TaskAssignment from "../models/TaskAssignment";
-import User from "../models/User";
-import { createNotificationsForRecipients } from "../services/notificationService";
+} from "../services/taskService.js";
+import Task from "../models/Task.js";
+import TaskAssignment from "../models/TaskAssignment.js";
+import User from "../models/User.js";
+import { createNotificationsForRecipients } from "../services/notificationService.js";
 import {
   emitTaskCommentCreated,
   emitTaskStatusUpdated,
   emitUsersNotification,
-} from "../socket/io";
+} from "../socket/io.js";
 
 const createTaskSchema = z.object({
   title: z

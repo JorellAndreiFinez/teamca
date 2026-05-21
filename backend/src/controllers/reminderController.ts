@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z, ZodError } from "zod";
-import { reminderService } from "../services/reminderService";
-import { IUser } from "../models/User";
+import { reminderService } from "../services/reminderService.js";
+import { IUser } from "../models/User.js";
 
 // Zod validation schema
 const updateReminderSchema = z.object({

@@ -1,15 +1,15 @@
 // backend/src/routes/leaveRoutes.ts
 
 import { Router } from "express";
-import { authMiddleware } from "../middlewares/authMiddleware";
-import { requireAnyRole } from "../middlewares/rbac";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { requireAnyRole } from "../middlewares/rbac.js";
 import {
   createLeaveHandler,
   getMyLeavesHandler,
   getPendingLeavesHandler,
   reviewLeaveHandler,
   cancelLeaveHandler,
-} from "../controllers/leaveController";
+} from "../controllers/leaveController.js";
 
 const router = Router();
 

@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import User from "../models/User";
-import InternProfile from "../models/InternProfile";
+import User from "../models/User.js";
+import InternProfile from "../models/InternProfile.js";
 
 const SAFE_USER_SELECT = "-password_hash";
 

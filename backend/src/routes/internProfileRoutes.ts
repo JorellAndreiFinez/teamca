@@ -3,8 +3,8 @@ import {
   createInternProfileHandler,
   getInternProfileByUser,
   updateInternProfileByUser,
-} from "../controllers/internProfileController";
-import authenticateJWT from "../middlewares/auth";
+} from "../controllers/internProfileController.js";
+import authenticateJWT from "../middlewares/auth.js";
 
 const router = Router();
 

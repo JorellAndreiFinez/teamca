@@ -1,5 +1,5 @@
-import InternProfile from "../models/InternProfile";
-import User from "../models/User";
+import InternProfile from "../models/InternProfile.js";
+import User from "../models/User.js";
 
 export type InternProfilePayload = {
   user_id: string;

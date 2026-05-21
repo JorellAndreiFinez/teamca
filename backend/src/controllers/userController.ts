@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
-import User from "../models/User";
+import User from "../models/User.js";
 import {
   createUser as createUserService,
   updateUser as updateUserService,
   deleteWhitelistedUser as deleteUserService,
   createWhitelistedUser,
   activateWhitelistedUser,
-} from "../services/userService";
-import { createNotificationsForRecipients } from "../services/notificationService";
-import { emitUsersDirectoryUpdated, emitUsersNotification } from "../socket/io";
+} from "../services/userService.js";
+import { createNotificationsForRecipients } from "../services/notificationService.js";
+import { emitUsersDirectoryUpdated, emitUsersNotification } from "../socket/io.js";
 
 type AuthUser = NonNullable<Request["user"]>;
 

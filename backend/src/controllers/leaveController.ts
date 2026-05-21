@@ -2,7 +2,7 @@
 
 import type { Request, Response } from "express";
 import { z } from "zod";
-import * as leaveService from "../services/leaveService";
+import * as leaveService from "../services/leaveService.js";
 
 // ─── validation schemas ───────────────────────────────────────────────────────
 
