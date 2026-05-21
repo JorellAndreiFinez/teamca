@@ -215,10 +215,10 @@ export const getPendingLeaves = async (actorId: string) => {
     ...normalize(l as unknown as ILeave),
     applicant: l.userId
       ? {
-          _id: String(l.userId._id),
-          name: `${l.userId.first_name} ${l.userId.last_name}`.trim() || l.userId.email,
-          email: l.userId.email,
-        }
+        _id: String(l.userId._id),
+        name: `${l.userId.first_name} ${l.userId.last_name}`.trim() || l.userId.email,
+        email: l.userId.email,
+      }
       : undefined,
   }));
 };
