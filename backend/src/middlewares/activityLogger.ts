@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { logActivity } from "../services/activityService";
-import { ResourceType, ActionType, LogStatus } from "../models/ActivityLog";
+import { logActivity } from "../services/activityService.js";
+import { ResourceType, ActionType, LogStatus } from "../models/ActivityLog.js";
 
 // capture request/response details for activity logging
 export const activityLogger = (

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z, ZodError } from "zod";
-import { exportService } from "../services/exportService";
-import { IUser } from "../models/User";
+import { exportService } from "../services/exportService.js";
+import { IUser } from "../models/User.js";
 
 // Zod validation schema
 const exportQuerySchema = z

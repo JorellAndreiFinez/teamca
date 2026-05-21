@@ -2,9 +2,9 @@ import { Types } from "mongoose";
 import Notification, {
   type INotification,
   type NotificationEventType,
-} from "../models/Notification";
+} from "../models/Notification.js";
 
-type NotificationEntityType = "task" | "user";
+type NotificationEntityType = "task" | "user" | "leave";
 
 export type CreateNotificationInput = {
   recipientId: string;

@@ -1,0 +1,3 @@
+[dotenv@17.3.1] injecting env (1) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+API server listening on port 3999

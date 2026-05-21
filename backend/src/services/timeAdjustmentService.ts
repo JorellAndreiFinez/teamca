@@ -1,6 +1,6 @@
-import TimeAdjustmentRequest from "../models/TimeAdjustmentRequest";
-import DTR from "../models/DTR";
-import { emitUserDTRUpdated } from "../socket/io";
+import TimeAdjustmentRequest from "../models/TimeAdjustmentRequest.js";
+import DTR from "../models/DTR.js";
+import { emitUserDTRUpdated } from "../socket/io.js";
 
 export const timeAdjustmentService = {
   async submitRequest(

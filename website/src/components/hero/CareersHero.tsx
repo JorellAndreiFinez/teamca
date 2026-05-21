@@ -51,7 +51,7 @@ const CareersHero: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full min-h-[60vh] overflow-hidden"
+      className="relative w-full min-h-[520px] sm:min-h-[60vh] overflow-hidden"
     >
       <img
         src="/partials/circle-gradient-shade.png"
@@ -60,12 +60,12 @@ const CareersHero: React.FC = () => {
 
       <div
         ref={textRef}
-        className="absolute top-40 left-12 md:left-24 lg:left-32 max-w-5xl text-left z-20"
+        className="absolute top-28 sm:top-36 md:top-40 left-4 sm:left-8 md:left-24 lg:left-32 right-4 max-w-5xl text-left z-20"
       >
-        <h1 className="text-6xl md:text-7xl font-heading text-white mb-4">
+        <h1 className="text-[2.45rem] xs:text-5xl md:text-6xl lg:text-7xl font-heading text-white mb-4 leading-tight">
           Application Process
         </h1>
-        <p className="text-white/90 text-lg md:text-xl mb-12 max-w-3xl">
+        <p className="text-white/90 text-base sm:text-lg md:text-xl mb-8 sm:mb-12 max-w-3xl">
           We believe our people are our greatest strength. Build a
           purpose-driven career where you help others secure their future, while
           growing your own.

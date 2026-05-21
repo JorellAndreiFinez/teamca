@@ -5,12 +5,12 @@ import Leave, {
   type ILeave,
   type LeaveStatus,
   type LeaveType,
-} from "../models/Leave";
-import User from "../models/User";
+} from "../models/Leave.js";
+import User from "../models/User.js";
 import {
   createNotification,
   createNotificationsForRecipients,
-} from "./notificationService";
+} from "./notificationService.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

@@ -6,7 +6,7 @@ interface MobileMenuProps {
 
 const MobileMenu: React.FC<MobileMenuProps> = ({ closeMenu }) => {
   return (
-    <div className="md:hidden flex flex-col bg-black px-6 py-4 space-y-3">
+    <div className="md:hidden flex flex-col bg-[--dark-primary] px-5 py-4 space-y-3 border-b border-[--br-color-default] shadow-2xl">
       <a href="/" onClick={closeMenu}>
         Home
       </a>

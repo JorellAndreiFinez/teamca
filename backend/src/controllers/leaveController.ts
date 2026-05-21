@@ -2,7 +2,7 @@
 
 import type { Request, Response } from "express";
 import { z } from "zod";
-import * as leaveService from "../services/leaveService";
+import * as leaveService from "../services/leaveService.js";
 
 // ─── validation schemas ───────────────────────────────────────────────────────
 
@@ -25,6 +25,17 @@ const reviewLeaveSchema = z.object({
 const getUserId = (req: Request): string => {
   if (!req.user) throw new Error("Unauthorized: Missing user");
   return String(req.user.user_id);
+};
+
+const getRouteParam = (
+  value: string | string[] | undefined,
+  name: string,
+): string => {
+  if (!value || Array.isArray(value)) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return value;
 };
 
 // ─── handlers ─────────────────────────────────────────────────────────────────
@@ -125,13 +136,7 @@ export const getPendingLeavesHandler = async (req: Request, res: Response) => {
 export const reviewLeaveHandler = async (req: Request, res: Response) => {
   try {
     const actorId = getUserId(req);
-    const leaveId = req.params.leaveId;
-
-    if (!leaveId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "leaveId is required." });
-    }
+    const leaveId = getRouteParam(req.params.leaveId, "leaveId");
 
     // status comes from the body (existing frontend contract)
     const statusSchema = z.object({
@@ -194,13 +199,7 @@ export const reviewLeaveHandler = async (req: Request, res: Response) => {
 export const cancelLeaveHandler = async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-    const leaveId = req.params.leaveId;
-
-    if (!leaveId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "leaveId is required." });
-    }
+    const leaveId = getRouteParam(req.params.leaveId, "leaveId");
 
     const leave = await leaveService.cancelLeave(userId, leaveId);
 

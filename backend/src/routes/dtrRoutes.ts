@@ -1,9 +1,9 @@
 import express from "express";
-import * as dtrController from "../controllers/dtrController";
-import { authMiddleware } from "../middlewares/authMiddleware";
-import { timeAdjustmentController } from "../controllers/timeAdjustmentController";
-import { reminderController } from "../controllers/reminderController";
-import { exportController } from "../controllers/exportController";
+import * as dtrController from "../controllers/dtrController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { timeAdjustmentController } from "../controllers/timeAdjustmentController.js";
+import { reminderController } from "../controllers/reminderController.js";
+import { exportController } from "../controllers/exportController.js";
 
 const router = express.Router();
 

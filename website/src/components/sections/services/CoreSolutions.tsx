@@ -41,7 +41,7 @@ export default function CoreSolutions() {
   ];
 
   return (
-    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary] px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white bg-[--dark-primary] px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -63,7 +63,7 @@ export default function CoreSolutions() {
 
         {/* GRID */}
         <div className="mt-12 flex justify-center">
-          <div className="grid grid-cols-2 gap-4 w-full max-w-3xl">
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 w-full max-w-3xl">
             {solutions.map((item, index) => {
               const isLastOdd =
                 solutions.length % 2 === 1 && index === solutions.length - 1;
@@ -73,7 +73,7 @@ export default function CoreSolutions() {
                   key={index}
                   className={`
                     relative rounded-2xl overflow-hidden group shadow-lg
-                    ${isLastOdd ? "col-span-2 h-[250px]" : "aspect-square"}
+                    ${isLastOdd ? "xs:col-span-2 h-[250px]" : "aspect-square min-h-[230px] xs:min-h-0"}
                   `}
                 >
                   {/* IMAGE */}
@@ -91,7 +91,7 @@ export default function CoreSolutions() {
                   />
 
                   {/* TEXT */}
-                  <div className="absolute bottom-0 left-0 w-full p-5 z-10 flex flex-col gap-2">
+                  <div className="absolute bottom-0 left-0 w-full p-4 sm:p-5 z-10 flex flex-col gap-2">
                     <h3 className="text-base md:text-lg font-semibold">
                       {item.title}
                     </h3>

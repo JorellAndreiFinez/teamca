@@ -2,7 +2,7 @@
 
 import type { NextFunction, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
-import User from "../models/User";
+import User from "../models/User.js";
 
 type TokenPayload = JwtPayload & {
   sub?: string;

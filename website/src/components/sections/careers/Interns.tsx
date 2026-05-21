@@ -3,7 +3,7 @@ import { Mail, FileText, QrCode, BriefcaseBusiness } from "lucide-react";
 
 export default function Interns() {
   return (
-    <section className="relative w-full min-h-[60vh] text-white px-6 py-16 overflow-hidden">
+    <section className="relative w-full min-h-[60vh] text-white px-4 sm:px-6 py-14 sm:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -28,14 +28,14 @@ export default function Interns() {
           <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden shadow-xl">
             <div className="grid grid-cols-1 lg:grid-cols-2">
               {/* LEFT SIDE */}
-              <div className="p-8 md:p-12 border-b lg:border-b-0 lg:border-r border-white/10">
-                <div className="flex items-center gap-3 mb-6">
+              <div className="p-4 xs:p-6 md:p-12 border-b lg:border-b-0 lg:border-r border-white/10">
+                <div className="flex items-center gap-3 mb-6 min-w-0">
                   <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
                     <BriefcaseBusiness className="w-6 h-6 text-white" />
                   </div>
 
-                  <div>
-                    <h3 className="text-2xl md:text-3xl font-semibold">
+                  <div className="min-w-0">
+                    <h3 className="text-xl xs:text-2xl md:text-3xl font-semibold">
                       Internship Application
                     </h3>
 
@@ -52,8 +52,8 @@ export default function Interns() {
                 </p>
 
                 {/* APPLICATION FORM */}
-                <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-6">
-                  <div className="flex items-start gap-4">
+                <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-4 xs:p-6">
+                  <div className="flex flex-col xs:flex-row items-start gap-4">
                     <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                       <FileText className="w-5 h-5 text-white" />
                     </div>
@@ -77,8 +77,8 @@ export default function Interns() {
                 </div>
 
                 {/* EMAIL */}
-                <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6">
-                  <div className="flex items-start gap-4">
+                <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4 xs:p-6">
+                  <div className="flex flex-col xs:flex-row items-start gap-4">
                     <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                       <Mail className="w-5 h-5 text-white" />
                     </div>
@@ -122,7 +122,7 @@ export default function Interns() {
               </div>
 
               {/* RIGHT SIDE */}
-              <div className="p-8 md:p-12 flex flex-col items-center justify-center">
+              <div className="p-4 xs:p-6 md:p-12 flex flex-col items-center justify-center">
                 <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
                   <QrCode className="w-8 h-8 text-white" />
                 </div>
@@ -141,7 +141,7 @@ export default function Interns() {
                   <img
                     src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://bit.ly/PLUKInternshipApplicationForm"
                     alt="Internship QR Code"
-                    className="w-[220px] h-[220px] object-contain"
+                    className="w-[180px] h-[180px] xs:w-[220px] xs:h-[220px] object-contain"
                   />
                 </div>
 

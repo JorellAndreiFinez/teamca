@@ -65,7 +65,7 @@ const Testimonials = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-12 px-4">
+    <div className="w-full max-w-4xl mx-auto py-12 px-4 overflow-hidden">
       <SectionHeader
         title="What Our Clients Say"
         align="center"
@@ -77,7 +77,7 @@ const Testimonials = () => {
         {slides.map((slide, index) => (
           <div
             key={index}
-            className={`flex space-x-6 transition-transform duration-500 ${
+            className={`flex flex-col md:flex-row gap-5 md:gap-6 transition-transform duration-500 ${
               index === currentSlide ? "flex" : "hidden"
             }`}
           >
@@ -85,11 +85,11 @@ const Testimonials = () => {
               <div
                 key={i}
                 style={{ background: "var(--br-color-card)" }}
-                className="flex-1 w-1/3 rounded-2xl p-[3px]"
+                className="flex-1 w-full md:w-1/3 rounded-2xl p-[3px]"
               >
                 <div
                   style={{ background: "var(--card-bg-color-primary)" }}
-                  className="h-full w-full rounded-2xl backdrop-blur-lg p-9 shadow-lg flex flex-col items-start text-left"
+                  className="h-full w-full rounded-2xl backdrop-blur-lg p-5 sm:p-7 lg:p-9 shadow-lg flex flex-col items-start text-left"
                 >
                   <img
                     src={testimonial.image}

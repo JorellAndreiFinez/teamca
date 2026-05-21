@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { timeAdjustmentService } from "../services/timeAdjustmentService";
-import { IUser } from "../models/User";
+import { timeAdjustmentService } from "../services/timeAdjustmentService.js";
+import { IUser } from "../models/User.js";
 
 // Zod validation schemas
 const submitRequestSchema = z.object({

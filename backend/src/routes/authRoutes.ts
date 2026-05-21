@@ -5,7 +5,7 @@ import {
   checkEmail,
   login,
   completeSetup,
-} from "../controllers/authController";
+} from "../controllers/authController.js";
 
 const router = express.Router();
 

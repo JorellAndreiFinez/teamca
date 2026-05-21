@@ -6,7 +6,7 @@ import {
   getDepartmentById,
   getDepartmentsByIds,
   updateDepartment,
-} from "../services/departmentService";
+} from "../services/departmentService.js";
 
 const getDepartmentIdParam = (req: Request): string => {
   const raw = req.params.departmentId;

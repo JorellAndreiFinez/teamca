@@ -12,7 +12,7 @@
     "lint:fix": "eslint . --format stylish --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json,md}\"",
-    "prepare": "husky"
+    "prepare": "node -e \"if (!process.env.CI && !process.env.VERCEL) require('child_process').execSync('husky', {stdio:'inherit'})\""
   },
   "dependencies": {
     "@astrojs/react": "^5.0.2",

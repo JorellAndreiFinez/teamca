@@ -1,10 +1,10 @@
 // backend\src\services\dtrService.ts
 
-import DTR from "../models/DTR";
-import DTRSummary from "../models/DTRSummary";
-import User from "../models/User";
-import Leave from "../models/Leave";
-import { emitUserDTRUpdated } from "../socket/io";
+import DTR from "../models/DTR.js";
+import DTRSummary from "../models/DTRSummary.js";
+import User from "../models/User.js";
+import Leave from "../models/Leave.js";
+import { emitUserDTRUpdated } from "../socket/io.js";
 
 /**
  * CONFIGURATION
@@ -607,3 +607,5 @@ export const getHistoryPaginated = async (
     total_pages,
   };
 };
+
+export { getHistoryWithLeaves } from "./dtrService.leave-integration.js";

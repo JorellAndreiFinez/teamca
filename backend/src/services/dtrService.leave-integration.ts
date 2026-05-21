@@ -8,8 +8,8 @@
 // This patch makes the *history list* also show approved leave records
 // so users see a unified attendance + leave timeline.
 
-import DTR from "../models/DTR";
-import Leave from "../models/Leave";
+import DTR from "../models/DTR.js";
+import Leave from "../models/Leave.js";
 
 // ── Paste this function into dtrService.ts ────────────────────────────────────
 

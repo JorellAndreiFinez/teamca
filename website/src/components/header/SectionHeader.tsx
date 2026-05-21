@@ -37,20 +37,20 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 
   const sizeClasses = {
     xs: {
-      h2: "text-xl sm:text-2xl lg:text-3xl",
+      h2: "text-xl sm:text-2xl lg:text-3xl leading-tight",
       p: "text-sm sm:text-base lg:text-lg",
     },
     sm: {
-      h2: "text-2xl sm:text-3xl lg:text-4xl",
+      h2: "text-2xl sm:text-3xl lg:text-4xl leading-tight",
       p: "text-base sm:text-lg lg:text-xl",
     },
     lg: {
-      h2: "text-3xl sm:text-4xl lg:text-5xl",
-      p: "text-lg sm:text-xl lg:text-2xl",
+      h2: "text-3xl sm:text-4xl lg:text-5xl leading-tight",
+      p: "text-base sm:text-xl lg:text-2xl",
     },
     xl: {
-      h2: "text-4xl sm:text-5xl lg:text-6xl",
-      p: "text-lg sm:text-xl lg:text-xl",
+      h2: "text-3xl xs:text-4xl sm:text-5xl lg:text-6xl leading-tight",
+      p: "text-base sm:text-xl lg:text-xl",
     },
   };
 
@@ -66,9 +66,9 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 
   return (
     <div
-      className={`mb-8 mx-auto ${alignClasses[align]} ${containerClasses[containerSize]}`}
+      className={`mb-8 mx-auto w-full ${alignClasses[align]} ${containerClasses[containerSize]}`}
     >
-      <h2 className={`font-bold my-10 ${currentSize.h2}`}>
+      <h2 className={`font-bold my-7 sm:my-10 ${currentSize.h2}`}>
         {titleParts ? (
           titleParts.map((part, i) => (
             <span

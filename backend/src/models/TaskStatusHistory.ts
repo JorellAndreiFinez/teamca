@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
-import type { TaskStatus } from "./Task";
+import type { TaskStatus } from "./Task.js";
 
 export interface ITaskStatusHistory extends Document {
   task_id: Types.ObjectId;
