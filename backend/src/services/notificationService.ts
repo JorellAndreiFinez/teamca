@@ -4,7 +4,7 @@ import Notification, {
   type NotificationEventType,
 } from "../models/Notification";
 
-type NotificationEntityType = "task" | "user";
+type NotificationEntityType = "task" | "user" | "leave";
 
 export type CreateNotificationInput = {
   recipientId: string;

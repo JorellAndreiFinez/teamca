@@ -607,3 +607,5 @@ export const getHistoryPaginated = async (
     total_pages,
   };
 };
+
+export { getHistoryWithLeaves } from "./dtrService.leave-integration";
