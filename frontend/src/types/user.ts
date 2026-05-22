@@ -36,6 +36,8 @@ export interface InternProfile {
   school_university: string;
   required_hours: number;
   rendered_hours_total: number;
+  days_worked?: number;
+  expected_completion_date?: string | null;
   actual_end_date?: Date;
 }
 

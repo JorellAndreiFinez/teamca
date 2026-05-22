@@ -75,6 +75,20 @@ export const getAllUsers = async () => {
   return User.find().select(SAFE_USER_SELECT).sort({ createdAt: -1 }).lean();
 };
 
+const computeExpectedCompletion = (
+  renderedHours: number,
+  requiredHours: number,
+  daysWorked: number,
+): string | null => {
+  if (renderedHours >= requiredHours || daysWorked === 0 || renderedHours === 0)
+    return null;
+  const avgHoursPerDay = renderedHours / daysWorked;
+  const daysLeft = Math.ceil((requiredHours - renderedHours) / avgHoursPerDay);
+  const date = new Date();
+  date.setDate(date.getDate() + daysLeft);
+  return date.toISOString().split("T")[0];
+};
+
 export const getUserById = async (userId: string) => {
   const user = await User.findById(userId).select(SAFE_USER_SELECT).lean();
   if (!user) return null;
@@ -82,7 +96,19 @@ export const getUserById = async (userId: string) => {
   const intern_profile = await InternProfile.findOne({
     user_id: user._id,
   }).lean();
-  return { ...user, intern_profile };
+
+  if (!intern_profile) return { ...user, intern_profile: null };
+
+  const expected_completion_date = computeExpectedCompletion(
+    intern_profile.rendered_hours_total ?? 0,
+    intern_profile.required_hours,
+    (intern_profile as any).days_worked ?? 0,
+  );
+
+  return {
+    ...user,
+    intern_profile: { ...intern_profile, expected_completion_date },
+  };
 };
 
 export const createWhitelistedUser = async (
