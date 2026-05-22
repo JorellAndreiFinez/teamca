@@ -8,6 +8,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import { initTaskSocket } from "./socket/io.js";
+import { startReminderScheduler } from "./services/schedulerService.js";
 import routes from "./routes/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -103,7 +104,7 @@ const _apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-void connectDB();
+void connectDB().then(() => startReminderScheduler());
 
 app.use("/api/auth", _authLimiter);
 app.use("/api", _apiLimiter, routes);
