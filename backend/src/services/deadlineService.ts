@@ -124,14 +124,14 @@ export const emitDeadlineNotificationsForTask = async (
   task: DeadlineNotificationTask,
   actorId?: string,
   actorFirstName?: string,
-): Promise<void> => {
+): Promise<number> => {
   if (!task.deadline || task.status === "Completed") {
-    return;
+    return 0;
   }
 
   const deadlineDate = new Date(task.deadline);
   if (Number.isNaN(deadlineDate.getTime())) {
-    return;
+    return 0;
   }
 
   const taskId = String(task.task_id);
@@ -143,7 +143,7 @@ export const emitDeadlineNotificationsForTask = async (
   const isOverdue = deadlineDay < todayDay;
 
   if (!isDueToday && !isOverdue) {
-    return;
+    return 0;
   }
 
   const recipientIds = [
@@ -154,19 +154,25 @@ export const emitDeadlineNotificationsForTask = async (
   ];
 
   if (recipientIds.length === 0) {
-    return;
+    return 0;
   }
+
+  let notifiedCount = 0;
 
   if (isDueToday) {
     const alertKey = `task_due_today:${taskId}:${formatDateKey(today)}`;
-    const alreadyNotified = await Notification.exists({
+    const existing = await Notification.find({
       event_type: "task_due_today",
       "metadata.alert_key": alertKey,
-    });
+      recipient_id: { $in: recipientIds },
+    }).select("recipient_id").lean();
 
-    if (!alreadyNotified) {
+    const notifiedIds = existing.map(n => String(n.recipient_id));
+    const toNotifyIds = recipientIds.filter(id => !notifiedIds.includes(id));
+
+    if (toNotifyIds.length > 0) {
       const notifications = await createNotificationsForRecipients(
-        recipientIds,
+        toNotifyIds,
         {
           actorId,
           eventType: "task_due_today",
@@ -188,19 +194,24 @@ export const emitDeadlineNotificationsForTask = async (
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
       }
+      notifiedCount += notifications.length;
     }
   }
 
   if (isOverdue) {
     const alertKey = `task_overdue:${taskId}`;
-    const alreadyNotified = await Notification.exists({
+    const existing = await Notification.find({
       event_type: "task_overdue",
       "metadata.alert_key": alertKey,
-    });
+      recipient_id: { $in: recipientIds },
+    }).select("recipient_id").lean();
 
-    if (!alreadyNotified) {
+    const notifiedIds = existing.map(n => String(n.recipient_id));
+    const toNotifyIds = recipientIds.filter(id => !notifiedIds.includes(id));
+
+    if (toNotifyIds.length > 0) {
       const notifications = await createNotificationsForRecipients(
-        recipientIds,
+        toNotifyIds,
         {
           actorId,
           eventType: "task_overdue",
@@ -222,8 +233,11 @@ export const emitDeadlineNotificationsForTask = async (
       for (const notification of notifications) {
         emitUsersNotification([notification.recipient_id], notification);
       }
+      notifiedCount += notifications.length;
     }
   }
+
+  return notifiedCount;
 };
 
 // ── Nightly sweep ─────────────────────────────────────────────────────────────
@@ -248,42 +262,13 @@ export const runDeadlineSweep = async (): Promise<{
 
   for (const task of tasks) {
     const taskId = String(task._id);
-    const previousCount = await Notification.countDocuments({
-      $or: [
-        {
-          event_type: "task_due_today",
-          "metadata.task_id": taskId,
-        },
-        {
-          event_type: "task_overdue",
-          "metadata.task_id": taskId,
-        },
-      ],
-    });
-
-    await emitDeadlineNotificationsForTask({
+    const count = await emitDeadlineNotificationsForTask({
       task_id: taskId,
       title: task.title,
       status: task.status,
       deadline: task.deadline,
     });
-
-    const newCount = await Notification.countDocuments({
-      $or: [
-        {
-          event_type: "task_due_today",
-          "metadata.task_id": taskId,
-        },
-        {
-          event_type: "task_overdue",
-          "metadata.task_id": taskId,
-        },
-      ],
-    });
-
-    if (newCount > previousCount) {
-      notified += 1;
-    }
+    notified += count;
   }
 
   return { processed: tasks.length, notified };

@@ -204,7 +204,7 @@ export default function NotificationBell({ compact = false }: NotificationBellPr
   const rootRef = useRef<HTMLDivElement | null>(null);
   const items = useNotificationStore((state) => state.items);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
-  const hasDueTodayAlert = useNotificationStore((state) => state.hasDueTodayAlert);
+  const hasDeadlineAlert = useNotificationStore((state) => state.hasDeadlineAlert);
   const loading = useNotificationStore((state) => state.loading);
   const isOpen = useNotificationStore((state) => state.isOpen);
   const toggleOpen = useNotificationStore((state) => state.toggleOpen);
@@ -297,15 +297,14 @@ export default function NotificationBell({ compact = false }: NotificationBellPr
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 1 1-6 0m6 0H9" />
         </svg>
-        {unreadCount > 0 && (
+        {hasDeadlineAlert ? (
+          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-amber-400" aria-label="Deadline alert" />
+        ) : unreadCount > 0 ? (
           <span className="absolute right-1 top-1 flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
           </span>
-        )}
-        {hasDueTodayAlert && unreadCount === 0 && (
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-amber-400" aria-label="Deadline alert" />
-        )}
+        ) : null}
       </button>
 
       {isOpen ? (

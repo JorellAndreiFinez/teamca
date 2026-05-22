@@ -1,6 +1,9 @@
 import { runDeadlineSweep } from "../services/deadlineService.js";
 
-const SWEEP_HOUR = Number(process.env.DEADLINE_SWEEP_HOUR ?? 0);
+let SWEEP_HOUR = Number(process.env.DEADLINE_SWEEP_HOUR ?? 0);
+if (Number.isNaN(SWEEP_HOUR) || SWEEP_HOUR < 0 || SWEEP_HOUR > 23) {
+  SWEEP_HOUR = 0;
+}
 
 // schedules the deadline sweep to run once per day at SWEEP_HOUR (default: midnight)
 // uses setTimeout for the first run then setInterval for 24-hour repeats
@@ -37,6 +40,9 @@ export function scheduleDeadlineSweep(): void {
       })
       .catch((err: unknown) => {
         console.error("[DeadlineSweep] Error during sweep:", err);
+      })
+      .finally(() => {
+        setTimeout(executeSweep, msUntilNextSweep());
       });
   };
 
@@ -44,9 +50,5 @@ export function scheduleDeadlineSweep(): void {
   const nextTime = new Date(Date.now() + delay).toISOString();
   console.warn(`[DeadlineSweep] Scheduled — first run at ${nextTime}`);
 
-  setTimeout(() => {
-    executeSweep();
-    // repeat every 24 hours
-    setInterval(executeSweep, 24 * 60 * 60 * 1000);
-  }, delay);
+  setTimeout(executeSweep, delay);
 }

@@ -130,7 +130,7 @@ export default function TaskBriefWidget({ tasks, isLoading: externalLoading = fa
               href="/tasks?sort_by=deadline_asc"
               className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
             >
-              <span>⚠</span>
+              <span aria-hidden="true">⚠</span>
               <span>{overdueCount} {overdueCount === 1 ? 'task' : 'tasks'} overdue</span>
             </a>
           )}
@@ -139,7 +139,7 @@ export default function TaskBriefWidget({ tasks, isLoading: externalLoading = fa
               href="/tasks?sort_by=deadline_asc"
               className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
             >
-              <span>🕐</span>
+              <span aria-hidden="true">🕐</span>
               <span>{dueTodayCount} {dueTodayCount === 1 ? 'task' : 'tasks'} due today</span>
             </a>
           )}

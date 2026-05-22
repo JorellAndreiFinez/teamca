@@ -104,8 +104,9 @@ const _apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-void connectDB();
-scheduleDeadlineSweep();
+connectDB().then(() => {
+  scheduleDeadlineSweep();
+});
 
 app.use("/api/auth", _authLimiter);
 app.use("/api", _apiLimiter, routes);

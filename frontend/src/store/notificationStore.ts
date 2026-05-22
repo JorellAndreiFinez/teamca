@@ -5,7 +5,7 @@ import type { NotificationItem } from "../types/notification";
 interface NotificationState {
   items: NotificationItem[];
   unreadCount: number;
-  hasDueTodayAlert: boolean;
+  hasDeadlineAlert: boolean;
   page: number;
   totalPages: number;
   loading: boolean;
@@ -22,7 +22,7 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   items: [],
   unreadCount: 0,
-  hasDueTodayAlert: false,
+  hasDeadlineAlert: false,
   page: 1,
   totalPages: 1,
   loading: false,
@@ -38,7 +38,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({
         items: data.items,
         unreadCount: data.unread_count,
-        hasDueTodayAlert: data.items.some(
+        hasDeadlineAlert: data.items.some(
           (item) =>
             !item.is_read &&
             (item.event_type === 'task_due_today' || item.event_type === 'task_overdue'),
@@ -58,7 +58,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({
         items: data.items,
         unreadCount: data.unread_count,
-        hasDueTodayAlert: data.items.some(
+        hasDeadlineAlert: data.items.some(
           (item) =>
             !item.is_read &&
             (item.event_type === 'task_due_today' || item.event_type === 'task_overdue'),
@@ -84,7 +84,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({
       items: newItems,
       unreadCount: state.unreadCount + (item.is_read ? 0 : 1),
-      hasDueTodayAlert:
+      hasDeadlineAlert:
         newItems.some(
           (n) =>
             !n.is_read &&
@@ -110,7 +110,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({
       items: updatedItems,
       unreadCount: Math.max(0, state.unreadCount - 1),
-      hasDueTodayAlert: updatedItems.some(
+      hasDeadlineAlert: updatedItems.some(
         (n) =>
           !n.is_read &&
           (n.event_type === 'task_due_today' || n.event_type === 'task_overdue'),
@@ -137,7 +137,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         read_at: item.read_at ?? new Date().toISOString(),
       })),
       unreadCount: 0,
-      hasDueTodayAlert: false,
+      hasDeadlineAlert: false,
     });
 
     try {
