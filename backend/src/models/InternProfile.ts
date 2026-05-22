@@ -26,6 +26,11 @@ const internProfileSchema = new Schema(
       default: 0,
       min: 0,
     },
+    days_worked: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     actual_end_date: {
       type: Date,
       default: null,

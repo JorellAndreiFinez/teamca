@@ -5,6 +5,7 @@ import DTRSummary from "../models/DTRSummary.js";
 import User from "../models/User.js";
 import Leave from "../models/Leave.js";
 import { emitUserDTRUpdated } from "../socket/io.js";
+import { syncRenderedHours } from "./internProfileService.js";
 
 /**
  * CONFIGURATION
@@ -188,6 +189,9 @@ export const timeOut = async (userId: string, remarks: string) => {
 
   // update DTR totals and undertime
   await updateDTRTotals(dtr._id.toString());
+
+  // keep intern profile hours in sync
+  syncRenderedHours(userId).catch(() => {});
 
   try {
     emitUserDTRUpdated(userId, {

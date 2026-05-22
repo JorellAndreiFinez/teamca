@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import InternProfile from "../models/InternProfile.js";
+import DTR from "../models/DTR.js";
 import User from "../models/User.js";
 
 export type InternProfilePayload = {
@@ -11,6 +13,33 @@ export type InternProfilePayload = {
 
 export const getInternProfileByUserId = async (userId: string) => {
   return InternProfile.findOne({ user_id: userId }).lean();
+};
+
+export const syncRenderedHours = async (userId: string): Promise<void> => {
+  const result = await DTR.aggregate([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+        status: { $ne: "rejected" },
+        totalHours: { $gt: 0 },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        renderedHours: { $sum: "$totalHours" },
+        daysWorked: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const renderedHours = parseFloat((result[0]?.renderedHours ?? 0).toFixed(2));
+  const daysWorked = result[0]?.daysWorked ?? 0;
+
+  await InternProfile.findOneAndUpdate(
+    { user_id: userId },
+    { rendered_hours_total: renderedHours, days_worked: daysWorked },
+  );
 };
 
 export const createInternProfile = async (payload: InternProfilePayload) => {
