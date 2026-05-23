@@ -28,7 +28,10 @@ export type NotificationEventType =
   | "leave_submitted" // notifies admin/heads when a user files a leave
   | "leave_approved" // notifies the applicant when leave is approved
   | "leave_rejected" // notifies the applicant when leave is rejected
-  | "leave_cancelled"; // notifies admin/heads when a user cancels their leave
+  | "leave_cancelled" // notifies admin/heads when a user cancels their leave
+  // ── DTR reminder events ───────────────────────────────────────────────────
+  | "dtr_clock_in_reminder"
+  | "dtr_clock_out_reminder";
 
 export interface INotification extends Document {
   recipient_id: Types.ObjectId;
@@ -80,6 +83,8 @@ const notificationSchema = new Schema<INotification>({
       "leave_approved",
       "leave_rejected",
       "leave_cancelled",
+      "dtr_clock_in_reminder",
+      "dtr_clock_out_reminder",
     ],
     required: true,
     index: true,

@@ -8,6 +8,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import { initTaskSocket } from "./socket/io.js";
+import { startReminderScheduler } from "./services/schedulerService.js";
 import routes from "./routes/index.js";
 import { scheduleDeadlineSweep } from "./utils/scheduler.js";
 

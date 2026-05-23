@@ -6,6 +6,7 @@ import {
   deleteWhitelistedUser as deleteUserService,
   createWhitelistedUser,
   activateWhitelistedUser,
+  getUserById as getUserByIdService,
 } from "../services/userService.js";
 import { createNotificationsForRecipients } from "../services/notificationService.js";
 import { emitUsersDirectoryUpdated, emitUsersNotification } from "../socket/io.js";
@@ -142,18 +143,15 @@ export const getUserById = async (req: Request, res: Response) => {
   try {
     let userId: string = String(req.params.userId);
 
-    // Handle "me" to return the authenticated user's data
     if (userId === "me") {
       const authUser = req.user;
-
       if (!authUser?.user_id) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-
       userId = String(authUser.user_id);
     }
 
-    const user = await User.findById(userId, "-password_hash");
+    const user = await getUserByIdService(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
