@@ -7,6 +7,9 @@ export interface BreakRecord {
   type: 'lunch' | 'rest' | 'other';
 }
 
+// IBreak — alias kept for DTRRecordDetailModal compatibility
+export type IBreak = BreakRecord;
+
 export interface ClockRecord {
   timeIn: string | Date;
   timeOut?: string | Date;
@@ -16,6 +19,9 @@ export interface ClockRecord {
   status?: 'present' | 'late' | 'very_late' | 'absent';
   remarks?: string;
 }
+
+// ClockEntry — alias kept for DTRRecordDetailModal compatibility
+export type ClockEntry = ClockRecord;
 
 /** A standard DTR day record returned by the backend */
 export interface DailyTimeRecord {
@@ -30,6 +36,10 @@ export interface DailyTimeRecord {
   status?: 'pending' | 'approved' | 'rejected';
   remarks?: string;
   attendanceStatus?: 'present' | 'late' | 'very_late' | 'absent';
+
+  // Mongoose timestamps
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 
   // Set by getHistoryWithLeaves — true when this DTR day falls inside an approved leave period
   recordType?: 'dtr';
