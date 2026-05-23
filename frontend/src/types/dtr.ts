@@ -1,38 +1,87 @@
-// frontend\src\types\dtr.ts
+// frontend/src/types/dtr.ts
 
-export type DTRStatus = "Present" | "Absent" | "Leave" | "Holiday";
-
-// Clock entry with break tracking
-export interface IBreak {
-  breakStart: Date | string;
-  breakEnd?: Date | string;
+export interface BreakRecord {
+  breakStart: string | Date;
+  breakEnd?: string | Date;
   duration?: number; // minutes
-  type: "lunch" | "rest" | "other";
+  type: 'lunch' | 'rest' | 'other';
 }
 
-export interface ClockEntry {
-  timeIn: Date | string;
-  timeOut?: Date | string;
+export interface ClockRecord {
+  timeIn: string | Date;
+  timeOut?: string | Date;
   totalHours?: number;
   overtimeHours?: number;
+  breaks?: BreakRecord[];
+  status?: 'present' | 'late' | 'very_late' | 'absent';
   remarks?: string;
-  status?: string;
-  breaks?: IBreak[];
 }
 
-// Daily Time Record (matches backend structure)
+/** A standard DTR day record returned by the backend */
 export interface DailyTimeRecord {
-  _id?: string;
-  userId?: string;
-  departmentId?: string;
-  date: Date | string;
-  clocks: ClockEntry[];
-  attendanceStatus?: "present" | "late" | "very_late" | "absent";
+  _id: string;
+  userId: string;
+  departmentId: string;
+  date: string | Date;
+  clocks: ClockRecord[];
   totalHours?: number;
   undertimeHours?: number;
   totalBreakTime?: number;
-  status?: "pending" | "approved" | "rejected";
+  status?: 'pending' | 'approved' | 'rejected';
   remarks?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  attendanceStatus?: 'present' | 'late' | 'very_late' | 'absent';
+
+  // Set by getHistoryWithLeaves — true when this DTR day falls inside an approved leave period
+  recordType?: 'dtr';
+  coveredByLeave?: boolean;
+}
+
+/** A leave record returned inline with DTR history by getHistoryWithLeaves */
+export interface LeaveRecord {
+  _id: string;
+  recordType: 'leave';
+  date: string | Date;       // equals startDate — used as sort anchor
+  startDate: string | Date;
+  endDate: string | Date;
+  duration: number;           // working days
+  leaveType: 'vacation' | 'sick' | 'emergency' | 'unpaid' | 'other';
+  reason: string;
+  status: 'approved';         // only approved leaves appear in DTR history
+  reviewedBy?: string;
+  reviewedAt?: string | Date;
+  reviewHistory: Array<{
+    action: 'approved' | 'rejected' | 'cancelled';
+    actor_id: string;
+    actor_name: string;
+    reason?: string;
+    timestamp: string | Date;
+  }>;
+}
+
+/**
+ * Union type for merged DTR + Leave history returned by GET /dtr/history.
+ * Discriminate on `recordType`:
+ *   - undefined or 'dtr' → DailyTimeRecord
+ *   - 'leave'            → LeaveRecord
+ */
+export type DTRHistoryItem = DailyTimeRecord | LeaveRecord;
+
+export interface DTRSummary {
+  _id: string;
+  userId: string;
+  departmentId: string;
+  period: 'week' | 'month';
+  startDate: string | Date;
+  endDate: string | Date;
+  totalHours: number;
+  requiredHours: number;
+  overtimeHours: number;
+  undertimeHours: number;
+  totalBreakTime: number;
+  daysPresent: number;
+  daysLate: number;
+  daysAbsent: number;
+  daysOnLeave: number; // approved leave days in this period
+  lateCount: number;
+  undertimeDays: number;
 }
