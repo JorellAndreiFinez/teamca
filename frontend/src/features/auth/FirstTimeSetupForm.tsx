@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
+import { departmentService } from '../../services/departmentService';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import type { Department } from '../../types/user';
 
 interface FirstTimeSetupFormProps {
   email: string;
@@ -18,7 +20,10 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     confirmPassword: '',
     school_university: '',
     required_hours: 480,
+    department_id: '',
   });
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -30,7 +35,33 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
+  useEffect(() => {
+    let cancelled = false;
 
+    const loadDepartments = async () => {
+      setDepartmentsLoading(true);
+      try {
+        const data = await departmentService.getAllDepartments();
+        if (!cancelled) {
+          setDepartments(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setServerError('Unable to load departments. Please try again.');
+        }
+      } finally {
+        if (!cancelled) {
+          setDepartmentsLoading(false);
+        }
+      }
+    };
+
+    void loadDepartments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -50,6 +81,7 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     }
     
     if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    if (!formData.department_id) errs.department_id = 'Department is required';
     if (!formData.school_university.trim()) errs.school_university = 'School/University is required';
     if (formData.required_hours < 1) errs.required_hours = 'Required hours must be at least 1';
     return errs;
@@ -72,6 +104,7 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
         first_name: formData.first_name,
         last_name: formData.last_name,
         password: formData.password,
+        department_id: formData.department_id,
         school_university: formData.school_university,
         required_hours: Number(formData.required_hours),
       });
@@ -139,6 +172,35 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
               error={errors.confirmPassword}
               placeholder="Re-enter password"
             />
+          </div>
+
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-sm font-semibold text-gray-700">Team Assignment</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Department
+              </label>
+              <select
+                value={formData.department_id}
+                onChange={(e) => handleChange('department_id', e.target.value)}
+                disabled={departmentsLoading}
+                className={`w-full h-10 rounded-lg border px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.department_id ? 'border-red-300' : 'border-gray-300'
+                } ${departmentsLoading ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+              >
+                <option value="">
+                  {departmentsLoading ? 'Loading departments...' : 'Select department'}
+                </option>
+                {departments.map((department) => (
+                  <option key={department._id} value={department._id}>
+                    {department.department_name}
+                  </option>
+                ))}
+              </select>
+              {errors.department_id && (
+                <p className="mt-1 text-sm text-red-600">{errors.department_id}</p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-4 border-t pt-6">

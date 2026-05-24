@@ -8,6 +8,12 @@ import ProperClockCard from '../../components/properClockCard';
 import { useDtrStore } from '../../store/dtrStore';
 import { useDtrSocket } from '../../features/dtr/hooks/useDtrSocket';
 import Button from '../../components/ui/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/Dialog';
 import { WidgetSkeleton, CalendarSkeleton } from '../../components/ui/Skeleton';
 import { internProfileService } from '../../services/internProfileService';
 import type { InternProfile } from '../../types/user';
@@ -27,6 +33,10 @@ export default function InternDashboard() {
   const [isLoadingWidgets, setIsLoadingWidgets] = React.useState(true);
   const [internProfile, setInternProfile] = React.useState<InternProfile | null>(null);
   const [isLoadingInternProfile, setIsLoadingInternProfile] = React.useState(true);
+  const [clockOutModalOpen, setClockOutModalOpen] = React.useState(false);
+  const [clockOutRemarks, setClockOutRemarks] = React.useState('');
+  const [clockOutSubmitting, setClockOutSubmitting] = React.useState(false);
+  const [clockOutError, setClockOutError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoadingWidgets(false), 600);
@@ -98,6 +108,35 @@ export default function InternDashboard() {
   // subscribe to DTR socket so dashboard updates live
   useDtrSocket(handleDtrSocketUpdate);
 
+  const openClockOutModal = () => {
+    setClockOutRemarks('');
+    setClockOutError(null);
+    setClockOutModalOpen(true);
+  };
+
+  const handleSubmitClockOut = async () => {
+    const remarks = clockOutRemarks.trim();
+
+    if (!remarks) {
+      setClockOutError('Remarks are required to clock out.');
+      return;
+    }
+
+    try {
+      setClockOutSubmitting(true);
+      setDtrActionError(null);
+      setClockOutError(null);
+      await clockOut(remarks);
+      setClockOutRemarks('');
+      setClockOutModalOpen(false);
+      window.location.reload();
+    } catch (err: any) {
+      setClockOutError(err?.response?.data?.message || 'Failed to clock out');
+    } finally {
+      setClockOutSubmitting(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -149,21 +188,7 @@ export default function InternDashboard() {
                 setDtrActionError(err?.response?.data?.message || 'Failed to clock in');
               }
           }}
-          onClockOut={async () => {
-            try {
-              // simple prompt for remarks — in-app modal could be implemented later
-              const remarks = window.prompt('Enter clock-out remarks:') || '';
-              if (!remarks.trim()) {
-                alert('Remarks are required to clock out.');
-                return;
-              }
-                setDtrActionError(null);
-              await clockOut(remarks);
-              window.location.reload();
-              } catch (err: any) {
-                setDtrActionError(err?.response?.data?.message || 'Failed to clock out');
-              }
-          }}
+          onClockOut={openClockOutModal}
           onStartBreak={async () => {
             try {
                 setDtrActionError(null);
@@ -208,6 +233,54 @@ export default function InternDashboard() {
           {isLoadingWidgets ? <CalendarSkeleton /> : <CalendarWidget />}
         </Card>
       </div>
+
+      <Dialog open={clockOutModalOpen} onOpenChange={setClockOutModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Clock Out</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Please describe what you accomplished today.
+            </p>
+            {clockOutError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {clockOutError}
+              </div>
+            )}
+            <textarea
+              value={clockOutRemarks}
+              onChange={(event) => {
+                setClockOutRemarks(event.target.value);
+                if (clockOutError) setClockOutError(null);
+              }}
+              placeholder="e.g. Finished assigned tasks, fixed bugs, attended team sync..."
+              className="min-h-[120px] w-full resize-none rounded-md border border-slate-300 p-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              maxLength={300}
+              disabled={clockOutSubmitting}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setClockOutModalOpen(false)}
+                disabled={clockOutSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={handleSubmitClockOut}
+                loading={clockOutSubmitting}
+                disabled={!clockOutRemarks.trim()}
+              >
+                Submit & Clock Out
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

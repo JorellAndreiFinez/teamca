@@ -15,6 +15,7 @@ interface Props {
 }
 
 const departmentRoles = ["Intern", "Supervisor", "Head"];
+const globalRoles = ["Standard_User", "Admin", "Superadmin"] as const;
 
 export default function AddUserModal({ open, onClose, onSuccess }: Props) {
   const [isWhitelist, setIsWhitelist] = useState(false);
@@ -64,6 +65,8 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
         first_name: "",
         last_name: "",
         password: "",
+        global_role:
+          prev.global_role === "Superadmin" ? "Standard_User" : prev.global_role,
         department_role: "Intern",
       }));
     }
@@ -107,10 +110,17 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
         setError("Department is required for whitelisted users.");
         return;
       }
-
+      if (!form.department_role) {
+        setError("Department role is required for whitelisted users.");
+        return;
+      }
       try {
         setLoading(true);
-        await userService.createWhitelistedUser(form.email);
+        await userService.createWhitelistedUser(form.email, {
+          global_role: form.global_role as "Admin" | "Standard_User",
+          department_id: form.department_id,
+          department_role: form.department_role as "Head" | "Supervisor" | "Intern",
+        });
         onSuccess();
         onClose();
 
@@ -122,9 +132,11 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
           global_role: "Standard_User",
           is_active: true,
           department_id: "",
-          department_role: "Intern",          required_hours: 8,
+          department_role: "",
+          required_hours: 8,
           working_hours: { start: "08:00", end: "17:00" },
-          working_days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],        });
+          working_days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        });
         setIsWhitelist(false);
       } catch (err: any) {
         setError(err?.response?.data?.message || "Failed to whitelist email.");
@@ -266,25 +278,28 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
             />
           )}
 
-          {/* role & status - hidden for whitelist */}
-          {!isWhitelist && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Access Role
-                </label>
-                <select
-                  name="global_role"
-                  value={form.global_role}
-                  onChange={handleSelectChange}
-                  className="w-full h-10 rounded-lg border px-3 text-slate-700 bg-white"
-                >
-                  <option value="Superadmin">Superadmin</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Standard_User">Standard User</option>
-                </select>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Access Role
+              </label>
+              <select
+                name="global_role"
+                value={form.global_role}
+                onChange={handleSelectChange}
+                className="w-full h-10 rounded-lg border px-3 text-slate-700 bg-white"
+              >
+                {globalRoles
+                  .filter((role) => !isWhitelist || role !== "Superadmin")
+                  .map((role) => (
+                    <option key={role} value={role}>
+                      {role === "Standard_User" ? "Standard User" : role}
+                    </option>
+                  ))}
+              </select>
+            </div>
 
+            {!isWhitelist && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
                   Status
@@ -299,8 +314,8 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
                   <option value="false">Inactive</option>
                 </select>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* department fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -323,42 +338,29 @@ export default function AddUserModal({ open, onClose, onSuccess }: Props) {
               </select>
             </div>
 
-            {!isWhitelist && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Department Role
-                </label>
-                <select
-                  name="department_role"
-                  value={form.department_role}
-                  onChange={handleSelectChange}
-                  disabled={!form.department_id}
-                  className={`w-full h-10 rounded-lg border px-3 text-slate-700 ${
-                    !form.department_id
-                      ? "bg-slate-100 cursor-not-allowed"
-                      : "bg-white"
-                  }`}
-                >
-                  <option value="">Select role</option>
-                  {departmentRoles.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {isWhitelist && form.department_id && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Department Role
-                </label>
-                <div className="w-full h-10 rounded-lg border px-3 flex items-center text-slate-700 bg-slate-100">
-                  Intern (Auto)
-                </div>
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Department Role
+              </label>
+              <select
+                name="department_role"
+                value={form.department_role}
+                onChange={handleSelectChange}
+                disabled={!form.department_id}
+                className={`w-full h-10 rounded-lg border px-3 text-slate-700 ${
+                  !form.department_id
+                    ? "bg-slate-100 cursor-not-allowed"
+                    : "bg-white"
+                }`}
+              >
+                <option value="">Select role</option>
+                {departmentRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/*  SCHEDULE SECTION */}

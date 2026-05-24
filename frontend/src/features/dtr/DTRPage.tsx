@@ -46,6 +46,7 @@ export default function DTRPage() {
 
   const [open, setOpen] = useState(false);
   const [remarks, setRemarks] = useState("");
+  const [remarksError, setRemarksError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -251,6 +252,7 @@ export default function DTRPage() {
    * OPEN MODAL
    */
   const handleOpenClockOut = () => {
+    setRemarksError(null);
     setOpen(true);
   };
 
@@ -260,13 +262,14 @@ export default function DTRPage() {
   const handleSubmitClockOut = async () => {
     const trimmedRemarks = remarks.trim();
     if (!trimmedRemarks) {
-      alert("Remarks are required");
+      setRemarksError("Remarks are required to clock out.");
       return;
     }
 
     try {
       setSubmitting(true);
       setActionError(null);
+      setRemarksError(null);
 
       await clockOut(trimmedRemarks);
 
@@ -276,7 +279,7 @@ export default function DTRPage() {
       window.location.reload();
     } catch (err) {
       const message = (err as any)?.response?.data?.message || "Failed to clock out";
-      setActionError(message);
+      setRemarksError(message);
     } finally {
       setSubmitting(false);
     }
@@ -467,9 +470,18 @@ export default function DTRPage() {
               Please describe what you accomplished today.
             </p>
 
+            {remarksError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {remarksError}
+              </div>
+            )}
+
             <textarea
               value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
+              onChange={(e) => {
+                setRemarks(e.target.value);
+                if (remarksError) setRemarksError(null);
+              }}
               placeholder="e.g. Finished dashboard UI, fixed bugs..."
               className="w-full border rounded-md p-2 text-sm min-h-[120px]"
               maxLength={300}

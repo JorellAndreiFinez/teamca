@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import InternProfile from "../models/InternProfile.js";
+import Department from "../models/Department.js";
 import { logActivity } from "../services/activityService.js";
 
 const JWT_SECRET =
@@ -117,6 +119,7 @@ export const completeSetup = async (req: Request, res: Response) => {
     const first_name = String(req.body?.first_name ?? "").trim();
     const last_name = String(req.body?.last_name ?? "").trim();
     const password = String(req.body?.password ?? "");
+    const department_id = String(req.body?.department_id ?? "").trim();
     const school_university = String(req.body?.school_university ?? "").trim();
     const required_hours = Number(req.body?.required_hours);
 
@@ -125,6 +128,7 @@ export const completeSetup = async (req: Request, res: Response) => {
       !first_name ||
       !last_name ||
       !password ||
+      !department_id ||
       !school_university
     ) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -185,11 +189,28 @@ export const completeSetup = async (req: Request, res: Response) => {
         .json({ message: "Names must be at least 2 characters" });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(department_id)) {
+      return res.status(400).json({ message: "Invalid department" });
+    }
+
+    const department = await Department.findById(department_id).select("_id");
+    if (!department) {
+      return res.status(404).json({ message: "Department not found" });
+    }
+
+    const departmentRole = user.departments?.[0]?.department_role ?? "Intern";
+
     // update user with setup info
     const password_hash = await bcrypt.hash(password, 12);
     user.first_name = first_name;
     user.last_name = last_name;
     user.password_hash = password_hash;
+    user.departments = [
+      {
+        department_id: new mongoose.Types.ObjectId(department_id),
+        department_role: departmentRole,
+      },
+    ];
     user.is_active = true;
     await user.save();
 
@@ -226,6 +247,8 @@ export const completeSetup = async (req: Request, res: Response) => {
         first_name,
         last_name,
         global_role: user.global_role,
+        department_id,
+        department_role: departmentRole,
         school_university,
         required_hours,
       },

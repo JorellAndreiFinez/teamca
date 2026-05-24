@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import InternProfile from "../models/InternProfile.js";
+import Department from "../models/Department.js";
 
 const SAFE_USER_SELECT = "-password_hash";
 
@@ -88,9 +89,18 @@ export const login = async (payload: LoginInput) => {
 export const completeSetup = async (payload: CompleteSetupInput) => {
   const schoolUniversity = payload.school_university?.trim() ?? "";
   const requiredHours = Number(payload.required_hours);
+  const departmentId = payload.department_id?.trim() ?? "";
 
   if (!schoolUniversity) {
     throw new Error("School/University is required.");
+  }
+
+  if (!departmentId) {
+    throw new Error("Department is required.");
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+    throw new Error("Invalid department.");
   }
 
   if (!Number.isFinite(requiredHours) || requiredHours < 1) {
@@ -109,6 +119,13 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
     throw new Error("Account is already active.");
   }
 
+  const department = await Department.findById(departmentId).select("_id");
+  if (!department) {
+    throw new Error("Department not found.");
+  }
+
+  const departmentRole = user.departments?.[0]?.department_role ?? "Intern";
+
   const password_hash = await bcrypt.hash(payload.password, 10);
 
   user.first_name = payload.first_name;
@@ -117,14 +134,12 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
   user.global_role = user.global_role ?? "Standard_User";
   user.is_active = true;
 
-  if (payload.department_id) {
-    user.departments = [
-      {
-        department_id: new mongoose.Types.ObjectId(payload.department_id),
-        department_role: "Intern",
-      },
-    ];
-  }
+  user.departments = [
+    {
+      department_id: new mongoose.Types.ObjectId(departmentId),
+      department_role: departmentRole,
+    },
+  ];
 
   await user.save();
 

@@ -63,8 +63,8 @@ const getRenderedHoursFromRecords = (records: DailyTimeRecord[]) => {
       return acc + (Number.isFinite(hours) ? hours : 0);
     }, 0) ?? 0;
 
-    const recordTotal = Number(record.totalHours ?? clockHours);
-    const baseHours = Number.isFinite(recordTotal) ? recordTotal : clockHours;
+    const recordTotal = Number(record.totalHours ?? 0);
+    const baseHours = Number.isFinite(recordTotal) && recordTotal > 0 ? recordTotal : clockHours;
 
     return sum + baseHours;
   }, 0);
@@ -87,6 +87,19 @@ const formatDate = (value?: string | Date | null) => {
   }).format(date);
 };
 
+const formatGlobalRole = (role?: string) => {
+  if (role === 'Standard_User') return 'Standard User';
+  return role || '';
+};
+
+const buildRoleLine = (user: any) => {
+  const labels = [
+    formatGlobalRole(user?.global_role),
+    user?.departments?.[0]?.department_role,
+  ].filter(Boolean);
+
+  return labels.length > 0 ? labels.join(' · ') : 'User';
+};
 
 function DetailField({
   label,
@@ -163,9 +176,7 @@ export default function ProfilePage() {
 
   const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || 'Unnamed User';
   const identiconValue = String(user?.user_id || user?._id || user?.email || fullName || 'user');
-  const jobTitleLabel = String((user as any)?.job_title || (user as any)?.job_role || 'Front End Developer');
-  const departmentRoleLabel = String(user?.departments?.[0]?.department_role || 'Intern');
-  const profileRoleLine = `${jobTitleLabel} · ${departmentRoleLabel}`;
+  const profileRoleLine = buildRoleLine(user);
 
   const hasAnyInternInput = Boolean(
     formData.school_university.trim() ||
