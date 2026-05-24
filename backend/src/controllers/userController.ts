@@ -1,15 +1,20 @@
 import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import {
   createUser as createUserService,
   updateUser as updateUserService,
-  deleteWhitelistedUser as deleteUserService,
+  deleteUser as deleteUserService,
+  deleteWhitelistedUser,
   createWhitelistedUser,
   activateWhitelistedUser,
   getUserById as getUserByIdService,
 } from "../services/userService.js";
 import { createNotificationsForRecipients } from "../services/notificationService.js";
-import { emitUsersDirectoryUpdated, emitUsersNotification } from "../socket/io.js";
+import {
+  emitUsersDirectoryUpdated,
+  emitUsersNotification,
+} from "../socket/io.js";
 
 type AuthUser = NonNullable<Request["user"]>;
 
@@ -245,7 +250,8 @@ export const activateWhitelistedUserHandler = async (
 
     const first_name = String(req.body?.first_name ?? "").trim();
     const last_name = String(req.body?.last_name ?? "").trim();
-    const password_hash = String(req.body?.password_hash ?? "");
+    const password = String(req.body?.password ?? "");
+    const suppliedPasswordHash = String(req.body?.password_hash ?? "");
 
     const global_role = req.body?.global_role || "Standard_User";
     const department_id = req.body?.department_id
@@ -254,7 +260,7 @@ export const activateWhitelistedUserHandler = async (
 
     const department_role = req.body?.department_role || "Intern";
 
-    if (!first_name || !last_name || !password_hash) {
+    if (!first_name || !last_name || (!password && !suppliedPasswordHash)) {
       return res.status(400).json({
         message: "First name, last name, and password are required",
       });
@@ -267,12 +273,21 @@ export const activateWhitelistedUserHandler = async (
       });
     }
 
-    // Validate password hash format (bcrypt check)
-    if (!password_hash.startsWith("$2")) {
+    if (password && password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    // Validate password hash format if a pre-hashed password is supplied.
+    if (suppliedPasswordHash && !suppliedPasswordHash.startsWith("$2")) {
       return res.status(400).json({
         message: "Invalid password format",
       });
     }
+
+    const password_hash =
+      suppliedPasswordHash || (await bcrypt.hash(password, 12));
 
     const user = await activateWhitelistedUser(userId, {
       first_name,
@@ -289,6 +304,38 @@ export const activateWhitelistedUserHandler = async (
 
     return res.status(400).json({
       message: error.message || "Failed to activate whitelisted user",
+    });
+  }
+};
+
+export const deleteWhitelistedUserHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    if (!req.user || req.user.global_role !== "Superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Only Superadmins can access this." });
+    }
+
+    const userId = getUserIdParam(req);
+    const result = await deleteWhitelistedUser(userId);
+
+    const directorySubscribers = await getActiveUserDirectorySubscriberIds();
+    emitUsersDirectoryUpdated(directorySubscribers, {
+      event_type: "user_deleted",
+      user_id: userId,
+      actor_id: String(req.user.user_id),
+      updated_at: new Date().toISOString(),
+    });
+
+    return res.json(result);
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    return res.status(400).json({
+      message: error.message || "Failed to cancel whitelisted user",
     });
   }
 };
@@ -548,9 +595,16 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
         .json({ message: "Forbidden: Only Superadmins can access this." });
     }
 
-    // Get users who are active
-    const whitelistedUsers = await User.find({ is_active: true }) // <-- change false to true
+    const whitelistedUsers = await User.find({
+      is_active: false,
+      $or: [
+        { password_hash: { $exists: false } },
+        { password_hash: null },
+        { password_hash: "" },
+      ],
+    })
       .select("-password_hash")
+      .sort({ createdAt: -1 })
       .lean();
 
     res.json(whitelistedUsers);

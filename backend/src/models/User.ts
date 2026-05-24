@@ -46,7 +46,7 @@ const userSchema = new Schema<IUser>(
     first_name: { type: String, default: "" },
     last_name: { type: String, default: "" },
     email: { type: String, required: true, unique: true },
-    password_hash: { type: String, required: true },
+    password_hash: { type: String, required: false },
 
     global_role: {
       type: String,

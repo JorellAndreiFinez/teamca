@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Button from "../ui/Button";
 import MobileMenu from "./MobileMenu";
+import { config } from "@/config/env";
 import "../../styles/global.css";
 // import { File, LogIn } from "lucide-react";
 
@@ -38,16 +39,14 @@ const Navbar: React.FC = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <Button
-            variant="secondary"
-            className="flex items-center gap-2 backdrop-blur-md text-sm"
-          >
-            Signin
-          </Button>
-
-          <Button variant="default" className="flex items-center gap-2 text-sm">
-            Login
-          </Button>
+          <a href={config.frontendUrl}>
+            <Button
+              variant="default"
+              className="flex items-center gap-2 text-sm"
+            >
+              Login
+            </Button>
+          </a>
         </div>
 
         <button

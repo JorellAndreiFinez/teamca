@@ -15,7 +15,15 @@ type ApiError = {
 
 // proper payload types (no any)
 export type CreateUserPayload = Record<string, unknown>;
-export type ActivateWhitelistPayload = Record<string, unknown>;
+export type ActivateWhitelistPayload = {
+  first_name: string;
+  last_name: string;
+  password?: string;
+  password_hash?: string;
+  global_role?: User["global_role"];
+  department_id?: string;
+  department_role?: "Head" | "Supervisor" | "Intern";
+};
 
 export const userService = {
   getAllUsers: async (): Promise<User[]> => {
@@ -25,6 +33,11 @@ export const userService = {
     } catch {
       return [];
     }
+  },
+
+  getWhitelistedUsers: async (): Promise<User[]> => {
+    const { data } = await api.get<User[]>("/users/whitelisted");
+    return data;
   },
 
   createUser: async (payload: CreateUserPayload): Promise<User> => {
@@ -58,6 +71,21 @@ export const userService = {
   createWhitelistedUser: async (email: string): Promise<User> => {
     const { data } = await api.post<User>("/users/whitelist", { email });
     return data;
+  },
+
+  deleteWhitelistedUser: async (userId: string): Promise<void> => {
+    try {
+      await api.delete(`/users/whitelist/${userId}`);
+    } catch (err: unknown) {
+      const e = err as ApiError;
+
+      const message =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to cancel whitelisted user";
+
+      throw new Error(message, { cause: err });
+    }
   },
 
   activateWhitelistedUser: async (
