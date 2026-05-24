@@ -257,6 +257,10 @@ export const deleteWhitelistedUser = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found.");
 
+  if (user.is_active || user.password_hash) {
+    throw new Error("Only pending setup whitelisted users can be canceled.");
+  }
+
   await user.deleteOne();
   return { message: "Whitelisted user deleted" };
 };
@@ -270,8 +274,16 @@ export const getWhitelistedUsers = async (req: Request, res: Response) => {
         .json({ message: "Forbidden: Only Superadmins can access this." });
     }
 
-    const whitelistedUsers = await User.find({ is_active: true })
+    const whitelistedUsers = await User.find({
+      is_active: false,
+      $or: [
+        { password_hash: { $exists: false } },
+        { password_hash: null },
+        { password_hash: "" },
+      ],
+    })
       .select("-password_hash")
+      .sort({ createdAt: -1 })
       .lean();
 
     res.json(whitelistedUsers);

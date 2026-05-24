@@ -4,6 +4,9 @@ import {
   getUserById,
   updateUser,
   getWhitelistedUsers,
+  createWhitelistedUserHandler,
+  activateWhitelistedUserHandler,
+  deleteWhitelistedUserHandler,
   createUser,
   deleteUser,
 } from "../controllers/userController.js";
@@ -19,11 +22,32 @@ router.get(
   getWhitelistedUsers,
 );
 
+router.post(
+  "/whitelist",
+  authMiddleware,
+  requireGlobalRole("Superadmin"),
+  createWhitelistedUserHandler,
+);
+
+router.delete(
+  "/whitelist/:userId",
+  authMiddleware,
+  requireGlobalRole("Superadmin"),
+  deleteWhitelistedUserHandler,
+);
+
 router.get(
   "/",
   authMiddleware,
   requireAnyRole(["Superadmin", "Admin"], ["Head", "Supervisor"]),
   getUsers,
+);
+
+router.post(
+  "/:userId/activate-whitelist",
+  authMiddleware,
+  requireGlobalRole("Superadmin"),
+  activateWhitelistedUserHandler,
 );
 
 router.get("/:userId", authMiddleware, getUserById);
