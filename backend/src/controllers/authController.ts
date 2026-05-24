@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import InternProfile from "../models/InternProfile.js";
 import { logActivity } from "../services/activityService.js";
 
 const JWT_SECRET =
@@ -116,9 +117,23 @@ export const completeSetup = async (req: Request, res: Response) => {
     const first_name = String(req.body?.first_name ?? "").trim();
     const last_name = String(req.body?.last_name ?? "").trim();
     const password = String(req.body?.password ?? "");
+    const school_university = String(req.body?.school_university ?? "").trim();
+    const required_hours = Number(req.body?.required_hours);
 
-    if (!email || !first_name || !last_name || !password) {
+    if (
+      !email ||
+      !first_name ||
+      !last_name ||
+      !password ||
+      !school_university
+    ) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    if (!Number.isFinite(required_hours) || required_hours < 1) {
+      return res
+        .status(400)
+        .json({ message: "Required hours must be at least 1" });
     }
 
     // Validate email format
@@ -178,6 +193,26 @@ export const completeSetup = async (req: Request, res: Response) => {
     user.is_active = true;
     await user.save();
 
+    await InternProfile.findOneAndUpdate(
+      { user_id: user._id },
+      {
+        $set: {
+          school_university,
+          required_hours,
+        },
+        $setOnInsert: {
+          rendered_hours_total: 0,
+          days_worked: 0,
+          actual_end_date: null,
+        },
+      },
+      {
+        new: true,
+        setDefaultsOnInsert: true,
+        upsert: true,
+      },
+    );
+
     // log successful account setup
     await logActivity({
       user_id: user._id.toString(),
@@ -186,7 +221,14 @@ export const completeSetup = async (req: Request, res: Response) => {
       resource_type: "auth",
       description: `Account setup completed for ${email}`,
       status: "success",
-      changes: { email, first_name, last_name, global_role: user.global_role },
+      changes: {
+        email,
+        first_name,
+        last_name,
+        global_role: user.global_role,
+        school_university,
+        required_hours,
+      },
     }).catch(() => {}); // ignore logging errors
 
     const token = jwt.sign({ user_id: user._id }, JWT_SECRET, {

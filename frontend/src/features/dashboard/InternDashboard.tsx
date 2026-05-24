@@ -9,9 +9,13 @@ import { useDtrStore } from '../../store/dtrStore';
 import { useDtrSocket } from '../../features/dtr/hooks/useDtrSocket';
 import Button from '../../components/ui/Button';
 import { WidgetSkeleton, CalendarSkeleton } from '../../components/ui/Skeleton';
+import { internProfileService } from '../../services/internProfileService';
+import type { InternProfile } from '../../types/user';
 
 export default function InternDashboard() {
   const user = useAuthStore((state) => state.user);
+  const userId = user?._id || user?.user_id;
+  const dtrRecords = useDtrStore((state) => state.records);
   const clockedIn = useDtrStore((state) => state.clockedIn);
   const isOnBreak = useDtrStore((state) => state.isOnBreak);
   const refreshRecords = useDtrStore((state) => state.refreshRecords);
@@ -21,6 +25,8 @@ export default function InternDashboard() {
   const endBreak = useDtrStore((state) => state.endBreak);
   const [dtrActionError, setDtrActionError] = React.useState<string | null>(null);
   const [isLoadingWidgets, setIsLoadingWidgets] = React.useState(true);
+  const [internProfile, setInternProfile] = React.useState<InternProfile | null>(null);
+  const [isLoadingInternProfile, setIsLoadingInternProfile] = React.useState(true);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoadingWidgets(false), 600);
@@ -44,12 +50,47 @@ export default function InternDashboard() {
     loadDtr();
   }, [refreshRecords]);
 
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadInternProfile = async () => {
+      if (!userId) {
+        setInternProfile(null);
+        setIsLoadingInternProfile(false);
+        return;
+      }
+
+      setIsLoadingInternProfile(true);
+
+      try {
+        const profile = await internProfileService.getInternProfileByUserId(userId);
+        if (!cancelled) {
+          setInternProfile(profile);
+        }
+      } catch {
+        if (!cancelled) {
+          setInternProfile(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingInternProfile(false);
+        }
+      }
+    };
+
+    void loadInternProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   // Memoize socket callback to prevent recreation on every render
   const handleDtrSocketUpdate = React.useCallback(
-    async (payload: any) => {
+    async () => {
       try {
         await refreshRecords();
-      } catch (err) {}
+      } catch {}
     },
     [refreshRecords],
   );
@@ -142,13 +183,20 @@ export default function InternDashboard() {
         />
       </div>
 
-      
-
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card title="DTR Analytics">
-            {isLoadingWidgets ? <WidgetSkeleton lines={5} /> : <DTRAnalyticsWidget requiredHours={8} />}
+            {isLoadingWidgets || isLoadingInternProfile ? (
+              <WidgetSkeleton lines={5} />
+            ) : (
+              <DTRAnalyticsWidget
+                records={dtrRecords}
+                requiredHours={internProfile?.required_hours ?? 0}
+                renderedHours={internProfile?.rendered_hours_total}
+                workingHours={user?.working_hours}
+              />
+            )}
           </Card>
 
           <Card title="Task Brief">
