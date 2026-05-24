@@ -86,6 +86,17 @@ export const login = async (payload: LoginInput) => {
 };
 
 export const completeSetup = async (payload: CompleteSetupInput) => {
+  const schoolUniversity = payload.school_university?.trim() ?? "";
+  const requiredHours = Number(payload.required_hours);
+
+  if (!schoolUniversity) {
+    throw new Error("School/University is required.");
+  }
+
+  if (!Number.isFinite(requiredHours) || requiredHours < 1) {
+    throw new Error("Required hours must be at least 1.");
+  }
+
   const user = await User.findOne({
     email: payload.email.trim().toLowerCase(),
   });
@@ -117,18 +128,25 @@ export const completeSetup = async (payload: CompleteSetupInput) => {
 
   await user.save();
 
-  if (payload.school_university && payload.required_hours) {
-    const existingProfile = await InternProfile.findOne({ user_id: user._id });
-
-    if (!existingProfile) {
-      await InternProfile.create({
-        user_id: user._id,
-        school_university: payload.school_university,
-        required_hours: payload.required_hours,
+  await InternProfile.findOneAndUpdate(
+    { user_id: user._id },
+    {
+      $set: {
+        school_university: schoolUniversity,
+        required_hours: requiredHours,
+      },
+      $setOnInsert: {
         rendered_hours_total: 0,
-      });
-    }
-  }
+        days_worked: 0,
+        actual_end_date: null,
+      },
+    },
+    {
+      new: true,
+      setDefaultsOnInsert: true,
+      upsert: true,
+    },
+  );
 
   const token = issueToken(String(user._id));
   const safeUser = await User.findById(user._id)

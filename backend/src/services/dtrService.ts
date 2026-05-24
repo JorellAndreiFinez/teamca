@@ -83,7 +83,9 @@ export const timeIn = async (userId: string) => {
       clocks: dtr.clocks,
       attendanceStatus: dtr.attendanceStatus,
     });
-  } catch (_err) {}
+  } catch (_err) {
+    // Socket updates are best-effort; DTR persistence already succeeded.
+  }
 
   return dtr;
 };
@@ -135,7 +137,9 @@ export const timeOut = async (userId: string, remarks: string) => {
       lastClock,
       totalHours: dtr.totalHours,
     });
-  } catch (_err) {}
+  } catch (_err) {
+    // Socket updates are best-effort; DTR persistence already succeeded.
+  }
 
   return dtr;
 };
@@ -171,7 +175,9 @@ export const startBreak = async (userId: string, breakType: "lunch" | "rest" | "
 
   try {
     emitUserDTRUpdated(userId, { event: "break-start", dtrId: dtr._id, clocks: dtr.clocks });
-  } catch (_err) {}
+  } catch (_err) {
+    // Socket updates are best-effort; DTR persistence already succeeded.
+  }
 
   return dtr;
 };
@@ -200,7 +206,9 @@ export const endBreak = async (userId: string) => {
 
   try {
     emitUserDTRUpdated(userId, { event: "break-end", dtrId: dtr._id, clocks: dtr.clocks });
-  } catch (_err) {}
+  } catch (_err) {
+    // Socket updates are best-effort; DTR persistence already succeeded.
+  }
 
   return dtr;
 };
@@ -239,7 +247,9 @@ export const updateDTRTotals = async (dtrId: string) => {
       totalHours: dtr.totalHours,
       undertimeHours: dtr.undertimeHours,
     });
-  } catch (_err) {}
+  } catch (_err) {
+    // Socket updates are best-effort; DTR persistence already succeeded.
+  }
 
   return dtr;
 };
