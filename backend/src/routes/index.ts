@@ -20,6 +20,7 @@ router.use("/intern-profiles", internProfileRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/tasks", taskRoutes);
 router.use("/activity", activityRoutes);
+router.use("/activity-logs", activityRoutes);
 router.use("/dtr", dtrRoutes);
 
 router.use("/leave", leaveRoutes);

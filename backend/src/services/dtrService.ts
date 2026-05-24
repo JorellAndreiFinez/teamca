@@ -5,6 +5,7 @@ import DTRSummary from "../models/DTRSummary";
 import User from "../models/User";
 import Leave from "../models/Leave";
 import { emitUserDTRUpdated } from "../socket/io";
+import { syncRenderedHours } from "./internProfileService";
 
 /**
  * CONFIGURATION
@@ -41,6 +42,30 @@ const computeAttendance = (timeIn: Date) => {
   if (lateMinutes <= 60) return "late";
   if (lateMinutes < 120) return "very_late";
   return "absent";
+};
+
+const getBreakMinutes = (breaks: any[] = []) => {
+  return breaks.reduce((sum: number, breakEntry: any) => {
+    if (typeof breakEntry.duration === "number") {
+      return sum + breakEntry.duration;
+    }
+
+    if (breakEntry.breakStart && breakEntry.breakEnd) {
+      return (
+        sum +
+        Math.floor(
+          (breakEntry.breakEnd.getTime() - breakEntry.breakStart.getTime()) /
+            60000,
+        )
+      );
+    }
+
+    return sum;
+  }, 0);
+};
+
+const hasActiveBreak = (breaks: any[] = []) => {
+  return breaks.some((breakEntry) => breakEntry.breakStart && !breakEntry.breakEnd);
 };
 
 /**
@@ -104,7 +129,10 @@ export const timeOut = async (userId: string, remarks: string) => {
   if (!dtr || dtr.clocks.length === 0) throw new Error("No clock-in found for today");
 
   const lastClock = dtr.clocks[dtr.clocks.length - 1];
-  if (lastClock.timeOut) return lastClock;
+  if (lastClock.timeOut) throw new Error("Last clock-in already timed out");
+  if (hasActiveBreak(lastClock.breaks)) {
+    throw new Error("End your active break before clocking out");
+  }
 
   const now = new Date();
   const nowMinutes = getMinutes(now);
@@ -114,34 +142,34 @@ export const timeOut = async (userId: string, remarks: string) => {
 
   let totalMinutes = (now.getTime() - lastClock.timeIn.getTime()) / 60000;
   if (lastClock.breaks && lastClock.breaks.length > 0) {
-    const breakMinutes = lastClock.breaks.reduce((sum: number, b: any) => sum + (b.duration || 0), 0);
-    totalMinutes -= breakMinutes;
+    totalMinutes -= getBreakMinutes(lastClock.breaks);
   }
 
   lastClock.totalHours = parseFloat((totalMinutes / 60).toFixed(2));
 
   let overtimeHours = 0;
-  if (nowMinutes <= END_TIME && nowMinutes > START_TIME) {
+  if (nowMinutes > END_TIME) {
     const overtimeMinutes = nowMinutes - END_TIME;
-    if (overtimeMinutes > 0) overtimeHours = overtimeMinutes / 60;
+    overtimeHours = overtimeMinutes / 60;
   }
   lastClock.overtimeHours = parseFloat(overtimeHours.toFixed(2));
 
   await dtr.save();
-  await updateDTRTotals(dtr._id.toString());
+  const updatedDtr = await updateDTRTotals(dtr._id.toString());
+  await syncRenderedHours(userId);
 
   try {
     emitUserDTRUpdated(userId, {
       event: "time-out",
-      dtrId: dtr._id,
+      dtrId: updatedDtr._id,
       lastClock,
-      totalHours: dtr.totalHours,
+      totalHours: updatedDtr.totalHours,
     });
   } catch (_err) {
     // Socket updates are best-effort; DTR persistence already succeeded.
   }
 
-  return dtr;
+  return updatedDtr;
 };
 
 /**
@@ -220,8 +248,7 @@ const calculateTotalHours = (clock: any) => {
   if (!clock.timeIn || !clock.timeOut) return 0;
   let totalMinutes = (clock.timeOut.getTime() - clock.timeIn.getTime()) / 60000;
   if (clock.breaks && clock.breaks.length > 0) {
-    const breakMinutes = clock.breaks.reduce((sum: number, b: any) => sum + (b.duration || 0), 0);
-    totalMinutes -= breakMinutes;
+    totalMinutes -= getBreakMinutes(clock.breaks);
   }
   return parseFloat((totalMinutes / 60).toFixed(2));
 };

@@ -24,6 +24,11 @@ export type ActivateWhitelistPayload = {
   department_id?: string;
   department_role?: "Head" | "Supervisor" | "Intern";
 };
+export type CreateWhitelistedUserOptions = {
+  global_role?: "Admin" | "Standard_User";
+  department_id?: string;
+  department_role?: "Head" | "Supervisor" | "Intern";
+};
 
 export const userService = {
   getAllUsers: async (): Promise<User[]> => {
@@ -68,8 +73,14 @@ export const userService = {
     return data;
   },
 
-  createWhitelistedUser: async (email: string): Promise<User> => {
-    const { data } = await api.post<User>("/users/whitelist", { email });
+  createWhitelistedUser: async (
+    email: string,
+    options: CreateWhitelistedUserOptions = {},
+  ): Promise<User> => {
+    const { data } = await api.post<User>("/users/whitelist", {
+      email,
+      ...options,
+    });
     return data;
   },
 

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import InternProfile from "../models/InternProfile.js";
+import Department from "../models/Department.js";
 import { Request, Response } from "express";
 
 const SAFE_USER_SELECT = "-password_hash";
@@ -10,6 +11,9 @@ type DepartmentRole = "Head" | "Supervisor" | "Intern";
 
 export type CreateWhitelistedUserInput = {
   email: string;
+  global_role?: GlobalRole;
+  department_id?: string;
+  department_role?: DepartmentRole;
 };
 
 export type ActivateWhitelistedUserInput = {
@@ -115,17 +119,39 @@ export const createWhitelistedUser = async (
   payload: CreateWhitelistedUserInput,
 ) => {
   const email = payload.email.trim().toLowerCase();
+  const globalRole = payload.global_role ?? "Standard_User";
+  const departmentId = payload.department_id?.trim();
 
   const existing = await User.findOne({ email });
   if (existing) throw new Error("Email already exists.");
+  if (globalRole === "Superadmin") {
+    throw new Error("Cannot assign Superadmin role through whitelist setup.");
+  }
+
+  const departments = [];
+  if (departmentId) {
+    if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+      throw new Error("Invalid department.");
+    }
+
+    const department = await Department.findById(departmentId).select("_id");
+    if (!department) {
+      throw new Error("Department not found.");
+    }
+
+    departments.push({
+      department_id: new mongoose.Types.ObjectId(departmentId),
+      department_role: payload.department_role ?? "Intern",
+    });
+  }
 
   const created = await User.create({
     email,
     is_active: false,
     first_name: "",
     last_name: "",
-    global_role: "Standard_User",
-    departments: [],
+    global_role: globalRole,
+    departments,
   });
 
   return getUserById(String(created._id));

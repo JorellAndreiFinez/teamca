@@ -219,6 +219,11 @@ export const createWhitelistedUserHandler = async (
     const email = String(req.body?.email ?? "")
       .trim()
       .toLowerCase();
+    const department_id = req.body?.department_id
+      ? String(req.body.department_id)
+      : undefined;
+    const global_role = req.body?.global_role || "Standard_User";
+    const department_role = req.body?.department_role || "Intern";
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -230,7 +235,12 @@ export const createWhitelistedUserHandler = async (
       return res.status(400).json({ message: "Invalid email format" });
     }
 
-    const newUser = await createWhitelistedUser({ email });
+    const newUser = await createWhitelistedUser({
+      email,
+      global_role: global_role as "Superadmin" | "Admin" | "Standard_User",
+      department_id,
+      department_role: department_role as "Head" | "Supervisor" | "Intern",
+    });
 
     res.status(201).json(newUser);
   } catch (err: unknown) {

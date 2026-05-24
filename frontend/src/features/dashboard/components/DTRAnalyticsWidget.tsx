@@ -18,37 +18,21 @@ export default function DTRAnalyticsWidget({
   renderedHours,
   workingHours,
 }: DTRAnalyticsWidgetProps) {
-  const totalRenderedMs = renderedHours
-    ? renderedHours * 60 * 60 * 1000 // if passed as hours, convert to ms
-    : records
-      ? records.reduce((sum, r) => {
-          const dailyMs =
-            r.clocks?.reduce((acc, c) => {
-              if (!c.timeIn || !c.timeOut) return acc;
+  const renderedFromRecords = records?.reduce((sum, r) => {
+    const clockHours =
+      r.clocks?.reduce((acc, c) => acc + Number(c.totalHours ?? 0), 0) ?? 0;
+    const recordHours = Number(r.totalHours ?? 0);
 
-              const diffMs =
-                new Date(c.timeOut).getTime() - new Date(c.timeIn).getTime();
-              return acc + diffMs;
-            }, 0) || 0;
+    return sum + (recordHours > 0 ? recordHours : clockHours);
+  }, 0);
 
-          return sum + dailyMs;
-        }, 0)
-      : 0;
-
-  const isWithinWorkingHours = (timeIn: string, start: string, end: string) => {
-    const inDate = new Date(timeIn);
-
-    const [startH, startM] = start.split(":").map(Number);
-    const [endH, endM] = end.split(":").map(Number);
-
-    const startDate = new Date(inDate);
-    startDate.setHours(startH, startM, 0, 0);
-
-    const endDate = new Date(inDate);
-    endDate.setHours(endH, endM, 0, 0);
-
-    return inDate >= startDate && inDate <= endDate;
-  };
+  const totalRenderedMs =
+    (renderedFromRecords && renderedFromRecords > 0
+      ? renderedFromRecords
+      : renderedHours || 0) *
+    60 *
+    60 *
+    1000;
 
   // Convert total milliseconds → total minutes
   const totalMinutes = Math.floor(totalRenderedMs / (1000 * 60));
