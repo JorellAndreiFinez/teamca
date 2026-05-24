@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { taskService } from '../../../services/taskService';
 import type { Task, TaskStatus } from '../../../types/task';
+import { isOverdueDeadline, isDueTodayDeadline } from '../../../utils/dateUtils';
 
 interface TaskBriefWidgetProps {
   tasks?: Task[];
@@ -70,6 +71,16 @@ export default function TaskBriefWidget({ tasks, isLoading: externalLoading = fa
     );
   }, [displayTasks]);
 
+  const overdueCount = useMemo(
+    () => displayTasks.filter((t) => t.is_overdue ?? isOverdueDeadline(t.deadline, t.status)).length,
+    [displayTasks],
+  );
+
+  const dueTodayCount = useMemo(
+    () => displayTasks.filter((t) => t.is_due_today ?? isDueTodayDeadline(t.deadline, t.status)).length,
+    [displayTasks],
+  );
+
   const hasAnyTasks = displayTasks.length > 0;
 
   if (isLoading) {
@@ -111,6 +122,29 @@ export default function TaskBriefWidget({ tasks, isLoading: externalLoading = fa
           </div>
         ))}
       </div>
+
+      {(overdueCount > 0 || dueTodayCount > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {overdueCount > 0 && (
+            <a
+              href="/tasks?sort_by=deadline_asc"
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+            >
+              <span aria-hidden="true">⚠</span>
+              <span>{overdueCount} {overdueCount === 1 ? 'task' : 'tasks'} overdue</span>
+            </a>
+          )}
+          {dueTodayCount > 0 && (
+            <a
+              href="/tasks?sort_by=deadline_asc"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+            >
+              <span aria-hidden="true">🕐</span>
+              <span>{dueTodayCount} {dueTodayCount === 1 ? 'task' : 'tasks'} due today</span>
+            </a>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
         <p className="text-xs text-gray-600">

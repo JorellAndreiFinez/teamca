@@ -11,6 +11,7 @@ import TaskFeedback from "../models/TaskFeedback.js";
 import TaskStatusHistory from "../models/TaskStatusHistory.js";
 import TaskWorkLink from "../models/TaskWorkLink.js";
 import User, { type IUser } from "../models/User.js";
+import { getDeadlineState } from "./deadlineService.js";
 
 type ActorRole = IUser["global_role"];
 type ActorDepartmentRole = IUser["departments"][number]["department_role"];
@@ -191,16 +192,21 @@ const normalizeTask = (
         deadline?: Date;
         created_at: Date;
       },
-) => ({
-  task_id: String(task._id),
-  title: task.title,
-  description: task.description ?? "",
-  created_by: String(task.created_by),
-  status: task.status,
-  priority: task.priority,
-  deadline: task.deadline,
-  created_at: task.created_at,
-});
+) => {
+  const deadlineState = getDeadlineState(task.deadline, task.status);
+  return {
+    task_id: String(task._id),
+    title: task.title,
+    description: task.description ?? "",
+    created_by: String(task.created_by),
+    status: task.status,
+    priority: task.priority,
+    deadline: task.deadline,
+    created_at: task.created_at,
+    is_overdue: deadlineState === "overdue",
+    is_due_today: deadlineState === "due_today",
+  };
+};
 
 const getDeadlineSortValue = (value?: string | Date): number | null => {
   if (!value) {

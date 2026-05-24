@@ -5,6 +5,7 @@ import type { NotificationItem } from "../types/notification";
 interface NotificationState {
   items: NotificationItem[];
   unreadCount: number;
+  hasDeadlineAlert: boolean;
   page: number;
   totalPages: number;
   loading: boolean;
@@ -21,6 +22,7 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   items: [],
   unreadCount: 0,
+  hasDeadlineAlert: false,
   page: 1,
   totalPages: 1,
   loading: false,
@@ -36,6 +38,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({
         items: data.items,
         unreadCount: data.unread_count,
+        hasDeadlineAlert: data.items.some(
+          (item) =>
+            !item.is_read &&
+            (item.event_type === 'task_due_today' || item.event_type === 'task_overdue'),
+        ),
         page: data.page,
         totalPages: data.total_pages,
       });
@@ -51,6 +58,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({
         items: data.items,
         unreadCount: data.unread_count,
+        hasDeadlineAlert: data.items.some(
+          (item) =>
+            !item.is_read &&
+            (item.event_type === 'task_due_today' || item.event_type === 'task_overdue'),
+        ),
         page: data.page,
         totalPages: data.total_pages,
       });
@@ -68,9 +80,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return;
     }
 
+    const newItems = [item, ...state.items].slice(0, 20);
     set({
-      items: [item, ...state.items].slice(0, 20),
+      items: newItems,
       unreadCount: state.unreadCount + (item.is_read ? 0 : 1),
+      hasDeadlineAlert:
+        newItems.some(
+          (n) =>
+            !n.is_read &&
+            (n.event_type === 'task_due_today' || n.event_type === 'task_overdue'),
+        ),
     });
   },
 
@@ -83,13 +102,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return;
     }
 
+    const updatedItems = state.items.map((item) =>
+      item.notification_id === notificationId
+        ? { ...item, is_read: true, read_at: new Date().toISOString() }
+        : item,
+    );
     set({
-      items: state.items.map((item) =>
-        item.notification_id === notificationId
-          ? { ...item, is_read: true, read_at: new Date().toISOString() }
-          : item,
-      ),
+      items: updatedItems,
       unreadCount: Math.max(0, state.unreadCount - 1),
+      hasDeadlineAlert: updatedItems.some(
+        (n) =>
+          !n.is_read &&
+          (n.event_type === 'task_due_today' || n.event_type === 'task_overdue'),
+      ),
     });
 
     try {
@@ -112,6 +137,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         read_at: item.read_at ?? new Date().toISOString(),
       })),
       unreadCount: 0,
+      hasDeadlineAlert: false,
     });
 
     try {

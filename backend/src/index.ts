@@ -10,6 +10,7 @@ import { connectDB } from "./config/db.js";
 import { initTaskSocket } from "./socket/io.js";
 import { startReminderScheduler } from "./services/schedulerService.js";
 import routes from "./routes/index.js";
+import { scheduleDeadlineSweep } from "./utils/scheduler.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -104,7 +105,9 @@ const _apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down and try again." },
 });
 
-void connectDB().then(() => startReminderScheduler());
+connectDB().then(() => {
+  scheduleDeadlineSweep();
+});
 
 app.use("/api/auth", _authLimiter);
 app.use("/api", _apiLimiter, routes);

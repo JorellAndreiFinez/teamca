@@ -1,4 +1,5 @@
 import type { TaskDetail, TaskPriority, TaskStatus } from '../../../types/task';
+import { isOverdueDeadline, isDueTodayDeadline } from '../../../utils/dateUtils';
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
   'Not Started': 'bg-slate-100 text-slate-700',
@@ -70,7 +71,18 @@ export default function TaskDetails({ task }: TaskDetailsProps) {
       <div className="grid grid-cols-1 gap-2 text-sm text-slate-600 sm:grid-cols-2">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-400">Deadline</p>
-          <p>{formatDateTime(task.deadline)}</p>
+          <div className="flex items-center gap-2">
+            <p>{formatDateTime(task.deadline)}</p>
+            {(task.is_overdue ?? isOverdueDeadline(task.deadline, task.status)) ? (
+              <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                Overdue
+              </span>
+            ) : (task.is_due_today ?? isDueTodayDeadline(task.deadline, task.status)) ? (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                Due Today
+              </span>
+            ) : null}
+          </div>
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-400">Created</p>
