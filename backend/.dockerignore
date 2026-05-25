@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.git
+.gitignore
+.eslintcache
+*.log
+.DS_Store
+Dockerfile
+.dockerignore

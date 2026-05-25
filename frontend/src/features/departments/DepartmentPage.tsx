@@ -231,6 +231,7 @@ export default function DepartmentPage() {
                     {getHeadName(dept) && (
                       <span>📋 Head: <span className="font-medium text-slate-900">{getHeadName(dept)}</span></span>
                     )}
+                    <span>👥 Members: <span className="font-medium text-slate-900">{dept.member_count ?? 0}</span></span>
                   </div>
                 </div>
 
@@ -387,26 +388,47 @@ export default function DepartmentPage() {
       <Modal open={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <div className="bg-white rounded-xl p-6 w-full max-w-md">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Delete Department</h2>
-          <p className="text-sm text-slate-600 mb-6">
-            Are you sure you want to delete <span className="font-semibold">{selectedDept?.department_name}</span>? This action cannot be undone.
-          </p>
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              onClick={handleDeleteConfirm}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
+          {selectedDept && (selectedDept.member_count ?? 0) > 0 ? (
+            <>
+              <div className="p-3 mb-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
+                <span className="font-semibold">{selectedDept.department_name}</span> has{' '}
+                <span className="font-semibold">{selectedDept.member_count}</span> member
+                {selectedDept.member_count === 1 ? '' : 's'}. Reassign or remove them before deleting.
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-slate-600 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{selectedDept?.department_name}</span>? This action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={handleDeleteConfirm}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </div>

@@ -101,6 +101,11 @@ export default function UpdateUserModal({
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
 
+    if (name === "department_id" && !value) {
+      setForm((prev) => ({ ...prev, department_id: "", department_role: "" }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       [name]: name === "is_active" ? value === "true" : value,

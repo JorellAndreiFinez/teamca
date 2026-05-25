@@ -49,6 +49,7 @@ export interface Department {
   department_head?: string | null;
   supervisor_id?: string;
   head_id?: string;
+  member_count?: number;
   created_at?: Date;
 }
 
