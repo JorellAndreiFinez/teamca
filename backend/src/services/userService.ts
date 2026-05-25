@@ -222,6 +222,25 @@ export const createUser = async (payload: CreateUserInput) => {
 
   const created = await User.create(userPayload);
 
+  for (const assignment of userPayload.departments) {
+    if (assignment.department_role !== "Head") continue;
+    const deptId = assignment.department_id;
+    const dept = await Department.findById(deptId).select("department_head");
+    const previousHeadId = dept?.department_head ? String(dept.department_head) : null;
+    if (previousHeadId === String(created._id)) continue;
+
+    await Department.updateOne(
+      { _id: deptId },
+      { $set: { department_head: created._id } },
+    );
+    if (previousHeadId) {
+      await User.updateOne(
+        { _id: previousHeadId, "departments.department_id": deptId },
+        { $set: { "departments.$.department_role": "Supervisor" } },
+      );
+    }
+  }
+
   return getUserById(String(created._id));
 };
 

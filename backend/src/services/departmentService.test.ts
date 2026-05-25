@@ -5,6 +5,7 @@ import {
   deleteDepartment,
   getAllDepartments,
   getDepartmentById,
+  getDepartmentMembers,
   updateDepartment,
 } from "./departmentService.js";
 import User from "../models/User.js";
@@ -206,5 +207,109 @@ describe("departmentService — name validation", () => {
   it("trims whitespace from department name on create", async () => {
     const dept = await createDepartment("  Engineering  ");
     expect(dept.department_name).toBe("Engineering");
+  });
+});
+
+describe("departmentService.getDepartmentMembers", () => {
+  it("returns paginated members of the department", async () => {
+    const dept = await makeDepartment();
+    for (let i = 0; i < 15; i += 1) {
+      await makeUser({
+        first_name: `Person${i.toString().padStart(2, "0")}`,
+        departments: [{ department_id: dept._id, department_role: "Intern" }],
+      });
+    }
+
+    const page1 = await getDepartmentMembers(String(dept._id), { page: 1, pageSize: 10 });
+    expect(page1.members.length).toBe(10);
+    expect(page1.total).toBe(15);
+    expect(page1.page).toBe(1);
+    expect(page1.pageSize).toBe(10);
+
+    const page2 = await getDepartmentMembers(String(dept._id), { page: 2, pageSize: 10 });
+    expect(page2.members.length).toBe(5);
+    expect(page2.total).toBe(15);
+  });
+
+  it("only returns users who are members of the queried department", async () => {
+    const a = await makeDepartment({ department_name: "Alpha" });
+    const b = await makeDepartment({ department_name: "Beta" });
+    await makeUser({ departments: [{ department_id: a._id, department_role: "Intern" }] });
+    await makeUser({ departments: [{ department_id: a._id, department_role: "Intern" }] });
+    await makeUser({ departments: [{ department_id: b._id, department_role: "Intern" }] });
+
+    const result = await getDepartmentMembers(String(a._id));
+    expect(result.total).toBe(2);
+    expect(result.members.length).toBe(2);
+  });
+
+  it("includes each member's department_role for THIS department", async () => {
+    const dept = await makeDepartment();
+    await makeUser({
+      first_name: "Helena",
+      departments: [{ department_id: dept._id, department_role: "Head" }],
+    });
+    await makeUser({
+      first_name: "Sam",
+      departments: [{ department_id: dept._id, department_role: "Supervisor" }],
+    });
+
+    const result = await getDepartmentMembers(String(dept._id));
+    const helena = result.members.find((m) => m.first_name === "Helena");
+    const sam = result.members.find((m) => m.first_name === "Sam");
+    expect(helena?.department_role).toBe("Head");
+    expect(sam?.department_role).toBe("Supervisor");
+  });
+
+  it("filters by role", async () => {
+    const dept = await makeDepartment();
+    await makeUser({ departments: [{ department_id: dept._id, department_role: "Head" }] });
+    await makeUser({ departments: [{ department_id: dept._id, department_role: "Supervisor" }] });
+    await makeUser({ departments: [{ department_id: dept._id, department_role: "Intern" }] });
+    await makeUser({ departments: [{ department_id: dept._id, department_role: "Intern" }] });
+
+    const interns = await getDepartmentMembers(String(dept._id), { role: "Intern" });
+    expect(interns.total).toBe(2);
+    expect(interns.members.every((m) => m.department_role === "Intern")).toBe(true);
+  });
+
+  it("filters by search across first_name, last_name, email (case-insensitive)", async () => {
+    const dept = await makeDepartment();
+    await makeUser({
+      first_name: "Alice",
+      last_name: "Anderson",
+      email: "alice.a@test.local",
+      departments: [{ department_id: dept._id, department_role: "Intern" }],
+    });
+    await makeUser({
+      first_name: "Bob",
+      last_name: "Smith",
+      email: "bob@test.local",
+      departments: [{ department_id: dept._id, department_role: "Intern" }],
+    });
+
+    const byFirstName = await getDepartmentMembers(String(dept._id), { search: "ali" });
+    expect(byFirstName.total).toBe(1);
+    expect(byFirstName.members[0].first_name).toBe("Alice");
+
+    const byEmail = await getDepartmentMembers(String(dept._id), { search: "BOB@" });
+    expect(byEmail.total).toBe(1);
+    expect(byEmail.members[0].first_name).toBe("Bob");
+  });
+
+  it("returns an empty page for departments with no members", async () => {
+    const dept = await makeDepartment();
+    const result = await getDepartmentMembers(String(dept._id));
+    expect(result.members).toEqual([]);
+    expect(result.total).toBe(0);
+  });
+
+  it("clamps page/pageSize to safe bounds", async () => {
+    const dept = await makeDepartment();
+    await makeUser({ departments: [{ department_id: dept._id, department_role: "Intern" }] });
+
+    const r = await getDepartmentMembers(String(dept._id), { page: 0, pageSize: -5 });
+    expect(r.page).toBe(1);
+    expect(r.pageSize).toBe(1);
   });
 });

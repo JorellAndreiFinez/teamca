@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Edit2, Trash2, Users } from 'lucide-react';
 import { departmentService } from '../../services/departmentService';
 import { userService } from '../../services/userService';
@@ -9,6 +9,9 @@ import Modal from '../../components/ui/Modal';
 import Card from '../../components/ui/Card';
 import type { Department, User } from '../../types/user';
 import { WidgetSkeleton } from '../../components/ui/Skeleton';
+import DepartmentDetailModal from './DepartmentDetailModal';
+
+const DEPARTMENTS_PER_PAGE = 8;
 
 interface DepartmentForm {
   department_name: string;
@@ -27,7 +30,11 @@ export default function DepartmentPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+
+  // Pagination
+  const [page, setPage] = useState(1);
 
   // Form state
   const [form, setForm] = useState<DepartmentForm>({
@@ -89,6 +96,22 @@ export default function DepartmentPage() {
     setSelectedDept(dept);
     setIsDeleteModalOpen(true);
   };
+
+  const handleCardClick = (dept: Department) => {
+    setSelectedDept(dept);
+    setIsDetailModalOpen(true);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(departments.length / DEPARTMENTS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const pagedDepartments = useMemo(() => {
+    const start = (safePage - 1) * DEPARTMENTS_PER_PAGE;
+    return departments.slice(start, start + DEPARTMENTS_PER_PAGE);
+  }, [departments, safePage]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,9 +242,20 @@ export default function DepartmentPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {departments.map((dept) => (
+          {pagedDepartments.map((dept) => (
             <Card key={dept._id}>
-              <div className="flex items-start justify-between p-4">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => handleCardClick(dept)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCardClick(dept);
+                  }
+                }}
+                className="flex items-start justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <div className="flex-1">
                   <h3 className="font-bold text-lg text-slate-900">{dept.department_name}</h3>
                   {dept.description && (
@@ -232,31 +266,27 @@ export default function DepartmentPage() {
                       <span>Head: <span className="font-medium text-slate-900">{getHeadName(dept)}</span></span>
                     )}
                     <span>Members: <span className="font-medium text-slate-900">{dept.member_count ?? 0}</span></span>
-                    {dept.role_counts && (dept.member_count ?? 0) > 0 && (
-                      <span className="text-slate-500">
-                        ({dept.role_counts.Head} Head
-                        {dept.role_counts.Head === 1 ? '' : 's'} ·{' '}
-                        {dept.role_counts.Supervisor} Supervisor
-                        {dept.role_counts.Supervisor === 1 ? '' : 's'} ·{' '}
-                        {dept.role_counts.Intern} Intern
-                        {dept.role_counts.Intern === 1 ? '' : 's'})
-                      </span>
-                    )}
                   </div>
                 </div>
 
                 {/* Actions */}
                 {(isSuperadmin || isAdmin) && (
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => handleEditClick(dept)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(dept);
+                      }}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Edit department"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button
-                      onClick={() => handleDeleteClick(dept)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(dept);
+                      }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Delete department"
                     >
@@ -267,6 +297,37 @@ export default function DepartmentPage() {
               </div>
             </Card>
           ))}
+
+          {departments.length > DEPARTMENTS_PER_PAGE && (
+            <div className="flex items-center justify-between pt-2 text-sm text-slate-600">
+              <span>
+                Showing {(safePage - 1) * DEPARTMENTS_PER_PAGE + 1}–
+                {Math.min(safePage * DEPARTMENTS_PER_PAGE, departments.length)} of{' '}
+                {departments.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-slate-700">
+                  Page {safePage} of {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -441,6 +502,13 @@ export default function DepartmentPage() {
           )}
         </div>
       </Modal>
+
+      {/* Detail Modal */}
+      <DepartmentDetailModal
+        open={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        department={selectedDept}
+      />
     </div>
   );
 }

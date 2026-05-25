@@ -224,6 +224,67 @@ export const updateDepartment = async (
   return saved;
 };
 
+const escapeRegex = (input: string) => input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export type DepartmentRoleKey = "Head" | "Supervisor" | "Intern";
+
+export const getDepartmentMembers = async (
+  departmentId: string,
+  opts: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    role?: DepartmentRoleKey | null;
+  } = {},
+) => {
+  const page = Math.max(1, Math.floor(opts.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.floor(opts.pageSize ?? 10)));
+  const skip = (page - 1) * pageSize;
+  const search = (opts.search ?? "").trim();
+  const role = opts.role ?? null;
+
+  const elemMatch: Record<string, any> = {
+    department_id: new mongoose.Types.ObjectId(departmentId),
+  };
+  if (role) elemMatch.department_role = role;
+
+  const filter: Record<string, any> = {
+    departments: { $elemMatch: elemMatch },
+  };
+
+  if (search) {
+    const re = new RegExp(escapeRegex(search), "i");
+    filter.$or = [{ first_name: re }, { last_name: re }, { email: re }];
+  }
+
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .select("first_name last_name email global_role is_active departments")
+      .sort({ first_name: 1, last_name: 1 })
+      .skip(skip)
+      .limit(pageSize)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
+
+  const members = users.map((u: any) => {
+    const assignment = (u.departments ?? []).find(
+      (d: any) => String(d.department_id) === String(departmentId),
+    );
+    return {
+      _id: u._id,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      email: u.email,
+      global_role: u.global_role,
+      is_active: u.is_active,
+      department_role: assignment?.department_role ?? null,
+    };
+  });
+
+  return { members, total, page, pageSize };
+};
+
 export const deleteDepartment = async (departmentId: string) => {
   const department = await Department.findById(departmentId);
   if (!department) {
@@ -247,6 +308,7 @@ export default {
   getAllDepartments,
   getDepartmentsByIds,
   getDepartmentById,
+  getDepartmentMembers,
   createDepartment,
   updateDepartment,
   deleteDepartment,

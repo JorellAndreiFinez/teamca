@@ -179,6 +179,7 @@ export const createUser = async (req: Request, res: Response) => {
       email,
       password_hash,
       global_role,
+      departments,
       department_id,
       department_role,
       is_active,
@@ -190,6 +191,15 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    const normalizedDepartments = Array.isArray(departments)
+      ? departments.filter(
+          (d: { department_id?: string; department_role?: string }) =>
+            d && d.department_id && d.department_role,
+        )
+      : department_id && department_role
+        ? [{ department_id, department_role }]
+        : [];
+
     const newUser = await createUserService({
       first_name,
       last_name,
@@ -199,8 +209,7 @@ export const createUser = async (req: Request, res: Response) => {
       is_active,
       working_hours,
       working_days,
-
-      departments: department_id ? [{ department_id, department_role }] : [],
+      departments: normalizedDepartments,
     });
 
     res.status(201).json(newUser);
