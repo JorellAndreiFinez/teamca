@@ -7,7 +7,7 @@ import DTRHistoryTable from "./DTRHistoryTable";
 import DTRRecordDetailModal from "./DTRRecordDetailModal";
 import { useDtrStore } from "../../store/dtrStore";
 import { dtrService } from "../../services/dtrService";
-import type { DailyTimeRecord } from "../../types/dtr";
+import type { DailyTimeRecord, DTRHistoryItem } from "../../types/dtr";
 import { ReminderSettings } from "../../components/ReminderSettings";
 import { ExportOptions } from "../../components/ExportOptions";
 import { TimeAdjustmentForm } from "../../components/TimeAdjustmentForm";
@@ -23,7 +23,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/Dialog";
@@ -59,10 +58,10 @@ export default function DTRPage() {
   const [breakLoading, setBreakLoading] = useState(false);
   const [breakStartTime, setBreakStartTime] = useState<Date | null>(null);
 
-  // History state
-  const [historyRecords, setHistoryRecords] = useState<DailyTimeRecord[]>([]);
+  // History state — DTRHistoryItem union supports both DTR rows and leave rows
+  const [historyRecords, setHistoryRecords] = useState<DTRHistoryItem[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyLimit, setHistoryLimit] = useState(10);
+  const [historyLimit] = useState(10);
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -77,8 +76,6 @@ export default function DTRPage() {
   const activeClock = React.useMemo(() => {
     if (!records.length) return undefined;
 
-    // Only check the most recent (today's) DTR record for open clocks
-    // This prevents picking up stale unclosed entries from past days
     const today = records.sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     )[0];
@@ -99,10 +96,10 @@ export default function DTRPage() {
 
   const totalMinutesWorked = clockInTime
     ? Math.max(
-      0,
-      Math.floor((Date.now() - clockInTime.getTime()) / 60000) -
-      (isBreakActive ? breakDuration : 0),
-    )
+        0,
+        Math.floor((Date.now() - clockInTime.getTime()) / 60000) -
+          (isBreakActive ? breakDuration : 0),
+      )
     : 0;
 
   const syncBreakTimer = React.useCallback(() => {
@@ -114,7 +111,6 @@ export default function DTRPage() {
       );
       return;
     }
-
     setBreakStartTime(null);
     setBreakDuration(0);
   }, [activeClock]);
@@ -128,7 +124,7 @@ export default function DTRPage() {
       try {
         await refreshRecords();
       } catch (err) {
-        // Handle error
+        // handled
       } finally {
         setLoading(false);
       }
@@ -144,26 +140,24 @@ export default function DTRPage() {
   }, [syncBreakTimer]);
 
   const fetchHistory = React.useCallback(async () => {
-    if (!isAuthenticated) {
-      return;
-    }
+    if (!isAuthenticated) return;
 
     try {
       setHistoryLoading(true);
       const result = await dtrService.getHistory(historyPage, historyLimit, historyFilters);
-      setHistoryRecords(result.items);
+      // result.items contains both DailyTimeRecord and LeaveRecord entries
+      setHistoryRecords(result.items as DTRHistoryItem[]);
       setHistoryTotal(result.total);
       setHistoryTotalPages(result.total_pages);
     } catch (err) {
-      // Handle error
+      // handled
     } finally {
       setHistoryLoading(false);
     }
   }, [isAuthenticated, historyPage, historyLimit, historyFilters]);
 
-  // Memoize socket callback to prevent recreation on every render
   const handleDtrSocketUpdate = React.useCallback(
-    async (payload: any) => {
+    async (_payload: any) => {
       try {
         await refreshRecords();
         await fetchHistory();
@@ -174,15 +168,12 @@ export default function DTRPage() {
     [refreshRecords, fetchHistory],
   );
 
-  // subscribe to DTR socket updates so UI reflects global state changes
   useDtrSocket(handleDtrSocketUpdate);
 
-  // Fetch history when page/limit/filters change
   React.useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
-  // Update break duration every second when on break
   React.useEffect(() => {
     if (!clockedIn || !breakStartTime) return;
 
@@ -234,31 +225,23 @@ export default function DTRPage() {
     );
   }
 
-  /**
-   * CLOCK IN
-   */
   const handleClockIn = async () => {
     try {
       setActionError(null);
       await clockIn();
       window.location.reload();
     } catch (err) {
-      const message = (err as any)?.response?.data?.message || "Failed to clock in";
+      const message = (err as any)?.response?.data?.message ||
+        (err instanceof Error ? err.message : "Failed to clock in");
       setActionError(message);
     }
   };
 
-  /**
-   * OPEN MODAL
-   */
   const handleOpenClockOut = () => {
     setRemarksError(null);
     setOpen(true);
   };
 
-  /**
-   * SUBMIT CLOCK OUT
-   */
   const handleSubmitClockOut = async () => {
     const trimmedRemarks = remarks.trim();
     if (!trimmedRemarks) {
@@ -273,60 +256,53 @@ export default function DTRPage() {
 
       await clockOut(trimmedRemarks);
 
-      // reset
       setRemarks("");
       setOpen(false);
       window.location.reload();
     } catch (err) {
-      const message = (err as any)?.response?.data?.message || "Failed to clock out";
+      const message = (err as any)?.response?.data?.message ||
+        (err instanceof Error ? err.message : "Failed to clock out");
       setRemarksError(message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  /**
-   * START BREAK
-   */
   const handleStartBreak = async () => {
     try {
       setBreakLoading(true);
       setActionError(null);
       await startBreak();
     } catch (err) {
-      const message = (err as any)?.response?.data?.message || "Failed to start break";
+      const message = (err as any)?.response?.data?.message ||
+        (err instanceof Error ? err.message : "Failed to start break");
       setActionError(message);
     } finally {
       setBreakLoading(false);
     }
   };
 
-  /**
-   * END BREAK
-   */
   const handleEndBreak = async () => {
     try {
       setBreakLoading(true);
       setActionError(null);
       await endBreak();
     } catch (err) {
-      const message = (err as any)?.response?.data?.message || "Failed to end break";
+      const message = (err as any)?.response?.data?.message ||
+        (err instanceof Error ? err.message : "Failed to end break");
       setActionError(message);
     } finally {
       setBreakLoading(false);
     }
   };
 
-  /**
-   * HISTORY HANDLERS
-   */
   const handleHistoryPageChange = (newPage: number) => {
     setHistoryPage(newPage);
   };
 
   const handleHistoryFilterChange = (filters: any) => {
     setHistoryFilters((prev) => ({ ...prev, ...filters }));
-    setHistoryPage(1); // Reset to first page when filtering
+    setHistoryPage(1);
   };
 
   const handleHistorySortChange = (sortBy: string) => {
@@ -350,7 +326,6 @@ export default function DTRPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* HEADER with Compact Clock */}
       <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-slate-900">Daily Time Record</h1>
@@ -364,7 +339,6 @@ export default function DTRPage() {
           )}
         </div>
 
-        {/* Simplified DTR Card on Right */}
         <div className="w-full lg:w-80 flex-shrink-0">
           <Card className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
@@ -377,44 +351,29 @@ export default function DTRPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Status</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Status
+                </p>
                 <p className="mt-1.5 text-sm font-semibold text-slate-700">
-                  {isBreakActive
-                    ? "On Break"
-                    : isClockedIn
-                      ? "Clocked In"
-                      : "Not Clocked In"}
+                  {isBreakActive ? "On Break" : isClockedIn ? "Clocked In" : "Not Clocked In"}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
               {!isClockedIn ? (
-                <Button
-                  onClick={handleClockIn}
-                  className="w-full"
-                >
+                <Button onClick={handleClockIn} className="w-full">
                   Clock In
                 </Button>
               ) : (
-                <Button
-                  onClick={handleOpenClockOut}
-                  variant="danger"
-                  className="w-full"
-                >
+                <Button onClick={handleOpenClockOut} variant="danger" className="w-full">
                   Clock Out
                 </Button>
               )}
 
               {isClockedIn && (
                 <Button
-                  onClick={() => {
-                    if (isBreakActive) {
-                      handleEndBreak();
-                    } else {
-                      handleStartBreak();
-                    }
-                  }}
+                  onClick={() => { isBreakActive ? handleEndBreak() : handleStartBreak(); }}
                   variant="secondary"
                   className="w-full"
                   disabled={breakLoading}
@@ -427,7 +386,6 @@ export default function DTRPage() {
         </div>
       </div>
 
-      {/* COMPACT SUMMARIES - 2 columns, secondary reference */}
       {user?.user_id && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-4">
@@ -439,7 +397,6 @@ export default function DTRPage() {
         </div>
       )}
 
-      {/* ATTENDANCE HISTORY */}
       <Card className="p-0 overflow-hidden bg-transparent">
         <DTRHistoryTable
           records={historyRecords}
@@ -458,24 +415,21 @@ export default function DTRPage() {
         />
       </Card>
 
-      {/* 🔥 CLOCK OUT MODAL */}
+      {/* CLOCK OUT MODAL */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Clock Out</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
               Please describe what you accomplished today.
             </p>
-
             {remarksError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {remarksError}
               </div>
             )}
-
             <textarea
               value={remarks}
               onChange={(e) => {
@@ -486,16 +440,10 @@ export default function DTRPage() {
               className="w-full border rounded-md p-2 text-sm min-h-[120px]"
               maxLength={300}
             />
-
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={submitting}
-              >
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-
               <Button
                 onClick={handleSubmitClockOut}
                 disabled={!remarks.trim() || submitting}
@@ -508,7 +456,7 @@ export default function DTRPage() {
         </DialogContent>
       </Dialog>
 
-      {/* REMINDER SETTINGS MODAL */}
+      {/* REMINDER MODAL */}
       <Dialog open={showReminderModal} onOpenChange={setShowReminderModal}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
@@ -539,7 +487,8 @@ export default function DTRPage() {
               initialDate={adjustmentDate || undefined}
               onSubmitSuccess={() => setShowAdjustmentModal(false)}
             />
-            {(user?.global_role === "Admin" || user?.global_role === "Superadmin" ||
+            {(user?.global_role === "Admin" ||
+              user?.global_role === "Superadmin" ||
               user?.departments?.some((d) => d.department_role === "Head")) ? (
               <TimeAdjustmentReview />
             ) : (
@@ -553,6 +502,7 @@ export default function DTRPage() {
           </div>
         </DialogContent>
       </Dialog>
+
       {/* DTR RECORD DETAIL MODAL */}
       <DTRRecordDetailModal
         record={selectedRecord}

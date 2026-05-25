@@ -2,6 +2,7 @@
 
 import mongoose, { Types } from "mongoose";
 import Leave, { type ILeave, type LeaveStatus, type LeaveType } from "../models/Leave";
+import DTR from "../models/DTR";
 import User from "../models/User";
 import { createNotification, createNotificationsForRecipients } from "./notificationService";
 
@@ -190,7 +191,7 @@ export const getPendingLeaves = async (actorId: string) => {
 
   const isAdmin = actor.global_role === "Admin" || actor.global_role === "Superadmin";
 
-  const query: any = { status: "pending" };
+  let query: any = { status: "pending" };
 
   if (!isAdmin) {
     // Head: only their department(s)
@@ -247,6 +248,35 @@ export const approveLeave = async (input: ReviewLeaveInput) => {
   });
 
   await leave.save();
+
+  // ── close any open clock on the leave start date ─────────────────────────
+  // Prevents the user being stuck in "Clocked In" state when leave is approved
+  // for a day they already clocked in on.
+  try {
+    const PH_OFFSET = 8 * 60 * 60 * 1000;
+    const leaveStartPH = new Date(leave.startDate.getTime() + PH_OFFSET);
+    leaveStartPH.setHours(0, 0, 0, 0);
+
+    const dtrOnLeaveDay = await DTR.findOne({
+      userId: leave.userId,
+      date: leaveStartPH,
+    });
+
+    if (dtrOnLeaveDay) {
+      let modified = false;
+      dtrOnLeaveDay.clocks.forEach((clock: any) => {
+        if (clock.timeIn && !clock.timeOut) {
+          clock.timeOut = new Date(leave.startDate);
+          clock.remarks = "Auto-closed: leave approved for this day";
+          clock.totalHours = 0;
+          modified = true;
+        }
+      });
+      if (modified) await dtrOnLeaveDay.save();
+    }
+  } catch (_err) {
+    // Non-critical: don't block approval if DTR close fails
+  }
 
   // ── notify applicant ──────────────────────────────────────────────────────
   await createNotification({
