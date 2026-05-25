@@ -266,7 +266,34 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
     user.working_days = payload.working_days;
   }
 
+  const headSyncOps: { departmentId: string; previousHeadId: string | null }[] = [];
+  const headReleases: string[] = [];
+
   if (Array.isArray(payload.departments)) {
+    const prevByDept = new Map(
+      user.departments.map((d) => [String(d.department_id), d.department_role]),
+    );
+    const nextByDept = new Map(
+      payload.departments.map((d) => [String(d.department_id), d.department_role]),
+    );
+
+    for (const [deptId, role] of nextByDept.entries()) {
+      if (role === "Head" && prevByDept.get(deptId) !== "Head") {
+        const dept = await Department.findById(deptId).select("department_head");
+        const previousHeadId = dept?.department_head ? String(dept.department_head) : null;
+        if (previousHeadId === String(user._id)) continue;
+        headSyncOps.push({ departmentId: deptId, previousHeadId });
+      }
+    }
+
+    for (const [deptId, role] of prevByDept.entries()) {
+      const wasHead = role === "Head";
+      const stillHead = nextByDept.get(deptId) === "Head";
+      if (wasHead && !stillHead) {
+        headReleases.push(deptId);
+      }
+    }
+
     user.departments = payload.departments.map((d) => ({
       department_id: new mongoose.Types.ObjectId(d.department_id),
       department_role: d.department_role,
@@ -275,7 +302,26 @@ export const updateUser = async (userId: string, payload: UpdateUserInput) => {
 
   await user.save();
 
-  // lightweight update response without intern profile
+  for (const deptId of headReleases) {
+    await Department.updateOne(
+      { _id: deptId, department_head: user._id },
+      { $set: { department_head: null } },
+    );
+  }
+
+  for (const op of headSyncOps) {
+    await Department.updateOne(
+      { _id: op.departmentId },
+      { $set: { department_head: user._id } },
+    );
+    if (op.previousHeadId) {
+      await User.updateOne(
+        { _id: op.previousHeadId, "departments.department_id": op.departmentId },
+        { $set: { "departments.$.department_role": "Supervisor" } },
+      );
+    }
+  }
+
   return user.toObject();
 };
 

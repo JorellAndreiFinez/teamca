@@ -227,11 +227,21 @@ export default function DepartmentPage() {
                   {dept.description && (
                     <p className="text-sm text-slate-600 mt-1">{dept.description}</p>
                   )}
-                  <div className="flex gap-4 mt-3 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-slate-600">
                     {getHeadName(dept) && (
-                      <span>📋 Head: <span className="font-medium text-slate-900">{getHeadName(dept)}</span></span>
+                      <span>Head: <span className="font-medium text-slate-900">{getHeadName(dept)}</span></span>
                     )}
-                    <span>👥 Members: <span className="font-medium text-slate-900">{dept.member_count ?? 0}</span></span>
+                    <span>Members: <span className="font-medium text-slate-900">{dept.member_count ?? 0}</span></span>
+                    {dept.role_counts && (dept.member_count ?? 0) > 0 && (
+                      <span className="text-slate-500">
+                        ({dept.role_counts.Head} Head
+                        {dept.role_counts.Head === 1 ? '' : 's'} ·{' '}
+                        {dept.role_counts.Supervisor} Supervisor
+                        {dept.role_counts.Supervisor === 1 ? '' : 's'} ·{' '}
+                        {dept.role_counts.Intern} Intern
+                        {dept.role_counts.Intern === 1 ? '' : 's'})
+                      </span>
+                    )}
                   </div>
                 </div>
 

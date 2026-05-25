@@ -2,26 +2,55 @@ import mongoose from "mongoose";
 import Department from "../models/Department.js";
 import User from "../models/User.js";
 
+export type DepartmentRoleCounts = {
+  Head: number;
+  Supervisor: number;
+  Intern: number;
+};
+
+const emptyRoleCounts = (): DepartmentRoleCounts => ({
+  Head: 0,
+  Supervisor: 0,
+  Intern: 0,
+});
+
 const attachMemberCounts = async <T extends { _id: any }>(
   departments: T[],
-): Promise<(T & { member_count: number })[]> => {
+): Promise<(T & { member_count: number; role_counts: DepartmentRoleCounts })[]> => {
   if (departments.length === 0) return [];
 
   const ids = departments.map((d) => d._id);
   const counts = await User.aggregate([
     { $unwind: "$departments" },
     { $match: { "departments.department_id": { $in: ids } } },
-    { $group: { _id: "$departments.department_id", count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: {
+          dept: "$departments.department_id",
+          role: "$departments.department_role",
+        },
+        count: { $sum: 1 },
+      },
+    },
   ]);
 
-  const countMap = new Map<string, number>(
-    counts.map((c) => [String(c._id), c.count]),
-  );
+  const breakdown = new Map<string, DepartmentRoleCounts>();
+  for (const row of counts) {
+    const deptKey = String(row._id.dept);
+    const bucket = breakdown.get(deptKey) ?? emptyRoleCounts();
+    const role = row._id.role as keyof DepartmentRoleCounts;
+    if (role in bucket) {
+      bucket[role] += row.count;
+    }
+    breakdown.set(deptKey, bucket);
+  }
 
-  return departments.map((d) => ({
-    ...d,
-    member_count: countMap.get(String(d._id)) ?? 0,
-  }));
+  return departments.map((d) => {
+    const role_counts = breakdown.get(String(d._id)) ?? emptyRoleCounts();
+    const member_count =
+      role_counts.Head + role_counts.Supervisor + role_counts.Intern;
+    return { ...d, member_count, role_counts };
+  });
 };
 
 export const getAllDepartments = async () => {
@@ -50,10 +79,8 @@ export const getDepartmentById = async (departmentId: string) => {
     .lean();
   if (!department) return null;
 
-  const member_count = await User.countDocuments({
-    "departments.department_id": departmentId,
-  });
-  return { ...department, member_count };
+  const [attached] = await attachMemberCounts([department]);
+  return attached;
 };
 
 const syncHeadToUser = async (
@@ -64,7 +91,6 @@ const syncHeadToUser = async (
   const samePerson =
     prevHeadId && newHeadId && String(prevHeadId) === String(newHeadId);
 
-  // Demote previous head, if there was one and they aren't being re-assigned.
   if (prevHeadId && !samePerson) {
     await User.updateOne(
       { _id: prevHeadId, "departments.department_id": departmentId },
@@ -168,6 +194,8 @@ export const updateDepartment = async (
       : null;
   }
 
+  let pendingSync: { prevHeadId: string | null; newHeadId: string | null } | null = null;
+
   if (updates.department_head !== undefined) {
     const prevHeadId = department.department_head
       ? String(department.department_head)
@@ -184,10 +212,16 @@ export const updateDepartment = async (
       department.department_head = null;
     }
 
-    await syncHeadToUser(departmentId, prevHeadId, newHeadId);
+    pendingSync = { prevHeadId, newHeadId };
   }
 
-  return department.save();
+  const saved = await department.save();
+
+  if (pendingSync) {
+    await syncHeadToUser(departmentId, pendingSync.prevHeadId, pendingSync.newHeadId);
+  }
+
+  return saved;
 };
 
 export const deleteDepartment = async (departmentId: string) => {

@@ -41,6 +41,12 @@ export interface InternProfile {
   actual_end_date?: Date;
 }
 
+export interface DepartmentRoleCounts {
+  Head: number;
+  Supervisor: number;
+  Intern: number;
+}
+
 export interface Department {
   _id?: string;
   department_id?: number | string;
@@ -50,6 +56,7 @@ export interface Department {
   supervisor_id?: string;
   head_id?: string;
   member_count?: number;
+  role_counts?: DepartmentRoleCounts;
   created_at?: Date;
 }
 
