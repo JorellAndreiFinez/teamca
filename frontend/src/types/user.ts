@@ -41,6 +41,12 @@ export interface InternProfile {
   actual_end_date?: Date;
 }
 
+export interface DepartmentRoleCounts {
+  Head: number;
+  Supervisor: number;
+  Intern: number;
+}
+
 export interface Department {
   _id?: string;
   department_id?: number | string;
@@ -49,7 +55,28 @@ export interface Department {
   department_head?: string | null;
   supervisor_id?: string;
   head_id?: string;
+  member_count?: number;
+  role_counts?: DepartmentRoleCounts;
   created_at?: Date;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DepartmentMember {
+  _id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  global_role: GlobalRole;
+  is_active: boolean;
+  department_role: DepartmentRole | null;
+}
+
+export interface DepartmentMembersPage {
+  members: DepartmentMember[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface WhitelistedEmail {

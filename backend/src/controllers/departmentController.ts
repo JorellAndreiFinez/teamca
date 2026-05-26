@@ -4,6 +4,7 @@ import {
   deleteDepartment,
   getAllDepartments,
   getDepartmentById,
+  getDepartmentMembers,
   getDepartmentsByIds,
   updateDepartment,
 } from "../services/departmentService.js";
@@ -71,6 +72,46 @@ export const getDepartment = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json(department);
+  } catch (error) {
+    return res.status(500).json({ message: error });
+  }
+};
+
+export const listDepartmentMembersHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+
+    const departmentId = getDepartmentIdParam(req);
+
+    const isPrivileged =
+      req.user.global_role === "Superadmin" || req.user.global_role === "Admin";
+    const isMemberOfDept =
+      typeof req.user.department_id !== "undefined" &&
+      String(req.user.department_id) === departmentId;
+
+    if (!isPrivileged && !isMemberOfDept) {
+      return res
+        .status(403)
+        .json({ message: "Insufficient permissions to view this department." });
+    }
+
+    const role = req.query.role ? String(req.query.role) : undefined;
+    const allowedRoles = ["Head", "Supervisor", "Intern"];
+    const normalizedRole =
+      role && allowedRoles.includes(role)
+        ? (role as "Head" | "Supervisor" | "Intern")
+        : null;
+
+    const result = await getDepartmentMembers(departmentId, {
+      page: req.query.page ? Number(req.query.page) : undefined,
+      pageSize: req.query.pageSize ? Number(req.query.pageSize) : undefined,
+      search: req.query.search ? String(req.query.search) : undefined,
+      role: normalizedRole,
+    });
+
+    return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ message: error });
   }
@@ -167,6 +208,7 @@ export const deleteDepartmentHandler = async (req: Request, res: Response) => {
 export default {
   listDepartments,
   getDepartment,
+  listDepartmentMembersHandler,
   createDepartmentHandler,
   updateDepartmentHandler,
   deleteDepartmentHandler,

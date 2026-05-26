@@ -8,6 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
@@ -39,6 +41,11 @@
     "socket.io": "^4.8.1",
     "zod": "^4.3.6"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.60.4",
+    "@rollup/rollup-darwin-x64": "^4.60.4",
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4"
+  },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/bcryptjs": "^3.0.0",
@@ -57,10 +64,12 @@
     "eslint-plugin-prettier": "^5.5.5",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
+    "mongodb-memory-server": "^11.1.0",
     "prettier": "^3.8.3",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.0"
+    "typescript-eslint": "^8.59.0",
+    "vitest": "^4.1.7"
   }
 }

@@ -3,6 +3,7 @@ import {
   createDepartmentHandler,
   deleteDepartmentHandler,
   getDepartment,
+  listDepartmentMembersHandler,
   listDepartments,
   updateDepartmentHandler,
 } from "../controllers/departmentController.js";
@@ -13,6 +14,11 @@ const router = Router();
 
 router.get("/", listDepartments);
 router.get("/:departmentId", authenticateJWT, getDepartment);
+router.get(
+  "/:departmentId/members",
+  authenticateJWT,
+  listDepartmentMembersHandler,
+);
 router.post(
   "/",
   authenticateJWT,

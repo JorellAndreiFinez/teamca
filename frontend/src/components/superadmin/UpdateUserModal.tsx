@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { userService } from "@/services/userService";
 import { departmentService } from "@/services/departmentService";
 import { useAuthStore } from "@/store/authStore";
-import type { Department, User } from "@/types/user";
+import type { Department, DepartmentAssignment, DepartmentRole, User } from "@/types/user";
 
 import { NumberInput } from "@/components/ui/input/NumberInput";
 import { TimeRangeInput } from "@/components/ui/input/TimeRangeInput";
@@ -20,7 +20,7 @@ interface Props {
   scope?: "full" | "limited";
 }
 
-const departmentRoles = ["Intern", "Supervisor", "Head"];
+const departmentRoles: DepartmentRole[] = ["Intern", "Supervisor", "Head"];
 
 export default function UpdateUserModal({
   open,
@@ -39,8 +39,7 @@ export default function UpdateUserModal({
     password: "",
     global_role: "Standard_User",
     is_active: true,
-    department_id: "",
-    department_role: "",
+    departments: [] as DepartmentAssignment[],
 
     required_hours: 0,
     working_hours: {
@@ -54,7 +53,6 @@ export default function UpdateUserModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ✅ Prefill user data
   useEffect(() => {
     if (!user) return;
 
@@ -65,10 +63,11 @@ export default function UpdateUserModal({
       password: "",
       global_role: user.global_role || "Standard_User",
       is_active: user.is_active ?? true,
-      department_id: user.departments?.[0]?.department_id || "",
-      department_role: user.departments?.[0]?.department_role || "",
+      departments: (user.departments || []).map((d) => ({
+        department_id: d.department_id,
+        department_role: d.department_role,
+      })),
 
-      // ✅ new fields (safe fallback)
       required_hours: (user as any).required_hours || 0,
       working_hours: {
         start: (user as any).working_hours?.start || "",
@@ -100,10 +99,41 @@ export default function UpdateUserModal({
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
-
     setForm((prev) => ({
       ...prev,
       [name]: name === "is_active" ? value === "true" : value,
+    }));
+  };
+
+  const addDepartmentAssignment = () => {
+    setForm((prev) => ({
+      ...prev,
+      departments: [
+        ...prev.departments,
+        { department_id: "", department_role: "Intern" },
+      ],
+    }));
+  };
+
+  const removeDepartmentAssignment = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      departments: prev.departments.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateDepartmentAssignment = (
+    index: number,
+    field: "department_id" | "department_role",
+    value: string,
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      departments: prev.departments.map((d, i) =>
+        i === index
+          ? { ...d, [field]: field === "department_role" ? (value as DepartmentRole) : value }
+          : d,
+      ),
     }));
   };
 
@@ -124,6 +154,23 @@ export default function UpdateUserModal({
 
     setError("");
 
+    const incomplete = form.departments.some(
+      (d) => !d.department_id || !d.department_role,
+    );
+    if (incomplete) {
+      setError("Each department assignment must have a department and a role.");
+      return;
+    }
+
+    const seen = new Set<string>();
+    for (const d of form.departments) {
+      if (seen.has(d.department_id)) {
+        setError("A user cannot be assigned to the same department twice.");
+        return;
+      }
+      seen.add(d.department_id);
+    }
+
     try {
       setLoading(true);
 
@@ -139,22 +186,11 @@ export default function UpdateUserModal({
         payload.is_active = form.is_active;
       }
 
-      // only update password if provided
       if (form.password) {
         payload.password_hash = form.password;
       }
 
-      // departments handling
-      if (form.department_id) {
-        payload.departments = [
-          {
-            department_id: form.department_id,
-            department_role: form.department_role,
-          },
-        ];
-      } else {
-        payload.departments = [];
-      }
+      payload.departments = form.departments;
 
       const updated = await userService.updateUser(user._id, payload);
 
@@ -248,37 +284,101 @@ export default function UpdateUserModal({
             </select>
           </div>
 
-          {/* Department */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <select
-              name="department_id"
-              value={form.department_id}
-              onChange={handleSelectChange}
-              disabled={scope === "limited"}
-              className="w-full h-10 rounded-lg border px-3"
-            >
-              <option value="">None</option>
-              {departments.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.department_name}
-                </option>
-              ))}
-            </select>
+          {/* Departments */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">
+                Departments
+              </label>
+              {scope !== "limited" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={addDepartmentAssignment}
+                  className="text-sm"
+                >
+                  Add Department
+                </Button>
+              )}
+            </div>
 
-            <select
-              name="department_role"
-              value={form.department_role}
-              onChange={handleSelectChange}
-              disabled={scope === "limited" || !form.department_id}
-              className="w-full h-10 rounded-lg border px-3"
-            >
-              <option value="">Select role</option>
-              {departmentRoles.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
+            {form.departments.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No department assignments. Click "Add Department" to assign one.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {form.departments.map((assignment, index) => {
+                  const otherSelectedIds = form.departments
+                    .filter((_, i) => i !== index)
+                    .map((d) => d.department_id)
+                    .filter(Boolean);
+
+                  return (
+                    <div
+                      key={index}
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2 items-center"
+                    >
+                      <select
+                        value={assignment.department_id}
+                        onChange={(e) =>
+                          updateDepartmentAssignment(
+                            index,
+                            "department_id",
+                            e.target.value,
+                          )
+                        }
+                        disabled={scope === "limited"}
+                        className="w-full h-10 rounded-lg border px-3"
+                      >
+                        <option value="">Select department</option>
+                        {departments
+                          .filter(
+                            (d) =>
+                              d._id === assignment.department_id ||
+                              !otherSelectedIds.includes(d._id || ""),
+                          )
+                          .map((d) => (
+                            <option key={d._id} value={d._id}>
+                              {d.department_name}
+                            </option>
+                          ))}
+                      </select>
+
+                      <select
+                        value={assignment.department_role}
+                        onChange={(e) =>
+                          updateDepartmentAssignment(
+                            index,
+                            "department_role",
+                            e.target.value,
+                          )
+                        }
+                        disabled={scope === "limited"}
+                        className="w-full h-10 rounded-lg border px-3"
+                      >
+                        {departmentRoles.map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </select>
+
+                      {scope !== "limited" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => removeDepartmentAssignment(index)}
+                          className="text-sm text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Schedule Section */}
