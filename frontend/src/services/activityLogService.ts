@@ -3,6 +3,12 @@ import { ActivityLogsResponse } from "../types/activityLog";
 
 const ENDPOINT = "/activity";
 
+const toSafeISOString = (dateStr?: string): string | undefined => {
+  if (!dateStr) return undefined;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? undefined : date.toISOString();
+};
+
 type ActivityLogParams = {
   limit: number;
   skip: number;
@@ -20,8 +26,10 @@ export const activityLogService = {
   ): Promise<ActivityLogsResponse> => {
     const params: ActivityLogParams = { limit, skip };
 
-    if (startDate) params.startDate = new Date(startDate).toISOString();
-    if (endDate) params.endDate = new Date(endDate).toISOString();
+    const safeStart = toSafeISOString(startDate);
+    const safeEnd = toSafeISOString(endDate);
+    if (safeStart) params.startDate = safeStart;
+    if (safeEnd) params.endDate = safeEnd;
 
     const response = await api.get<ActivityLogsResponse>(ENDPOINT, {
       params,
@@ -36,8 +44,8 @@ export const activityLogService = {
     const response = await api.post(
       `${ENDPOINT}/export`,
       {
-        startDate: startDate ? new Date(startDate).toISOString() : undefined,
-        endDate: endDate ? new Date(endDate).toISOString() : undefined,
+        startDate: toSafeISOString(startDate),
+        endDate: toSafeISOString(endDate),
       },
       {
         responseType: "blob",
