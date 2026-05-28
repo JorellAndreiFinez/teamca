@@ -1,7 +1,13 @@
 import api from "./api";
 import { ActivityLogsResponse } from "../types/activityLog";
 
-const ENDPOINT = "/activity-logs";
+const ENDPOINT = "/activity";
+
+const toSafeISOString = (dateStr?: string): string | undefined => {
+  if (!dateStr) return undefined;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? undefined : date.toISOString();
+};
 
 type ActivityLogParams = {
   limit: number;
@@ -20,8 +26,10 @@ export const activityLogService = {
   ): Promise<ActivityLogsResponse> => {
     const params: ActivityLogParams = { limit, skip };
 
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
+    const safeStart = toSafeISOString(startDate);
+    const safeEnd = toSafeISOString(endDate);
+    if (safeStart) params.startDate = safeStart;
+    if (safeEnd) params.endDate = safeEnd;
 
     const response = await api.get<ActivityLogsResponse>(ENDPOINT, {
       params,
@@ -35,7 +43,10 @@ export const activityLogService = {
   exportToCSV: async (startDate?: string, endDate?: string): Promise<Blob> => {
     const response = await api.post(
       `${ENDPOINT}/export`,
-      { startDate, endDate },
+      {
+        startDate: toSafeISOString(startDate),
+        endDate: toSafeISOString(endDate),
+      },
       {
         responseType: "blob",
         headers: { "Content-Type": "application/json" },
