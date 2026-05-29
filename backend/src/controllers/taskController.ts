@@ -31,6 +31,12 @@ import {
   emitTaskStatusUpdated,
   emitUsersNotification,
 } from "../socket/io.js";
+import {
+  compactActivityChanges,
+  logActivityForRequest,
+  optionalActivityText,
+  safeActivityText,
+} from "../utils/activityLogPayload.js";
 
 const createTaskSchema = z.object({
   title: z
@@ -399,6 +405,26 @@ export const assignTaskHandler = async (req: Request, res: Response) => {
       (id) => !currentAssigneeIds.includes(id),
     );
     const actorId = String(req.user.user_id);
+    const taskTitle = safeActivityText(task.title, taskId);
+
+    await logActivityForRequest(req, {
+      action_type: "update",
+      resource_type: "task",
+      resource_id: taskId,
+      description: `Task assignment updated: ${taskTitle}`,
+      changes: compactActivityChanges({
+        task_id: taskId,
+        task_title: taskTitle,
+        task_status: safeActivityText(task.status, "Unknown Status"),
+        old_assigned_user_ids: previousAssigneeIds,
+        new_assigned_user_ids: currentAssigneeIds,
+        added_assigned_user_ids: addedAssigneeIds,
+        removed_assigned_user_ids: removedAssigneeIds,
+        assigned_user_ids: currentAssigneeIds,
+        performed_by_user_id: actorId,
+        performed_by_email: optionalActivityText(req.user?.email),
+      }),
+    });
 
     if (addedAssigneeIds.length > 0) {
       const notifications = await createNotificationsForRecipients(
@@ -609,6 +635,26 @@ export const updateTaskStatusHandler = async (req: Request, res: Response) => {
     const actorId = String(req.user.user_id);
     const actorFirstName = await getUserFirstNameById(actorId);
     const assigneeIds = await getTaskAssigneeIds(taskId);
+    const previousStatus = updated.history.previous_status;
+    const newStatus = payload.status;
+    const taskTitle = safeActivityText(updated.task.title, taskId);
+
+    await logActivityForRequest(req, {
+      action_type: "update",
+      resource_type: "task",
+      resource_id: taskId,
+      description: `Task status changed: ${previousStatus} -> ${newStatus}`,
+      changes: compactActivityChanges({
+        task_id: taskId,
+        task_title: taskTitle,
+        old_status: previousStatus,
+        new_status: newStatus,
+        assigned_user_ids: assigneeIds,
+        performed_by_user_id: actorId,
+        performed_by_email: optionalActivityText(req.user?.email),
+      }),
+    });
+
     const statusNotifications = await createNotificationsForRecipients(
       assigneeIds,
       {

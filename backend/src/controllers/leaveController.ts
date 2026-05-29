@@ -3,6 +3,11 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import * as leaveService from "../services/leaveService.js";
+import {
+  compactActivityChanges,
+  logActivityForRequest,
+  optionalActivityText,
+} from "../utils/activityLogPayload.js";
 
 // ─── validation schemas ───────────────────────────────────────────────────────
 
@@ -170,6 +175,25 @@ export const reviewLeaveHandler = async (req: Request, res: Response) => {
         rejectionReason: parsed.data.rejectionReason,
       });
     }
+
+    await logActivityForRequest(req, {
+      action_type: "update",
+      resource_type: "dtr",
+      resource_id: leaveId,
+      description: `Leave request ${parsed.data.status}.`,
+      changes: compactActivityChanges({
+        record_type: "leave",
+        leave_id: leaveId,
+        requesting_user_id: optionalActivityText(leave?.userId),
+        approver_user_id: actorId,
+        approver_email: optionalActivityText(req.user?.email),
+        outcome: parsed.data.status,
+        rejection_reason:
+          parsed.data.status === "rejected"
+            ? parsed.data.rejectionReason
+            : undefined,
+      }),
+    });
 
     return res.status(200).json({
       success: true,
