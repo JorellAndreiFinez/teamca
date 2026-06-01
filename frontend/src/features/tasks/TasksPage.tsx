@@ -37,6 +37,49 @@ const DEFAULT_LIST: PaginatedTaskListResponse = {
 };
 
 const TASK_DESCRIPTION_MAX_LENGTH = 1000;
+const TASK_DRAFT_STORAGE_KEY = 'task-creation-draft';
+
+type TaskCreationDraft = {
+  form: {
+    title: string;
+    description: string;
+    priority: TaskPriority;
+    dueDate: string;
+    dueTime: string;
+  };
+  assigneeIds: string[];
+  noDueDateTime: boolean;
+  savedAt: string;
+};
+
+const loadTaskDraft = (userId: string): TaskCreationDraft | null => {
+  try {
+    const raw = localStorage.getItem(`${TASK_DRAFT_STORAGE_KEY}:${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as TaskCreationDraft;
+    if (!parsed?.form?.title && !parsed?.form?.description) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const saveTaskDraft = (userId: string, draft: Omit<TaskCreationDraft, 'savedAt'>) => {
+  try {
+    const entry: TaskCreationDraft = { ...draft, savedAt: new Date().toISOString() };
+    localStorage.setItem(`${TASK_DRAFT_STORAGE_KEY}:${userId}`, JSON.stringify(entry));
+  } catch {
+    // storage may be unavailable; fail silently
+  }
+};
+
+const clearTaskDraft = (userId: string) => {
+  try {
+    localStorage.removeItem(`${TASK_DRAFT_STORAGE_KEY}:${userId}`);
+  } catch {
+    // fail silently
+  }
+};
 
 const getUserIdentifier = (user: User): string => String(user.user_id || (user as any)._id || '').trim();
 
@@ -107,6 +150,8 @@ export default function TasksPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [pendingDraft, setPendingDraft] = useState<TaskCreationDraft | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
@@ -422,6 +467,51 @@ export default function TasksPage() {
       return scoped;
     });
   }, [assignableUsers, isIntern, resolvedCurrentUserId]);
+
+  // Auto-save draft whenever the create form changes while the modal is open
+  useEffect(() => {
+    if (!isCreateModalOpen || !resolvedCurrentUserId || draftRestored === false) {
+      return;
+    }
+
+    const isFormEmpty =
+      !createForm.title.trim() &&
+      !createForm.description.trim() &&
+      createForm.priority === 'Medium' &&
+      !createForm.dueDate &&
+      !createForm.dueTime &&
+      !noDueDateTime;
+
+    if (isFormEmpty) {
+      clearTaskDraft(resolvedCurrentUserId);
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      saveTaskDraft(resolvedCurrentUserId, {
+        form: createForm,
+        assigneeIds,
+        noDueDateTime,
+      });
+    }, 600);
+
+    return () => window.clearTimeout(handle);
+  }, [assigneeIds, createForm, draftRestored, isCreateModalOpen, noDueDateTime, resolvedCurrentUserId]);
+
+  // When the create modal opens, check for a saved draft and surface it
+  useEffect(() => {
+    if (!isCreateModalOpen || !resolvedCurrentUserId) {
+      return;
+    }
+
+    const saved = loadTaskDraft(resolvedCurrentUserId);
+    if (saved) {
+      setPendingDraft(saved);
+      setDraftRestored(false);
+    } else {
+      setDraftRestored(true);
+    }
+  }, [isCreateModalOpen, resolvedCurrentUserId]);
 
   const handleSocketComment = useCallback((payload: any) => {
     const taskId = payload?.task_id;
@@ -762,6 +852,7 @@ export default function TasksPage() {
 
       await taskService.createTask(payload);
 
+      clearTaskDraft(resolvedCurrentUserId);
       setCreateForm({
         title: '',
         description: '',
@@ -1051,8 +1142,46 @@ export default function TasksPage() {
         onEditTaskDetails={handleOpenEditTaskDetails}
       />
 
-      <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create Task" className="max-w-xl">
+      <Modal open={isCreateModalOpen} onClose={() => {
+        setIsCreateModalOpen(false);
+        setPendingDraft(null);
+        setDraftRestored(false);
+      }} title="Create Task" className="max-w-xl">
         <form className="space-y-3" onSubmit={handleCreateTask}>
+          {pendingDraft ? (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
+              <p className="text-sm font-medium text-sky-900">You have an unsaved draft</p>
+              <p className="mt-0.5 text-xs text-sky-700">
+                Saved {new Date(pendingDraft.savedAt).toLocaleString()} — restore it or start fresh.
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-sky-400 bg-white px-3 py-1.5 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                  onClick={() => {
+                    setCreateForm(pendingDraft.form);
+                    setAssigneeIds(pendingDraft.assigneeIds);
+                    setNoDueDateTime(pendingDraft.noDueDateTime);
+                    setPendingDraft(null);
+                    setDraftRestored(true);
+                  }}
+                >
+                  Restore draft
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                  onClick={() => {
+                    clearTaskDraft(resolvedCurrentUserId);
+                    setPendingDraft(null);
+                    setDraftRestored(true);
+                  }}
+                >
+                  Discard draft
+                </button>
+              </div>
+            </div>
+          ) : null}
           <Input
             label="Title"
             value={createForm.title}
@@ -1179,7 +1308,11 @@ export default function TasksPage() {
           ) : null}
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => {
+              setIsCreateModalOpen(false);
+              setPendingDraft(null);
+              setDraftRestored(false);
+            }}>
               Cancel
             </Button>
             <Button type="submit" size="sm" loading={isCreatingTask}>
