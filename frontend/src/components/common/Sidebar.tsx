@@ -7,12 +7,15 @@ import UserIdenticon from './UserIdenticon';
 import { userService } from '../../services/userService';
 import { config } from '../../config/env';
 import type { NotificationItem } from '../../types/notification';
+import { hasRoleAccess } from '../../lib/roleRoutes';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
 }
+
+// ─── icons ───────────────────────────────────────────────────────────────────
 
 function HomeIcon() {
   return (
@@ -46,15 +49,6 @@ function UsersIcon() {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   );
 }
@@ -121,38 +115,152 @@ function FolderIcon() {
   );
 }
 
-const isUserNotificationEvent = (eventType?: string): boolean => {
-  return eventType === 'user_profile_updated'
-    || eventType === 'user_role_changed'
-    || eventType === 'user_activation_changed'
-    || eventType === 'user_deleted';
+// ─── nav item definitions ─────────────────────────────────────────────────────
+//
+// Each item carries the same role constraints used in ROUTE_ACCESS_MAP so the
+// sidebar is always in sync with the route guard — no separate allow-lists to
+// maintain.  Items with no role constraints are visible to every logged-in user.
+
+type NavItemDef = NavItem & {
+  allowedGlobalRoles?: Array<'Superadmin' | 'Admin' | 'Standard_User'>;
+  allowedDepartmentRoles?: Array<'Head' | 'Supervisor' | 'Intern'>;
+  /** Groups this item under the Administration section header. */
+  section?: 'admin';
 };
 
-export default function Sidebar() {
-  const user = useAuthStore((state) => state.user);
-  const token = useAuthStore((state) => state.token);
-  const setUser = useAuthStore((state) => state.setUser);
-  const logout = useAuthStore((state) => state.logout);
-  const canManageUsers = useAuthStore((state) => state.canManageUsers);
-  const canWhitelistEmails = useAuthStore((state) => state.canWhitelistEmails);
-  const getUserFullName = useAuthStore((state) => state.getUserFullName);
-  const sidebarOpen = useUIStore((state) => state.sidebarOpen);
-  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+const NAV_ITEM_DEFS: NavItemDef[] = [
+  // ── core (all authenticated users) ──────────────────────────────────────────
+  { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
+  { label: 'DTR',       href: '/dtr',       icon: <ClockIcon /> },
+  { label: 'Leave',     href: '/leave',     icon: <DocumentIcon /> },
+  { label: 'Tasks',     href: '/tasks',     icon: <TaskIcon /> },
+  { label: 'Profile',   href: '/profile',   icon: <ProfileIcon /> },
 
-  const [mounted, setMounted] = React.useState(false);
-  const [shouldAnimate, setShouldAnimate] = React.useState(false);
+  // ── managers: Admin/Superadmin OR Head/Supervisor ───────────────────────────
+  // Matches backend: requireAnyRole(["Superadmin","Admin"], ["Head","Supervisor"])
+  {
+    label: 'User Directory',
+    href: '/users',
+    icon: <UsersIcon />,
+    allowedGlobalRoles: ['Superadmin', 'Admin'],
+    allowedDepartmentRoles: ['Head', 'Supervisor'],
+    section: 'admin',
+  },
+  {
+    label: 'Departments',
+    href: '/departments',
+    icon: <FolderIcon />,
+    allowedGlobalRoles: ['Superadmin', 'Admin'],
+    allowedDepartmentRoles: ['Head', 'Supervisor'],
+    section: 'admin',
+  },
+
+  // ── superadmin-only ──────────────────────────────────────────────────────────
+  // Matches backend: requireGlobalRole("Superadmin")
+  {
+    label: 'DTR Reports',
+    href: '/reports/dtr',
+    icon: <ChartIcon />,
+    allowedGlobalRoles: ['Superadmin'],
+    section: 'admin',
+  },
+  {
+    label: 'Task Analytics',
+    href: '/reports/tasks',
+    icon: <ChartIcon />,
+    allowedGlobalRoles: ['Superadmin'],
+    section: 'admin',
+  },
+  {
+    label: 'Activity Logs',
+    href: '/activity-logs',
+    icon: <LogsIcon />,
+    allowedGlobalRoles: ['Superadmin'],
+    section: 'admin',
+  },
+];
+
+// ─── socket helper ────────────────────────────────────────────────────────────
+
+const isUserNotificationEvent = (eventType?: string): boolean =>
+  eventType === 'user_profile_updated' ||
+  eventType === 'user_role_changed'    ||
+  eventType === 'user_activation_changed' ||
+  eventType === 'user_deleted';
+
+// ─── nav link ─────────────────────────────────────────────────────────────────
+
+function NavLink({
+  item,
+  isActive,
+  compact,
+  animClass,
+  animStyle,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  compact: boolean;
+  animClass: string;
+  animStyle?: React.CSSProperties;
+}) {
+  const base =
+    'relative transition-colors ' +
+    (isActive
+      ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
+      : 'text-slate-400 hover:bg-white/10 hover:text-white');
+
+  if (compact) {
+    return (
+      <a
+        href={item.href}
+        title={item.label}
+        className={`mx-2 mb-1 flex h-12 items-center justify-center rounded-xl ${base}`}
+      >
+        {isActive && (
+          <span className="absolute left-1 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
+        )}
+        {item.icon}
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={item.href}
+      className={`mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 ${base} ${animClass}`}
+      style={animStyle}
+    >
+      {isActive && (
+        <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
+      )}
+      {item.icon}
+      <span className="text-sm font-medium">{item.label}</span>
+    </a>
+  );
+}
+
+// ─── component ───────────────────────────────────────────────────────────────
+
+export default function Sidebar() {
+  const user              = useAuthStore((state) => state.user);
+  const token             = useAuthStore((state) => state.token);
+  const setUser           = useAuthStore((state) => state.setUser);
+  const logout            = useAuthStore((state) => state.logout);
+  const getUserFullName   = useAuthStore((state) => state.getUserFullName);
+  const sidebarOpen       = useUIStore((state) => state.sidebarOpen);
+  const toggleSidebar     = useUIStore((state) => state.toggleSidebar);
+
+  const [mounted, setMounted]               = React.useState(false);
+  const [shouldAnimate, setShouldAnimate]   = React.useState(false);
   const hasMounted = React.useRef(false);
+
   React.useEffect(() => { setMounted(true); }, []);
 
   React.useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true;
-      return;
-    }
-
+    if (!hasMounted.current) { hasMounted.current = true; return; }
     setShouldAnimate(true);
-    const timeout = window.setTimeout(() => setShouldAnimate(false), 520);
-    return () => window.clearTimeout(timeout);
+    const t = window.setTimeout(() => setShouldAnimate(false), 520);
+    return () => window.clearTimeout(t);
   }, [sidebarOpen]);
 
   const currentUserId = React.useMemo(
@@ -161,10 +269,7 @@ export default function Sidebar() {
   );
 
   const refreshCurrentUser = React.useCallback(async () => {
-    if (!currentUserId) {
-      return;
-    }
-
+    if (!currentUserId) return;
     try {
       const profile = await userService.getProfile(String(currentUserId));
       setUser(profile);
@@ -174,10 +279,7 @@ export default function Sidebar() {
   }, [currentUserId, setUser]);
 
   const socket = React.useMemo<Socket | null>(() => {
-    if (!token) {
-      return null;
-    }
-
+    if (!token) return null;
     return io(config.backendUrl, {
       transports: ['websocket'],
       auth: { token },
@@ -186,31 +288,22 @@ export default function Sidebar() {
   }, [token]);
 
   React.useEffect(() => {
-    if (!mounted || !token || !currentUserId) {
-      return;
-    }
-
+    if (!mounted || !token || !currentUserId) return;
     void refreshCurrentUser();
   }, [mounted, token, currentUserId, refreshCurrentUser]);
 
   React.useEffect(() => {
-    if (!socket || !currentUserId) {
-      return;
-    }
+    if (!socket || !currentUserId) return;
 
-    const onNotificationReceived = (payload: NotificationItem) => {
-      if (!isUserNotificationEvent(payload?.event_type)) {
-        return;
-      }
+    const onNotification = (payload: NotificationItem) => {
+      if (!isUserNotificationEvent(payload?.event_type)) return;
 
       const notificationUserId =
-        (typeof payload?.metadata?.user_id === 'string' && payload.metadata.user_id)
-        || (typeof payload?.entity_id === 'string' && payload.entity_id)
-        || null;
+        (typeof payload?.metadata?.user_id === 'string' && payload.metadata.user_id) ||
+        (typeof payload?.entity_id === 'string' && payload.entity_id) ||
+        null;
 
-      if (!notificationUserId || String(notificationUserId) !== String(currentUserId)) {
-        return;
-      }
+      if (!notificationUserId || String(notificationUserId) !== String(currentUserId)) return;
 
       if (payload.event_type === 'user_deleted') {
         logout();
@@ -221,59 +314,61 @@ export default function Sidebar() {
       void refreshCurrentUser();
     };
 
-    socket.on('notification:received', onNotificationReceived);
-
+    socket.on('notification:received', onNotification);
     return () => {
-      socket.off('notification:received', onNotificationReceived);
+      socket.off('notification:received', onNotification);
       socket.disconnect();
     };
   }, [currentUserId, logout, refreshCurrentUser, socket]);
 
-  const currentPath = mounted && typeof window !== 'undefined' ? window.location.pathname : '';
+  // ── derive visible nav items based on the current user's roles ───────────────
+  // We only filter after mount so the server render stays stable.
+  const { coreItems, adminItems } = React.useMemo(() => {
+    const core: NavItemDef[] = [];
+    const admin: NavItemDef[] = [];
 
-  const baseNavItems: NavItem[] = [
-    { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
-    { label: 'DTR', href: '/dtr', icon: <ClockIcon /> },
-    { label: 'Leave', href: '/leave', icon: <DocumentIcon /> },
-    { label: 'Tasks', href: '/tasks', icon: <TaskIcon /> },
-    { label: 'Profile', href: '/profile', icon: <ProfileIcon /> },
-  ];
+    for (const def of NAV_ITEM_DEFS) {
+      // Before mount (SSR / hydration) show all items so the skeleton is stable,
+      // then trim to role-allowed items once the auth store has hydrated.
+      const visible = !mounted || hasRoleAccess(user ?? null, {
+        allowedGlobalRoles: def.allowedGlobalRoles,
+        allowedDepartmentRoles: def.allowedDepartmentRoles,
+      });
 
-  const adminNavItems: NavItem[] = mounted && canManageUsers()
-    ? [
-        { label: 'User Directory', href: '/users', icon: <UsersIcon /> },
-        { label: 'Departments', href: '/departments', icon: <FolderIcon /> },
-      ]
-    : [];
+      if (!visible) continue;
 
-  const superadminNavItems: NavItem[] = mounted && canWhitelistEmails()
-    ? [
-        { label: 'DTR Reports', href: '/reports/dtr', icon: <ChartIcon /> },
-        { label: 'Task Analytics', href: '/reports/tasks', icon: <ChartIcon /> },
-        { label: 'Activity Logs', href: '/activity-logs', icon: <LogsIcon /> },
-      ]
-    : [];
+      if (def.section === 'admin') {
+        admin.push(def);
+      } else {
+        core.push(def);
+      }
+    }
 
-  const navItems = [...baseNavItems, ...adminNavItems, ...superadminNavItems];
+    return { coreItems: core, adminItems: admin };
+  }, [mounted, user]);
+
+  const currentPath = mounted && typeof window !== 'undefined'
+    ? window.location.pathname
+    : '';
 
   const handleLogout = () => {
     logout();
     window.location.href = '/login';
   };
 
-  // Before mount, use placeholder values to match server render
-  const fullName = mounted && user ? getUserFullName() : '';
+  const fullName      = mounted && user ? getUserFullName() : '';
   const identiconValue = mounted && user
     ? String(user.user_id || user._id || user.email || getUserFullName() || 'user')
     : 'user';
   const roleLabel = mounted && user
-    ? user.global_role === 'Superadmin'
-      ? 'Super Admin'
-      : user.global_role === 'Admin'
-      ? 'Admin'
-      : user.departments?.[0]?.department_role || 'Intern'
+    ? user.global_role === 'Superadmin' ? 'Super Admin'
+      : user.global_role === 'Admin'    ? 'Admin'
+      : user.departments?.[0]?.department_role ?? 'Intern'
     : '';
 
+  const animClass = shouldAnimate ? 'opacity-0 animate-fade-in' : '';
+
+  // ── collapsed sidebar ────────────────────────────────────────────────────────
   if (!sidebarOpen) {
     return (
       <div className="fixed top-0 left-0 z-30 flex h-full w-16 flex-col border-r border-slate-800/70 bg-slate-950 shadow-2xl shadow-slate-950/40 transition-all duration-300 ease-in-out">
@@ -286,21 +381,14 @@ export default function Sidebar() {
           <NotificationBell compact />
         </div>
         <nav className="flex-1 py-4">
-          {navItems.map((item) => (
-            <a
+          {[...coreItems, ...adminItems].map((item) => (
+            <NavLink
               key={item.href}
-              href={item.href}
-              title={item.label}
-              className={`relative mx-2 mb-1 flex h-12 items-center justify-center rounded-xl transition-colors
-                ${currentPath === item.href
-                  ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
-                  : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
-            >
-              {currentPath === item.href ? (
-                <span className="absolute left-1 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
-              ) : null}
-              {item.icon}
-            </a>
+              item={item}
+              isActive={currentPath === item.href}
+              compact
+              animClass=""
+            />
           ))}
         </nav>
         <div className="border-t border-slate-800/70 p-2">
@@ -316,6 +404,7 @@ export default function Sidebar() {
     );
   }
 
+  // ── expanded sidebar ─────────────────────────────────────────────────────────
   return (
     <div className="fixed top-0 left-0 z-30 flex h-full w-64 flex-col border-r border-slate-800/70 bg-slate-950 shadow-2xl shadow-slate-950/40 transition-all duration-300 ease-in-out">
       {/* Header */}
@@ -323,7 +412,7 @@ export default function Sidebar() {
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-slate-900 shadow-lg shadow-blue-900/30">
           <span className="text-sm font-semibold text-white">TC</span>
         </div>
-        <div className={`flex-1 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}>
+        <div className={`flex-1 ${animClass}`}>
           <p className="text-sm font-semibold text-white">TeamCA</p>
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">Intern Hub</p>
         </div>
@@ -335,17 +424,12 @@ export default function Sidebar() {
 
       {/* User info */}
       <div
-        className={`border-b border-slate-800/70 px-4 py-3 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}
+        className={`border-b border-slate-800/70 px-4 py-3 ${animClass}`}
         style={shouldAnimate ? { animationDelay: '60ms' } : undefined}
       >
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 shadow-inner">
-            <UserIdenticon
-              value={identiconValue}
-              size={36}
-              className="h-9 w-9"
-              title="User avatar"
-            />
+            <UserIdenticon value={identiconValue} size={36} className="h-9 w-9" title="User avatar" />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-white">{fullName}</p>
@@ -355,68 +439,39 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 overflow-y-auto">
-        {/* core items */}
-        {baseNavItems.map((item, idx) => (
-          <a
+      <nav className="flex-1 overflow-y-auto py-4">
+        {/* Core items */}
+        {coreItems.map((item, idx) => (
+          <NavLink
             key={item.href}
-            href={item.href}
-            className={`relative mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}
-              ${currentPath === item.href
-                ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
-                : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
-            style={shouldAnimate ? { animationDelay: `${100 + idx * 40}ms` } : undefined}
-          >
-            {currentPath === item.href ? (
-              <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
-            ) : null}
-            {item.icon}
-            <span className="text-sm font-medium">{item.label}</span>
-          </a>
+            item={item}
+            isActive={currentPath === item.href}
+            compact={false}
+            animClass={animClass}
+            animStyle={shouldAnimate ? { animationDelay: `${100 + idx * 40}ms` } : undefined}
+          />
         ))}
 
-        {/* superadmin section */}
-        {(adminNavItems.length > 0 || superadminNavItems.length > 0) && (
+        {/* Administration section — only rendered when the user has at least one admin item */}
+        {adminItems.length > 0 && (
           <>
             <div
-              className={`mb-1 mt-2 px-4 py-3 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}
+              className={`mb-1 mt-2 px-4 py-3 ${animClass}`}
               style={shouldAnimate ? { animationDelay: '320ms' } : undefined}
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">Administration</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                Administration
+              </p>
             </div>
-            {adminNavItems.map((item, idx) => (
-              <a
+            {adminItems.map((item, idx) => (
+              <NavLink
                 key={item.href}
-                href={item.href}
-                className={`relative mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}
-                  ${currentPath === item.href
-                    ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
-                    : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
-                style={shouldAnimate ? { animationDelay: `${360 + idx * 40}ms` } : undefined}
-              >
-                {currentPath === item.href ? (
-                  <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
-                ) : null}
-                {item.icon}
-                <span className="text-sm font-medium">{item.label}</span>
-              </a>
-            ))}
-            {superadminNavItems.map((item, idx) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className={`relative mx-2 mb-0.5 flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}
-                  ${currentPath === item.href
-                    ? 'bg-white/12 text-white shadow-sm shadow-slate-950/20'
-                    : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
-                style={shouldAnimate ? { animationDelay: `${400 + idx * 40}ms` } : undefined}
-              >
-                {currentPath === item.href ? (
-                  <span className="absolute left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400" />
-                ) : null}
-                {item.icon}
-                <span className="text-sm font-medium">{item.label}</span>
-              </a>
+                item={item}
+                isActive={currentPath === item.href}
+                compact={false}
+                animClass={animClass}
+                animStyle={shouldAnimate ? { animationDelay: `${360 + idx * 40}ms` } : undefined}
+              />
             ))}
           </>
         )}
@@ -424,7 +479,7 @@ export default function Sidebar() {
 
       {/* Logout */}
       <div
-        className={`border-t border-slate-800/70 p-3 ${shouldAnimate ? 'opacity-0 animate-fade-in' : ''}`}
+        className={`border-t border-slate-800/70 p-3 ${animClass}`}
         style={shouldAnimate ? { animationDelay: '500ms' } : undefined}
       >
         <button
