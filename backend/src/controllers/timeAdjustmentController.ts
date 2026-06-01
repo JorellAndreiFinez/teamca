@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { timeAdjustmentService } from "../services/timeAdjustmentService.js";
 import { IUser } from "../models/User.js";
+import {
+  compactActivityChanges,
+  logActivityForRequest,
+  optionalActivityText,
+} from "../utils/activityLogPayload.js";
 
 // Zod validation schemas
 const submitRequestSchema = z.object({
@@ -15,6 +20,9 @@ const submitRequestSchema = z.object({
 const reviewRequestSchema = z.object({
   reviewNotes: z.string().optional(),
 });
+
+const asActivityRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
 export const timeAdjustmentController = {
   async submitRequest(req: Request, res: Response) {
@@ -146,6 +154,27 @@ export const timeAdjustmentController = {
         String(userId),
         validated.reviewNotes,
       );
+      const requestRecord = asActivityRecord(request);
+
+      await logActivityForRequest(req, {
+        action_type: "update",
+        resource_type: "dtr",
+        resource_id: id,
+        description: "Time adjustment request approved.",
+        changes: compactActivityChanges({
+          record_type: "time_adjustment",
+          adjustment_request_id: optionalActivityText(requestRecord._id) ?? id,
+          dtr_id: optionalActivityText(requestRecord.dtrId),
+          requesting_user_id: optionalActivityText(requestRecord.userId),
+          approver_user_id: String(userId),
+          approver_email: optionalActivityText(req.user?.email),
+          outcome: "approved",
+          adjustment_type: optionalActivityText(requestRecord.adjustmentType),
+          original_value: optionalActivityText(requestRecord.originalValue),
+          requested_value: optionalActivityText(requestRecord.requestedValue),
+          review_notes: optionalActivityText(requestRecord.reviewNotes),
+        }),
+      });
 
       res.status(200).json({ success: true, data: request });
     } catch (error: any) {
@@ -196,6 +225,27 @@ export const timeAdjustmentController = {
         String(userId),
         validated.reviewNotes,
       );
+      const requestRecord = asActivityRecord(request);
+
+      await logActivityForRequest(req, {
+        action_type: "update",
+        resource_type: "dtr",
+        resource_id: id,
+        description: "Time adjustment request rejected.",
+        changes: compactActivityChanges({
+          record_type: "time_adjustment",
+          adjustment_request_id: optionalActivityText(requestRecord._id) ?? id,
+          dtr_id: optionalActivityText(requestRecord.dtrId),
+          requesting_user_id: optionalActivityText(requestRecord.userId),
+          approver_user_id: String(userId),
+          approver_email: optionalActivityText(req.user?.email),
+          outcome: "rejected",
+          adjustment_type: optionalActivityText(requestRecord.adjustmentType),
+          original_value: optionalActivityText(requestRecord.originalValue),
+          requested_value: optionalActivityText(requestRecord.requestedValue),
+          review_notes: optionalActivityText(requestRecord.reviewNotes),
+        }),
+      });
 
       res.status(200).json({ success: true, data: request });
     } catch (error: any) {

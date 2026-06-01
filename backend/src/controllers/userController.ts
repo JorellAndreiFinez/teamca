@@ -15,6 +15,12 @@ import {
   emitUsersDirectoryUpdated,
   emitUsersNotification,
 } from "../socket/io.js";
+import {
+  compactActivityChanges,
+  logActivityForRequest,
+  optionalActivityText,
+  safeActivityText,
+} from "../utils/activityLogPayload.js";
 
 type AuthUser = NonNullable<Request["user"]>;
 
@@ -94,6 +100,49 @@ const getActiveUserDirectorySubscriberIds = async (): Promise<string[]> => {
     .lean();
 
   return [...new Set(managers.map((item) => String(item._id)))];
+};
+
+const asActivityRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const getUserActivitySnapshot = (
+  user: unknown,
+): Record<string, unknown> => {
+  const record = asActivityRecord(user);
+  const rawDepartments = record.departments;
+  const departments = Array.isArray(rawDepartments)
+    ? rawDepartments.map((department) => {
+        const departmentRecord = asActivityRecord(department);
+        return compactActivityChanges({
+          department_id: optionalActivityText(departmentRecord.department_id),
+          department_role: optionalActivityText(
+            departmentRecord.department_role,
+          ),
+        });
+      })
+    : undefined;
+
+  return compactActivityChanges({
+    user_id: optionalActivityText(record._id),
+    email: optionalActivityText(record.email),
+    first_name: optionalActivityText(record.first_name),
+    last_name: optionalActivityText(record.last_name),
+    global_role: optionalActivityText(record.global_role),
+    is_active: record.is_active,
+    departments,
+    working_hours: record.working_hours,
+    working_days: record.working_days,
+  });
+};
+
+const getUserActivityId = (user: unknown, fallback: string): string => {
+  const record = asActivityRecord(user);
+  return safeActivityText(record._id, fallback);
+};
+
+const getUserActivityEmail = (user: unknown, fallback = "unknown email") => {
+  const record = asActivityRecord(user);
+  return safeActivityText(record.email, fallback);
 };
 
 /**
@@ -212,6 +261,21 @@ export const createUser = async (req: Request, res: Response) => {
       departments: normalizedDepartments,
     });
 
+    const targetUserId = getUserActivityId(newUser, "new-user");
+    await logActivityForRequest(req, {
+      action_type: "create",
+      resource_type: "user",
+      resource_id: targetUserId,
+      description: `User created: ${getUserActivityEmail(newUser, email)}`,
+      changes: compactActivityChanges({
+        target_user_id: targetUserId,
+        target_user_email: getUserActivityEmail(newUser, email),
+        performed_by_user_id: optionalActivityText(req.user?.user_id),
+        performed_by_email: optionalActivityText(req.user?.email),
+        after: getUserActivitySnapshot(newUser),
+      }),
+    });
+
     res.status(201).json(newUser);
   } catch (err: unknown) {
     const error = err as Error;
@@ -249,6 +313,24 @@ export const createWhitelistedUserHandler = async (
       global_role: global_role as "Superadmin" | "Admin" | "Standard_User",
       department_id,
       department_role: department_role as "Head" | "Supervisor" | "Intern",
+    });
+
+    const targetUserId = getUserActivityId(newUser, "new-whitelisted-user");
+    await logActivityForRequest(req, {
+      action_type: "create",
+      resource_type: "user",
+      resource_id: targetUserId,
+      description: `Whitelisted user created: ${getUserActivityEmail(
+        newUser,
+        email,
+      )}`,
+      changes: compactActivityChanges({
+        target_user_id: targetUserId,
+        target_user_email: getUserActivityEmail(newUser, email),
+        performed_by_user_id: optionalActivityText(req.user?.user_id),
+        performed_by_email: optionalActivityText(req.user?.email),
+        after: getUserActivitySnapshot(newUser),
+      }),
     });
 
     res.status(201).json(newUser);
@@ -317,6 +399,31 @@ export const activateWhitelistedUserHandler = async (
       department_role: department_role as "Head" | "Supervisor" | "Intern",
     });
 
+    await logActivityForRequest(req, {
+      action_type: "update",
+      resource_type: "user",
+      resource_id: getUserActivityId(user, userId),
+      description: `Whitelisted user activated: ${getUserActivityEmail(
+        user,
+        userId,
+      )}`,
+      changes: compactActivityChanges({
+        target_user_id: getUserActivityId(user, userId),
+        target_user_email: getUserActivityEmail(user, userId),
+        performed_by_user_id: optionalActivityText(req.user?.user_id),
+        performed_by_email: optionalActivityText(req.user?.email),
+        changed_fields: [
+          "first_name",
+          "last_name",
+          "password_hash",
+          "global_role",
+          "departments",
+          "is_active",
+        ],
+        after: getUserActivitySnapshot(user),
+      }),
+    });
+
     return res.json(user);
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));
@@ -339,6 +446,9 @@ export const deleteWhitelistedUserHandler = async (
     }
 
     const userId = getUserIdParam(req);
+    const userToDelete = await User.findById(userId)
+      .select("email first_name last_name global_role is_active departments")
+      .lean();
     const result = await deleteWhitelistedUser(userId);
 
     const directorySubscribers = await getActiveUserDirectorySubscriberIds();
@@ -347,6 +457,23 @@ export const deleteWhitelistedUserHandler = async (
       user_id: userId,
       actor_id: String(req.user.user_id),
       updated_at: new Date().toISOString(),
+    });
+
+    await logActivityForRequest(req, {
+      action_type: "delete",
+      resource_type: "user",
+      resource_id: userId,
+      description: `Whitelisted user deleted: ${getUserActivityEmail(
+        userToDelete,
+        userId,
+      )}`,
+      changes: compactActivityChanges({
+        target_user_id: userId,
+        target_user_email: getUserActivityEmail(userToDelete, userId),
+        performed_by_user_id: optionalActivityText(req.user?.user_id),
+        performed_by_email: optionalActivityText(req.user?.email),
+        before: getUserActivitySnapshot(userToDelete),
+      }),
     });
 
     return res.json(result);
@@ -372,7 +499,9 @@ export const updateUser = async (req: Request, res: Response) => {
     const payload = req.body || {};
 
     const previousUser = await User.findById(userId)
-      .select("global_role is_active departments")
+      .select(
+        "first_name last_name email global_role is_active departments working_hours working_days",
+      )
       .lean();
 
     if (!previousUser) {
@@ -487,6 +616,25 @@ export const updateUser = async (req: Request, res: Response) => {
     );
 
     const updatedEntityId = String(updatedUser._id || userId);
+
+    await logActivityForRequest(req, {
+      action_type: "update",
+      resource_type: "user",
+      resource_id: updatedEntityId,
+      description: `User updated: ${getUserActivityEmail(
+        updatedUser,
+        updatedEntityId,
+      )}`,
+      changes: compactActivityChanges({
+        target_user_id: updatedEntityId,
+        target_user_email: getUserActivityEmail(updatedUser, updatedEntityId),
+        performed_by_user_id: optionalActivityText(req.user?.user_id),
+        performed_by_email: optionalActivityText(req.user?.email),
+        changed_fields: updatedFields,
+        before: getUserActivitySnapshot(previousUser),
+        after: getUserActivitySnapshot(updatedUser),
+      }),
+    });
 
     const profileNotificationRecipients = [
       ...new Set([...recipientIds, updatedEntityId]),
@@ -681,6 +829,23 @@ export const deleteUser = async (req: Request, res: Response) => {
     ]);
 
     const actorId = req.user ? String(req.user.user_id) : undefined;
+
+    await logActivityForRequest(req, {
+      action_type: "delete",
+      resource_type: "user",
+      resource_id: userId,
+      description: `User deleted: ${getUserActivityEmail(
+        userToDelete,
+        userId,
+      )}`,
+      changes: compactActivityChanges({
+        target_user_id: userId,
+        target_user_email: getUserActivityEmail(userToDelete, userId),
+        performed_by_user_id: optionalActivityText(req.user?.user_id),
+        performed_by_email: optionalActivityText(req.user?.email),
+        before: getUserActivitySnapshot(userToDelete),
+      }),
+    });
 
     const notifications = await createNotificationsForRecipients(recipientIds, {
       actorId,
