@@ -147,8 +147,8 @@ describe("computeStreaks", () => {
 
   it("treats multiple completions on the same day as one day", () => {
     const today = new Date();
-    const sameDayLater = new Date(today.getTime() + 60 * 60 * 1000);
-    const { current, longest } = computeStreaks([today, sameDayLater]);
+    // FIX: Using the same date twice prevents the test from failing if run right before midnight.
+    const { current, longest } = computeStreaks([today, new Date(today.getTime())]);
     expect(current).toBe(1);
     expect(longest).toBe(1);
   });
@@ -161,7 +161,6 @@ describe("getProductivitySummary", () => {
     userId: string,
     completedAt: Date,
   ) => {
-    // CHANGED: Removed unused `dept` variable and invalid `departmentId` property from Task
     const task = await Task.create({
       title: `task-${Math.random().toString(36).slice(2, 8)}`,
       description: "",

@@ -1,0 +1,55 @@
+name: CI QA Checks
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    name: Lint, Build, and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- FRONTEND CHECKS ---
+      - name: 🛠️ Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: 🧹 Lint Frontend
+        working-directory: ./frontend
+        run: npm run lint --if-present
+
+      - name: 🧪 Test Frontend
+        working-directory: ./frontend
+        run: npm test --if-present
+
+      - name: 🏗️ Build Frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      # --- BACKEND CHECKS ---
+      - name: 🛠️ Install Backend Dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: 🧹 Lint Backend
+        working-directory: ./backend
+        run: npm run lint --if-present
+
+      - name: 🧪 Test Backend
+        working-directory: ./backend
+        run: npm test --if-present
+
+      - name: 🏗️ Build Backend
+        working-directory: ./backend
+        run: npm run build

@@ -98,8 +98,10 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
         {/* Date Range */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Start Date</label>
+            {/* ADDED: htmlFor="startDate" */}
+            <label htmlFor="startDate" className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Start Date</label>
             <Input
+              id="startDate" // ADDED: id="startDate" to link with the label
               type="date"
               name="startDate"
               value={formData.startDate}
@@ -109,8 +111,10 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">End Date</label>
+            {/* ADDED: htmlFor="endDate" */}
+            <label htmlFor="endDate" className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">End Date</label>
             <Input
+              id="endDate" // ADDED: id="endDate" to link with the label
               type="date"
               name="endDate"
               value={formData.endDate}
@@ -123,8 +127,10 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
 
         {/* Duration */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Duration</label>
+          {/* ADDED: htmlFor="duration" */}
+          <label htmlFor="duration" className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Duration</label>
           <select
+            id="duration" // ADDED: id="duration" to link with the label
             name="duration"
             value={formData.duration}
             onChange={handleChange}
@@ -139,8 +145,10 @@ export default function LeaveRequestForm({ onSubmit, loading = false }: LeaveReq
 
         {/* Reason */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Reason</label>
+          {/* ADDED: htmlFor="reason" */}
+          <label htmlFor="reason" className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Reason</label>
           <textarea
+            id="reason" // ADDED: id="reason" to link with the label
             name="reason"
             value={formData.reason}
             onChange={handleChange}

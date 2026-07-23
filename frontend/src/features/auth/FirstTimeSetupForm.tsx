@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
 import { departmentService } from '../../services/departmentService';
@@ -65,11 +64,25 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!formData.first_name.trim()) errs.first_name = 'First name is required';
-    if (formData.first_name.trim().length < 2) errs.first_name = 'First name must be at least 2 characters';
-    if (!formData.last_name.trim()) errs.last_name = 'Last name is required';
-    if (formData.last_name.trim().length < 2) errs.last_name = 'Last name must be at least 2 characters';
     
+    // FIX: Changed to an if/else if chain. 
+    // Previously, an empty string would trigger the first error, 
+    // but its length of 0 would also trigger the second error, overwriting the first one.
+    if (!formData.first_name.trim()) {
+      errs.first_name = 'First name is required';
+    } else if (formData.first_name.trim().length < 2) {
+      errs.first_name = 'First name must be at least 2 characters';
+    }
+
+    // FIX: Applied the same if/else if logic to the last name validation.
+    if (!formData.last_name.trim()) {
+      errs.last_name = 'Last name is required';
+    } else if (formData.last_name.trim().length < 2) {
+      errs.last_name = 'Last name must be at least 2 characters';
+    }
+    
+    // ADDED: Structured the password validation into a clear block 
+    // to ensure only the most relevant error is shown at a time.
     if (formData.password.length < 8) {
       errs.password = 'Password must be at least 8 characters';
     } else if (!/[A-Z]/.test(formData.password)) {
@@ -84,6 +97,7 @@ export default function FirstTimeSetupForm({ email, onBack }: FirstTimeSetupForm
     if (!formData.department_id) errs.department_id = 'Department is required';
     if (!formData.school_university.trim()) errs.school_university = 'School/University is required';
     if (formData.required_hours < 1) errs.required_hours = 'Required hours must be at least 1';
+    
     return errs;
   };
 

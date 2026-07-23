@@ -3,3 +3,8 @@ packages:
   - "frontend"
   - "website"
   - "documentation"
+allowBuilds:
+  core-js: true
+  esbuild: true
+  mongodb-memory-server: true
+  sharp: true

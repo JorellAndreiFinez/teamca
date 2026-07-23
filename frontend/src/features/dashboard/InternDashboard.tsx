@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription, // ADDED: Imported DialogDescription to fix Radix UI accessibility warnings
 } from '../../components/ui/Dialog';
 import { WidgetSkeleton, CalendarSkeleton } from '../../components/ui/Skeleton';
 import { internProfileService } from '../../services/internProfileService';
@@ -257,11 +258,12 @@ export default function InternDashboard() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Clock Out</DialogTitle>
+            {/* FIXED: Replaced standard <p> tag with <DialogDescription> to fulfill Radix UI aria-describedby accessibility requirements */}
+            <DialogDescription className="text-sm text-gray-600">
+              Please describe what you accomplished today.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Please describe what you accomplished today.
-            </p>
             {clockOutError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {clockOutError}
